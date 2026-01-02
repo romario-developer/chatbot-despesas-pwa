@@ -216,7 +216,7 @@ const DashboardPage = () => {
             </div>
             {pieData.length ? (
               <div className="h-72">
-                <ResponsiveContainer>
+                <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={pieData}
@@ -256,7 +256,7 @@ const DashboardPage = () => {
             </div>
             {barData.length ? (
               <div className="h-72">
-                <ResponsiveContainer>
+                <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={barData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="date" />
