@@ -1,30 +1,30 @@
 # Despesas PWA
 
-PWA em React + TypeScript para controle de despesas consumindo a API existente.
+PWA em React + TypeScript + Tailwind consumindo a API de despesas.
 
 ## Requisitos
-- Node 20+ recomendado
+- Node 20+ recomendado (Vite 7 sugere >=20.19 ou >=22.12)
 
 ## Como rodar local
-1. Instale dependências: `npm ci`
-2. Copie variáveis: `cp .env.example .env` (ou crie `.env` manualmente)
+1. Instale dependencias: `npm ci`
+2. Copie variaveis: `cp .env.example .env` (ou crie `.env` manualmente)
 3. Execute em modo dev: `npm run dev`
 4. Acesse a URL indicada pelo Vite.
 
-## Variáveis de ambiente
+## Variaveis de ambiente
 ```
 VITE_API_URL=https://chatbot-despesas.onrender.com
 ```
-Use `import.meta.env.VITE_API_URL` no código (já configurado).
+Use `import.meta.env.VITE_API_URL` no codigo (ja configurado).
 
-## Build / Produção (Render Static Site)
+## Build / Producao (Render Static Site)
 - Build command: `npm ci && npm run build`
 - Publish directory: `dist`
 - Environment: defina `VITE_API_URL`
 
-## Funcionalidades (Parte A)
-- Login com senha única e token salvo em `localStorage`
-- Rotas protegidas com React Router e ProtectedRoute
-- Layout com header, navegação e logout
-- Botões de teste: `/api/summary` e `/api/entries`
-- Tailwind configurado + PWA (manifest e ícones placeholder)
+## Funcionalidades
+- Autenticacao por senha unica, token em `localStorage`, rotas protegidas, logout
+- Dashboard: resumo mensal, graficos (Recharts) por categoria/dia, ultimos lancamentos
+- Lancamentos: filtros por mes/categoria/busca, cards mobile e tabela desktop, total em BRL, botao "Novo lancamento"
+- Rotas placeholder para `/entries/new` e `/entries/:id/edit` (serao implementadas na parte B2)
+- Tailwind configurado + PWA (manifest e icones placeholder)

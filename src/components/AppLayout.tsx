@@ -25,7 +25,7 @@ const AppLayout = () => {
               Dashboard
             </NavLink>
             <NavLink to="/entries" className={linkClasses}>
-              Lançamentos
+              Lancamentos
             </NavLink>
             <button
               type="button"

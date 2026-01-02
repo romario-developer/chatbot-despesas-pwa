@@ -37,14 +37,14 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     const message =
       err instanceof Error
         ? err.message
-        : "Não foi possível se conectar ao servidor.";
+        : "Nao foi possivel se conectar ao servidor.";
     throw new Error(message);
   }
 
   if (response.status === 401) {
     clearToken();
     redirectToLogin();
-    throw new Error("Sessão expirada. Faça login novamente.");
+    throw new Error("Sessao expirada. Faca login novamente.");
   }
 
   const text = await response.text();
@@ -62,7 +62,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     const message =
       (parsed as { message?: string } | null)?.message ||
       (typeof parsed === "string" && parsed) ||
-      "Não foi possível completar a requisição.";
+      "Nao foi possivel completar a requisicao.";
     throw new Error(message);
   }
 

@@ -4,13 +4,21 @@ export interface AuthResponse {
 
 export interface Entry {
   id: string;
-  amount: number;
   description: string;
+  amount: number;
   category: string;
   date: string;
-  [key: string]: unknown;
+  source: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export type EntriesResponse = Entry[] | Record<string, unknown>[];
+export interface Summary {
+  total: number;
+  totalPorCategoria: Record<string, number>;
+  totalPorDia: Record<string, number>;
+}
 
-export type SummaryResponse = Record<string, unknown>;
+export type EntriesResponse = Entry[];
+
+export type CategoriesResponse = string[];
