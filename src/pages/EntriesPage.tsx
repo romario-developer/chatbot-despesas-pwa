@@ -13,8 +13,8 @@ const EntriesPage = () => {
   const [month, setMonth] = useState(currentMonth());
   const [category, setCategory] = useState("");
   const [search, setSearch] = useState("");
-  const [categories, setCategories] = useState<string[]>([]);
-  const [entries, setEntries] = useState<Entry[]>([]);
+  const [categories, setCategories] = useState<unknown>([]);
+  const [entries, setEntries] = useState<Entry[] | unknown>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,7 +45,8 @@ const EntriesPage = () => {
           q: search || undefined,
         });
 
-        const sorted = [...data].sort(
+        const safeData = Array.isArray(data) ? data : [];
+        const sorted = [...safeData].sort(
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
         );
 
@@ -63,9 +64,15 @@ const EntriesPage = () => {
     loadEntries();
   }, [month, category, search]);
 
+  const safeCategories = Array.isArray(categories)
+    ? categories
+    : Object.keys((categories ?? {}) as Record<string, unknown>);
+
+  const safeEntries = Array.isArray(entries) ? entries : [];
+
   const totalAmount = useMemo(
-    () => entries.reduce((sum, entry) => sum + entry.amount, 0),
-    [entries],
+    () => safeEntries.reduce((sum, entry) => sum + entry.amount, 0),
+    [safeEntries],
   );
 
   return (
@@ -98,7 +105,7 @@ const EntriesPage = () => {
             className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
           >
             <option value="">Todas</option>
-            {categories.map((cat) => (
+            {safeCategories.map((cat) => (
               <option key={cat} value={cat}>
                 {cat}
               </option>
@@ -121,7 +128,7 @@ const EntriesPage = () => {
       <div className="card p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-slate-600">
-            {entries.length} lancamento(s) - Total {formatCurrency(totalAmount)}
+            {safeEntries.length} lancamento(s) - Total {formatCurrency(totalAmount)}
           </p>
         </div>
 
@@ -138,8 +145,8 @@ const EntriesPage = () => {
         {!isLoading && !error && (
           <>
             <div className="mt-4 space-y-3 md:hidden">
-              {entries.length ? (
-                entries.map((entry) => (
+              {safeEntries.length ? (
+                safeEntries.map((entry) => (
                   <div
                     key={entry.id}
                     className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
@@ -175,8 +182,8 @@ const EntriesPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {entries.length ? (
-                    entries.map((entry) => (
+                  {safeEntries.length ? (
+                    safeEntries.map((entry) => (
                       <tr key={entry.id} className="hover:bg-slate-50">
                         <td className="px-4 py-3 font-medium text-slate-900">
                           {entry.description}

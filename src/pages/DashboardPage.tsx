@@ -106,6 +106,8 @@ const DashboardPage = () => {
   const averagePerDay =
     summary && daysInMonth ? summary.total / daysInMonth : undefined;
 
+  const safeLatestEntries = Array.isArray(latestEntries) ? latestEntries : [];
+
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -228,9 +230,9 @@ const DashboardPage = () => {
               Ultimos lancamentos
             </h3>
           </div>
-          {latestEntries.length ? (
+          {safeLatestEntries.length ? (
             <ul className="divide-y divide-slate-100">
-              {latestEntries.map((entry) => (
+              {safeLatestEntries.map((entry) => (
                 <li key={entry.id} className="flex items-start justify-between py-3">
                   <div>
                     <p className="text-sm font-medium text-slate-900">
