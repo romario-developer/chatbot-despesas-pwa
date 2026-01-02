@@ -52,12 +52,19 @@ const DashboardPage = () => {
           listEntries({ from: range.from, to: range.to }),
         ]);
 
-        const sortedEntries = [...entriesData].sort(
+        const normalizedEntries = Array.isArray(entriesData) ? entriesData : [];
+        const normalizedSummary: Summary = {
+          total: summaryData?.total ?? 0,
+          totalPorCategoria: summaryData?.totalPorCategoria ?? {},
+          totalPorDia: summaryData?.totalPorDia ?? {},
+        };
+
+        const sortedEntries = [...normalizedEntries].sort(
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
         );
 
-        setSummary(summaryData);
-        setEntriesCount(entriesData.length);
+        setSummary(normalizedSummary);
+        setEntriesCount(normalizedEntries.length);
         setLatestEntries(sortedEntries.slice(0, 10));
       } catch (err) {
         const message =
@@ -76,20 +83,19 @@ const DashboardPage = () => {
 
   const pieData = useMemo(() => {
     if (!summary) return [];
-    return Object.entries(summary.totalPorCategoria).map(([name, value]) => ({
-      name,
-      value,
-    }));
+    return Object.entries(summary.totalPorCategoria ?? {}).map(
+      ([name, value]) => ({
+        name,
+        value,
+      }),
+    );
   }, [summary]);
 
   const barData = useMemo(() => {
     if (!summary) return [];
-    return Object.entries(summary.totalPorDia)
-      .map(([day, value]) => {
-        const dayLabel = day.split("-").pop() ?? day;
-        return { day: dayLabel, value };
-      })
-      .sort((a, b) => Number(a.day) - Number(b.day));
+    return Object.entries(summary.totalPorDia ?? {})
+      .map(([date, value]) => ({ date, value }))
+      .sort((a, b) => a.date.localeCompare(b.date));
   }, [summary]);
 
   const daysInMonth = useMemo(() => {
@@ -198,7 +204,7 @@ const DashboardPage = () => {
                 <ResponsiveContainer>
                   <BarChart data={barData}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="day" />
+                    <XAxis dataKey="date" />
                     <YAxis />
                     <Tooltip
                       formatter={(value: number | string | undefined) =>
@@ -214,7 +220,7 @@ const DashboardPage = () => {
             )}
           </div>
         </div>
-<h2 className="text-xs text-red-500">B1 ONLINE</h2>
+
 
         <div className="card p-4">
           <div className="mb-3 flex items-center justify-between">
