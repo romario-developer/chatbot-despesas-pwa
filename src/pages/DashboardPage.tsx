@@ -214,6 +214,7 @@ const DashboardPage = () => {
             )}
           </div>
         </div>
+<h2 className="text-xs text-red-500">B1 ONLINE</h2>
 
         <div className="card p-4">
           <div className="mb-3 flex items-center justify-between">
