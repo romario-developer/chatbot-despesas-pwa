@@ -10,9 +10,16 @@ const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
 });
 
 export const formatCurrency = (value: number) => currencyFormatter.format(value);
+export const formatBRL = (value: number) => currencyFormatter.format(value);
 
 export const formatDate = (isoDate: string) => {
   const parsed = new Date(isoDate);
   if (Number.isNaN(parsed.getTime())) return isoDate;
   return dateFormatter.format(parsed);
+};
+
+export const parseCurrencyInput = (input: string) => {
+  const normalized = input.replace(/\./g, "").replace(",", ".");
+  const value = Number(normalized);
+  return Number.isFinite(value) ? value : NaN;
 };

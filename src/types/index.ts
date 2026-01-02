@@ -30,3 +30,23 @@ export interface EntryPayload {
   date: string;
   source?: string;
 }
+
+export interface ExtraEntry {
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+}
+
+export interface FixedBill {
+  id: string;
+  name: string;
+  amount: number;
+  dueDay: number;
+}
+
+export interface PlanningData {
+  salaryByMonth: Record<string, number>;
+  extrasByMonth: Record<string, ExtraEntry[]>;
+  fixedBills: FixedBill[];
+}

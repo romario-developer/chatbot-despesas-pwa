@@ -25,6 +25,6 @@ Use `import.meta.env.VITE_API_URL` no codigo (ja configurado).
 ## Funcionalidades
 - Autenticacao por senha unica, token em `localStorage`, rotas protegidas, logout
 - Dashboard: resumo mensal, graficos (Recharts) por categoria/dia, ultimos lancamentos
-- Lancamentos: filtros por mes/categoria/busca, cards mobile e tabela desktop, total em BRL, botao "Novo lancamento"
-- Rotas placeholder para `/entries/new` e `/entries/:id/edit` (serao implementadas na parte B2)
+- Lancamentos: filtros por mes/categoria/busca, cards mobile e tabela desktop, total em BRL, criar/editar/excluir lancamentos (rotas `/entries/new`, `/entries/:id/edit`)
+- Planejamento (B3): rota `/planning` para salario por mes, entradas extras do mes e contas fixas globais (persistencia em `localStorage`), valores integrados ao resumo do Dashboard
 - Tailwind configurado + PWA (manifest e icones placeholder)

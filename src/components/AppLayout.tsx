@@ -27,6 +27,9 @@ const AppLayout = () => {
             <NavLink to="/entries" className={linkClasses}>
               Lancamentos
             </NavLink>
+            <NavLink to="/planning" className={linkClasses}>
+              Planejamento
+            </NavLink>
             <button
               type="button"
               onClick={handleLogout}

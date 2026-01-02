@@ -15,8 +15,9 @@ import {
 import MonthPicker from "../components/MonthPicker";
 import { listEntries } from "../api/entries";
 import { getSummary } from "../api/summary";
+import { loadPlanning } from "../storage/planningStorage";
 import { monthToRange } from "../utils/dateRange";
-import { formatCurrency, formatDate } from "../utils/format";
+import { formatBRL, formatCurrency, formatDate } from "../utils/format";
 import type { Entry, Summary } from "../types";
 
 const currentMonth = () => new Date().toISOString().slice(0, 7);
@@ -37,6 +38,11 @@ const DashboardPage = () => {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [latestEntries, setLatestEntries] = useState<Entry[]>([]);
   const [entriesCount, setEntriesCount] = useState(0);
+  const [planningTotals, setPlanningTotals] = useState({
+    salary: 0,
+    extras: 0,
+    fixed: 0,
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,9 +69,20 @@ const DashboardPage = () => {
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
         );
 
+        const planning = loadPlanning();
+        const salary = planning.salaryByMonth?.[month] ?? 0;
+        const extrasList = Array.isArray(planning.extrasByMonth?.[month])
+          ? planning.extrasByMonth?.[month]
+          : [];
+        const extras = extrasList.reduce((sum, item) => sum + (item?.amount ?? 0), 0);
+        const fixed = Array.isArray(planning.fixedBills)
+          ? planning.fixedBills.reduce((sum, bill) => sum + (bill?.amount ?? 0), 0)
+          : 0;
+
         setSummary(normalizedSummary);
         setEntriesCount(normalizedEntries.length);
         setLatestEntries(sortedEntries.slice(0, 10));
+        setPlanningTotals({ salary, extras, fixed });
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Erro ao carregar o dashboard.";
@@ -107,6 +124,10 @@ const DashboardPage = () => {
     summary && daysInMonth ? summary.total / daysInMonth : undefined;
 
   const safeLatestEntries = Array.isArray(latestEntries) ? latestEntries : [];
+  const receita = planningTotals.salary + planningTotals.extras;
+  const gastos = summary?.total ?? 0;
+  const saldo = receita - gastos;
+  const saldoPrevisto = receita - (gastos + planningTotals.fixed);
 
   const renderContent = () => {
     if (isLoading) {
@@ -150,6 +171,38 @@ const DashboardPage = () => {
             <p className="text-sm text-slate-600">Media por dia</p>
             <p className="mt-2 text-2xl font-semibold text-slate-900">
               {averagePerDay !== undefined ? formatCurrency(averagePerDay) : "-"}
+            </p>
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="card p-4">
+            <p className="text-sm text-slate-600">Receita (salario + extras)</p>
+            <p className="mt-2 text-xl font-semibold text-slate-900">
+              {formatBRL(receita)}
+            </p>
+          </div>
+          <div className="card p-4">
+            <p className="text-sm text-slate-600">Gastos do mes</p>
+            <p className="mt-2 text-xl font-semibold text-slate-900">
+              {formatBRL(gastos)}
+            </p>
+          </div>
+          <div className="card p-4">
+            <p className="text-sm text-slate-600">Fixas (previsto)</p>
+            <p className="mt-2 text-xl font-semibold text-slate-900">
+              {formatBRL(planningTotals.fixed)}
+            </p>
+          </div>
+          <div className="card p-4">
+            <p className="text-sm text-slate-600">Saldo</p>
+            <p className="mt-2 text-xl font-semibold text-slate-900">
+              {formatBRL(saldo)}
+            </p>
+          </div>
+          <div className="card p-4">
+            <p className="text-sm text-slate-600">Saldo previsto</p>
+            <p className="mt-2 text-xl font-semibold text-slate-900">
+              {formatBRL(saldoPrevisto)}
             </p>
           </div>
         </div>

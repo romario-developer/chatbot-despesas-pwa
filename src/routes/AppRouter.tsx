@@ -5,6 +5,7 @@ import DashboardPage from "../pages/DashboardPage";
 import EntriesPage from "../pages/EntriesPage";
 import EntryCreatePage from "../pages/EntryCreatePage";
 import EntryEditPage from "../pages/EntryEditPage";
+import PlanningPage from "../pages/PlanningPage";
 import LoginPage from "../pages/LoginPage";
 
 const AppRouter = () => (
@@ -22,6 +23,7 @@ const AppRouter = () => (
         <Route path="/entries" element={<EntriesPage />} />
         <Route path="/entries/new" element={<EntryCreatePage />} />
         <Route path="/entries/:id/edit" element={<EntryEditPage />} />
+        <Route path="/planning" element={<PlanningPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
