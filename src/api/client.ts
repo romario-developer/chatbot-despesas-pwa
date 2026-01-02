@@ -32,6 +32,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     response = await fetch(`${baseUrl}${path}`, {
       ...options,
       headers,
+      cache: "no-store",
     });
   } catch (err) {
     const message =
@@ -47,13 +48,20 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     throw new Error("Sessao expirada. Faca login novamente.");
   }
 
+  if (response.status === 204) {
+    return null as T;
+  }
+
+  const contentType = response.headers.get("content-type") ?? "";
+  const isJson = contentType.toLowerCase().includes("application/json");
   const text = await response.text();
-  const parsed = text
+
+  const parsed = isJson && text
     ? (() => {
         try {
           return JSON.parse(text);
         } catch {
-          return text;
+          return null;
         }
       })()
     : null;
@@ -61,10 +69,14 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   if (!response.ok) {
     const message =
       (parsed as { message?: string } | null)?.message ||
-      (typeof parsed === "string" && parsed) ||
+      (typeof parsed === "string" ? parsed : text) ||
       "Nao foi possivel completar a requisicao.";
     throw new Error(message);
   }
 
-  return parsed as T;
+  if (!isJson) {
+    return null as T;
+  }
+
+  return (parsed ?? null) as T;
 }
