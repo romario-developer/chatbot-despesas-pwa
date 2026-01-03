@@ -48,7 +48,7 @@ const EntryEditPage = () => {
           const { from, to } = monthToRange(currentMonth());
           const list = await listEntries({ from, to });
           const safeList = Array.isArray(list) ? list : [];
-          found = safeList.find((item) => item.id === id) ?? null;
+          found = safeList.find((item) => String(item.id) === String(id)) ?? null;
           if (!found) {
             throw primaryError;
           }
