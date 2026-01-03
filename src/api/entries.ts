@@ -1,5 +1,5 @@
 import { apiFetch } from "./client";
-import type { EntriesResponse, Entry, EntryPayload } from "../types";
+import type { Entry, EntryPayload } from "../types";
 
 export type ListEntriesParams = {
   from?: string;
@@ -8,7 +8,9 @@ export type ListEntriesParams = {
   q?: string;
 };
 
-export const listEntries = (params: ListEntriesParams = {}) => {
+type EntriesApiResponse = Entry[] | { items?: Entry[] } | null;
+
+export async function listEntries(params: ListEntriesParams = {}): Promise<Entry[]> {
   const search = new URLSearchParams();
 
   if (params.from) search.append("from", params.from);
@@ -19,8 +21,18 @@ export const listEntries = (params: ListEntriesParams = {}) => {
   const query = search.toString();
   const path = query ? `/api/entries?${query}` : "/api/entries";
 
-  return apiFetch<EntriesResponse>(path);
-};
+  const data = await apiFetch<EntriesApiResponse>(path);
+
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (data && Array.isArray(data.items)) {
+    return data.items;
+  }
+
+  return [];
+}
 
 export const getEntry = (id: string) => {
   return apiFetch<Entry>(`/api/entries/${id}`);

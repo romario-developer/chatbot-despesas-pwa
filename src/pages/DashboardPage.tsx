@@ -4,7 +4,6 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  Legend,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -15,10 +14,10 @@ import {
 import MonthPicker from "../components/MonthPicker";
 import { listEntries } from "../api/entries";
 import { getSummary } from "../api/summary";
-import { loadPlanning } from "../storage/planningStorage";
+import { getPlanning } from "../api/planning";
 import { monthToRange } from "../utils/dateRange";
 import { formatBRL, formatCurrency, formatDate } from "../utils/format";
-import type { Entry, Summary } from "../types";
+import { DEFAULT_PLANNING, type Entry, type Planning, type Summary } from "../types";
 
 const currentMonth = () => new Date().toISOString().slice(0, 7);
 
@@ -53,33 +52,43 @@ const DashboardPage = () => {
 
       try {
         const range = monthToRange(month);
-        const [summaryData, entriesData] = await Promise.all([
+        const [summaryData, entriesData, planningData] = await Promise.all([
           getSummary(month),
           listEntries({ from: range.from, to: range.to }),
+          getPlanning(),
         ]);
 
         const normalizedEntries = Array.isArray(entriesData) ? entriesData : [];
-        const normalizedSummary: Summary = {
-          total: summaryData?.total ?? 0,
-          totalPorCategoria: summaryData?.totalPorCategoria ?? {},
-          totalPorDia: summaryData?.totalPorDia ?? {},
-        };
 
         const sortedEntries = [...normalizedEntries].sort(
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
         );
 
-        const planning = loadPlanning();
-        const salary = planning.salaryByMonth?.[month] ?? 0;
+        const planning = (planningData ?? DEFAULT_PLANNING) as Planning;
+        const salaryValue = Number(planning.salaryByMonth?.[month]);
+        const salary = Number.isFinite(salaryValue) ? salaryValue : 0;
         const extrasList = Array.isArray(planning.extrasByMonth?.[month])
           ? planning.extrasByMonth?.[month]
           : [];
-        const extras = extrasList.reduce((sum, item) => sum + (item?.amount ?? 0), 0);
+        const extras = extrasList.reduce((sum, item) => {
+          const amount = Number(item?.amount);
+          return sum + (Number.isFinite(amount) ? amount : 0);
+        }, 0);
         const fixed = Array.isArray(planning.fixedBills)
-          ? planning.fixedBills.reduce((sum, bill) => sum + (bill?.amount ?? 0), 0)
+          ? planning.fixedBills.reduce((sum, bill) => {
+              const amount = Number(bill?.amount);
+              return sum + (Number.isFinite(amount) ? amount : 0);
+            }, 0)
           : 0;
 
-        setSummary(normalizedSummary);
+        setSummary(
+          summaryData ?? {
+            month,
+            total: 0,
+            totalPorCategoria: [],
+            totalPorDia: [],
+          },
+        );
         setEntriesCount(normalizedEntries.length);
         setLatestEntries(sortedEntries.slice(0, 10));
         setPlanningTotals({ salary, extras, fixed });
@@ -90,6 +99,7 @@ const DashboardPage = () => {
         setSummary(null);
         setLatestEntries([]);
         setEntriesCount(0);
+        setPlanningTotals({ salary: 0, extras: 0, fixed: 0 });
       } finally {
         setIsLoading(false);
       }
@@ -99,19 +109,28 @@ const DashboardPage = () => {
   }, [month]);
 
   const pieData = useMemo(() => {
-    if (!summary) return [];
-    return Object.entries(summary.totalPorCategoria ?? {}).map(
-      ([name, value]) => ({
-        name,
-        value,
-      }),
-    );
+    const list = Array.isArray(summary?.totalPorCategoria)
+      ? summary.totalPorCategoria
+      : [];
+
+    return list
+      .map((item) => ({
+        name: item.category || "Sem categoria",
+        value: Number(item.total) || 0,
+      }))
+      .filter((item) => item.value > 0);
   }, [summary]);
 
-  const barData = useMemo(() => {
-    if (!summary) return [];
-    return Object.entries(summary.totalPorDia ?? {})
-      .map(([date, value]) => ({ date, value }))
+  const dayData = useMemo(() => {
+    const list = Array.isArray(summary?.totalPorDia)
+      ? summary.totalPorDia
+      : [];
+
+    return list
+      .map((item) => ({
+        date: item.date,
+        total: Number(item.total) || 0,
+      }))
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [summary]);
 
@@ -214,39 +233,33 @@ const DashboardPage = () => {
                 Total por categoria
               </h3>
             </div>
-            {pieData.length ? (
-              <div className="h-72">
-                <ResponsiveContainer>
+            {pieData.length === 0 ? (
+              <div className="text-sm text-slate-500">Sem dados neste mes</div>
+            ) : (
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={pieData}
                       dataKey="value"
                       nameKey="name"
-                      cx="50%"
-                      cy="50%"
+                      innerRadius={55}
                       outerRadius={90}
-                      innerRadius={50}
                       paddingAngle={2}
-                      label
                     >
-                      {pieData.map((entry, index) => (
+                      {pieData.map((_, index) => (
                         <Cell
-                          key={entry.name}
+                          key={index}
                           fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]}
                         />
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value: number | string | undefined) =>
-                        formatCurrency(Number(value ?? 0))
-                      }
+                      formatter={(v: unknown) => formatBRL(Number(v) || 0)}
                     />
-                    <Legend />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-            ) : (
-              <p className="text-sm text-slate-500">Sem dados para este mes.</p>
             )}
           </div>
 
@@ -254,24 +267,32 @@ const DashboardPage = () => {
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-slate-900">Total por dia</h3>
             </div>
-            {barData.length ? (
-              <div className="h-72">
-                <ResponsiveContainer>
-                  <BarChart data={barData}>
+            {dayData.length === 0 ? (
+              <div className="text-sm text-slate-500">Sem dados neste mes</div>
+            ) : (
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dayData}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip
-                      formatter={(value: number | string | undefined) =>
-                        formatCurrency(Number(value ?? 0))
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(d: string) => d.slice(8, 10)}
+                    />
+                    <YAxis
+                      tickFormatter={(v: number | string) =>
+                        formatBRL(Number(v) || 0)
                       }
                     />
-                    <Bar dataKey="value" fill="#0f766e" radius={[6, 6, 0, 0]} />
+                    <Tooltip
+                      labelFormatter={(label: string) => `Dia ${label}`}
+                      formatter={(v: unknown) =>
+                        formatBRL(Number(v) || 0)
+                      }
+                    />
+                    <Bar dataKey="total" fill="#0f766e" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-            ) : (
-              <p className="text-sm text-slate-500">Sem dados para este mes.</p>
             )}
           </div>
         </div>

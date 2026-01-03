@@ -2,27 +2,39 @@ import { useEffect, useMemo, useState } from "react";
 import { createTelegramLinkCode, type TelegramLinkCodeResponse } from "../api/telegram";
 import MonthPicker from "../components/MonthPicker";
 import Toast from "../components/Toast";
-import {
-  addExtra,
-  addFixedBill,
-  deleteExtra,
-  deleteFixedBill,
-  getMonthKey,
-  loadPlanning,
-  setSalary,
-  updateExtra,
-  updateFixedBill,
-} from "../storage/planningStorage";
+import { getPlanning, savePlanning } from "../api/planning";
 import { formatBRL, parseCurrencyInput } from "../utils/format";
-import type { ExtraEntry, FixedBill, PlanningData } from "../types";
+import { DEFAULT_PLANNING, type Planning, type PlanningBill, type PlanningExtra } from "../types";
 
 const currentMonth = () => new Date().toISOString().slice(0, 7);
+
+const createId = () => {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+};
+
+const getMonthKey = (value: string | Date) => {
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 7);
+  }
+  if (typeof value === "string" && value.length >= 7) {
+    return value.slice(0, 7);
+  }
+  return new Date().toISOString().slice(0, 7);
+};
 
 type ToastState = { message: string; type: "success" | "error" } | null;
 
 const PlanningPage = () => {
   const [month, setMonth] = useState(currentMonth());
-  const [planning, setPlanning] = useState<PlanningData>(() => loadPlanning());
+  const [planning, setPlanning] = useState<Planning>({
+    salaryByMonth: {},
+    extrasByMonth: {},
+    fixedBills: [],
+  });
+  const [isLoading, setIsLoading] = useState(true);
   const [salaryInput, setSalaryInput] = useState("");
   const [extraForm, setExtraForm] = useState<{
     id?: string;
@@ -49,99 +61,173 @@ const PlanningPage = () => {
   const [telegramLink, setTelegramLink] = useState<TelegramLinkCodeResponse | null>(null);
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
 
-  useEffect(() => {
-    const data = loadPlanning();
-    setPlanning(data);
-  }, [month]);
+  const monthKey = useMemo(() => getMonthKey(month), [month]);
 
   useEffect(() => {
-    const key = getMonthKey(month);
-    const value = planning.salaryByMonth?.[key] ?? 0;
+    const load = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getPlanning();
+        setPlanning(data ?? DEFAULT_PLANNING);
+      } catch {
+        setToast({ message: "Erro ao carregar planejamento", type: "error" });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  useEffect(() => {
+    const value = planning.salaryByMonth?.[monthKey] ?? 0;
     setSalaryInput(value ? String(value) : "");
     setExtraForm((prev) => ({
       ...prev,
-      date: `${key}-01`,
+      date: `${monthKey}-01`,
     }));
-  }, [month, planning.salaryByMonth]);
+  }, [monthKey, planning.salaryByMonth]);
 
-  const salaryValue = planning.salaryByMonth?.[month] ?? 0;
+  const salaryValue = planning.salaryByMonth?.[monthKey] ?? 0;
 
   const monthExtras = useMemo(() => {
-    const list = planning.extrasByMonth?.[month];
+    const list = planning.extrasByMonth?.[monthKey];
     return Array.isArray(list) ? list : [];
-  }, [planning.extrasByMonth, month]);
+  }, [planning.extrasByMonth, monthKey]);
 
   const fixedBills = Array.isArray(planning.fixedBills) ? planning.fixedBills : [];
 
-  const extrasTotal = monthExtras.reduce((sum, item) => sum + (item?.amount ?? 0), 0);
-  const fixedTotal = fixedBills.reduce((sum, bill) => sum + (bill?.amount ?? 0), 0);
+  const extrasTotal = monthExtras.reduce((sum, item) => {
+    const amount = Number(item?.amount);
+    return sum + (Number.isFinite(amount) ? amount : 0);
+  }, 0);
 
-  const handleSaveSalary = () => {
+  const fixedTotal = fixedBills.reduce((sum, bill) => {
+    const amount = Number(bill?.amount);
+    return sum + (Number.isFinite(amount) ? amount : 0);
+  }, 0);
+
+  const handleSaveSalary = async () => {
     const parsed = parseCurrencyInput(salaryInput || "0");
     if (Number.isNaN(parsed)) {
       setErrors((prev) => ({ ...prev, salary: "Valor invalido" }));
       return;
     }
-    const data = setSalary(month, parsed);
-    setPlanning(data);
-    setErrors((prev) => ({ ...prev, salary: undefined }));
-    setToast({ message: "Salario salvo", type: "success" });
+    const next: Planning = {
+      ...planning,
+      salaryByMonth: {
+        ...planning.salaryByMonth,
+        [monthKey]: Number.isFinite(parsed) ? parsed : 0,
+      },
+    };
+
+    setPlanning(next);
+
+    try {
+      await savePlanning(next);
+      setToast({ message: "Salario salvo", type: "success" });
+      setErrors((prev) => ({ ...prev, salary: undefined }));
+    } catch {
+      setToast({ message: "Erro ao salvar salario", type: "error" });
+    }
   };
 
   const resetExtraForm = () => {
     setExtraForm({
       id: undefined,
-      date: `${month}-01`,
+      date: `${monthKey}-01`,
       description: "",
       amount: "",
     });
     setErrors((prev) => ({ ...prev, extra: undefined }));
   };
 
-  const handleSubmitExtra = () => {
+  const handleSubmitExtra = async () => {
     const parsedAmount = parseCurrencyInput(extraForm.amount);
-    if (
-      !extraForm.description.trim() ||
-      !extraForm.date ||
-      Number.isNaN(parsedAmount)
-    ) {
+    const description = extraForm.description.trim();
+    const date = extraForm.date || `${monthKey}-01`;
+    if (!description || !date || Number.isNaN(parsedAmount)) {
       setErrors((prev) => ({ ...prev, extra: "Preencha descricao, data e valor valido" }));
       return;
     }
 
-    if (extraForm.id) {
-      const data = updateExtra(month, extraForm.id, {
-        description: extraForm.description.trim(),
-        date: extraForm.date,
-        amount: parsedAmount,
+    const currentList = Array.isArray(planning.extrasByMonth[monthKey])
+      ? planning.extrasByMonth[monthKey]
+      : [];
+
+    const nextList: PlanningExtra[] = extraForm.id
+      ? currentList.map((item) =>
+          item.id === extraForm.id
+            ? {
+                ...item,
+                id: item.id,
+                description,
+                label: item.label ?? description,
+                date,
+                amount: Number.isFinite(parsedAmount) ? parsedAmount : 0,
+              }
+            : item,
+        )
+      : [
+          ...currentList,
+          {
+            id: extraForm.id ?? createId(),
+            description,
+            label: description,
+            date,
+            amount: Number.isFinite(parsedAmount) ? parsedAmount : 0,
+          },
+        ];
+
+    const nextPlanning: Planning = {
+      ...planning,
+      extrasByMonth: {
+        ...planning.extrasByMonth,
+        [monthKey]: nextList,
+      },
+    };
+
+    setErrors((prev) => ({ ...prev, extra: undefined }));
+    setPlanning(nextPlanning);
+    try {
+      await savePlanning(nextPlanning);
+      setToast({
+        message: extraForm.id ? "Entrada extra atualizada" : "Entrada extra adicionada",
+        type: "success",
       });
-      setPlanning(data);
-      setToast({ message: "Entrada extra atualizada", type: "success" });
-    } else {
-      const data = addExtra(month, {
-        description: extraForm.description.trim(),
-        date: extraForm.date,
-        amount: parsedAmount,
-      });
-      setPlanning(data);
-      setToast({ message: "Entrada extra adicionada", type: "success" });
+    } catch {
+      setToast({ message: "Erro ao salvar entrada extra", type: "error" });
     }
     resetExtraForm();
   };
 
-  const handleEditExtra = (extra: ExtraEntry) => {
+  const handleEditExtra = (extra: PlanningExtra) => {
     setExtraForm({
       id: extra.id,
-      date: extra.date,
-      description: extra.description,
-      amount: String(extra.amount),
+      date: extra.date ?? `${monthKey}-01`,
+      description: extra.description ?? extra.label ?? "",
+      amount: String(extra.amount ?? ""),
     });
   };
 
-  const handleDeleteExtra = (extra: ExtraEntry) => {
-    const data = deleteExtra(month, extra.id);
-    setPlanning(data);
-    setToast({ message: "Entrada extra removida", type: "success" });
+  const handleDeleteExtra = async (extra: PlanningExtra) => {
+    const currentList = Array.isArray(planning.extrasByMonth[monthKey])
+      ? planning.extrasByMonth[monthKey]
+      : [];
+    const nextList = currentList.filter((item) => item.id !== extra.id);
+    const nextPlanning: Planning = {
+      ...planning,
+      extrasByMonth: {
+        ...planning.extrasByMonth,
+        [monthKey]: nextList,
+      },
+    };
+    setPlanning(nextPlanning);
+    try {
+      await savePlanning(nextPlanning);
+      setToast({ message: "Entrada extra removida", type: "success" });
+    } catch {
+      setToast({ message: "Erro ao remover extra", type: "error" });
+    }
     if (extraForm.id === extra.id) {
       resetExtraForm();
     }
@@ -157,11 +243,12 @@ const PlanningPage = () => {
     setErrors((prev) => ({ ...prev, bill: undefined }));
   };
 
-  const handleSubmitBill = () => {
+  const handleSubmitBill = async () => {
     const parsedAmount = parseCurrencyInput(billForm.amount);
     const dueDay = Number(billForm.dueDay);
+    const name = billForm.name.trim();
     if (
-      !billForm.name.trim() ||
+      !name ||
       Number.isNaN(parsedAmount) ||
       Number.isNaN(dueDay) ||
       dueDay < 1 ||
@@ -171,39 +258,68 @@ const PlanningPage = () => {
       return;
     }
 
-    if (billForm.id) {
-      const data = updateFixedBill(billForm.id, {
-        name: billForm.name.trim(),
-        amount: parsedAmount,
-        dueDay,
+    const nextBills: PlanningBill[] = billForm.id
+      ? fixedBills.map((bill) =>
+          bill.id === billForm.id
+            ? {
+                ...bill,
+                id: bill.id,
+                name,
+                label: bill.label ?? name,
+                amount: Number.isFinite(parsedAmount) ? parsedAmount : 0,
+                dueDay,
+              }
+            : bill,
+        )
+      : [
+          ...fixedBills,
+          {
+            id: billForm.id ?? createId(),
+            name,
+            label: name,
+            amount: Number.isFinite(parsedAmount) ? parsedAmount : 0,
+            dueDay,
+          },
+        ];
+
+    const nextPlanning: Planning = { ...planning, fixedBills: nextBills };
+
+    setErrors((prev) => ({ ...prev, bill: undefined }));
+    setPlanning(nextPlanning);
+    try {
+      await savePlanning(nextPlanning);
+      setToast({
+        message: billForm.id ? "Conta fixa atualizada" : "Conta fixa adicionada",
+        type: "success",
       });
-      setPlanning(data);
-      setToast({ message: "Conta fixa atualizada", type: "success" });
-    } else {
-      const data = addFixedBill({
-        name: billForm.name.trim(),
-        amount: parsedAmount,
-        dueDay,
-      });
-      setPlanning(data);
-      setToast({ message: "Conta fixa adicionada", type: "success" });
+    } catch {
+      setToast({ message: "Erro ao salvar conta fixa", type: "error" });
     }
     resetBillForm();
   };
 
-  const handleEditBill = (bill: FixedBill) => {
+  const handleEditBill = (bill: PlanningBill) => {
     setBillForm({
       id: bill.id,
-      name: bill.name,
-      amount: String(bill.amount),
-      dueDay: String(bill.dueDay),
+      name: bill.name ?? bill.label ?? "",
+      amount: String(bill.amount ?? ""),
+      dueDay: bill.dueDay ? String(bill.dueDay) : "1",
     });
   };
 
-  const handleDeleteBill = (bill: FixedBill) => {
-    const data = deleteFixedBill(bill.id);
-    setPlanning(data);
-    setToast({ message: "Conta fixa removida", type: "success" });
+  const handleDeleteBill = async (bill: PlanningBill) => {
+    const nextBills = fixedBills.filter((item) => item.id !== bill.id);
+    const nextPlanning: Planning = {
+      ...planning,
+      fixedBills: nextBills,
+    };
+    setPlanning(nextPlanning);
+    try {
+      await savePlanning(nextPlanning);
+      setToast({ message: "Conta fixa removida", type: "success" });
+    } catch {
+      setToast({ message: "Erro ao remover conta fixa", type: "error" });
+    }
     if (billForm.id === bill.id) {
       resetBillForm();
     }
@@ -242,6 +358,10 @@ const PlanningPage = () => {
     }
   };
 
+  if (isLoading) {
+    return <div className="card p-4 text-sm text-slate-600">Carregando planejamento...</div>;
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -252,7 +372,11 @@ const PlanningPage = () => {
           </p>
         </div>
         <div className="sm:w-60">
-          <MonthPicker label="Mes" value={month} onChange={setMonth} />
+          <MonthPicker
+            label="Mes"
+            value={month}
+            onChange={(value) => setMonth(getMonthKey(value))}
+          />
         </div>
       </div>
 
@@ -354,10 +478,11 @@ const PlanningPage = () => {
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-sm font-semibold text-slate-900">
-                      {extra.description}
+                      {extra.description ?? extra.label ?? "Entrada"}
                     </p>
                     <p className="text-xs text-slate-600">
-                      {extra.date} - {formatBRL(extra.amount)}
+                      {(extra.date ?? `${monthKey}-01`).slice(0, 10)} -{" "}
+                      {formatBRL(Number.isFinite(Number(extra.amount)) ? Number(extra.amount) : 0)}
                     </p>
                   </div>
                   <div className="flex gap-2 text-xs font-semibold">
@@ -458,10 +583,13 @@ const PlanningPage = () => {
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-sm font-semibold text-slate-900">
-                      {bill.name}
+                      {bill.name ?? bill.label ?? "Conta"}
                     </p>
                     <p className="text-xs text-slate-600">
-                      {formatBRL(bill.amount)} - Vence dia {bill.dueDay}
+                      {formatBRL(
+                        Number.isFinite(Number(bill.amount)) ? Number(bill.amount) : 0,
+                      )}{" "}
+                      {bill.dueDay ? `- Vence dia ${bill.dueDay}` : ""}
                     </p>
                   </div>
                   <div className="flex gap-2 text-xs font-semibold">
