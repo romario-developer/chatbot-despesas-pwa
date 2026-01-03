@@ -12,6 +12,7 @@ import {
   YAxis,
 } from "recharts";
 import MonthPicker from "../components/MonthPicker";
+import Toast from "../components/Toast";
 import { listEntries } from "../api/entries";
 import { getSummary } from "../api/summary";
 import { getPlanning } from "../api/planning";
@@ -44,6 +45,9 @@ const DashboardPage = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(
+    null,
+  );
 
   useEffect(() => {
     const loadData = async () => {
@@ -57,6 +61,18 @@ const DashboardPage = () => {
           listEntries({ from: range.from, to: range.to }),
           getPlanning(),
         ]);
+
+        if (import.meta.env?.DEV) {
+          // Log raw response for debugging summary issues in development
+          // eslint-disable-next-line no-console
+          console.debug("[dashboard] summary response", summaryData);
+        }
+
+        const totalValue = Number(summaryData?.total);
+        const summaryValid = summaryData && Number.isFinite(totalValue);
+        if (!summaryValid) {
+          throw new Error("Falha ao carregar resumo do mes");
+        }
 
         const normalizedEntries = Array.isArray(entriesData) ? entriesData : [];
 
@@ -81,21 +97,16 @@ const DashboardPage = () => {
             }, 0)
           : 0;
 
-        setSummary(
-          summaryData ?? {
-            month,
-            total: 0,
-            totalPorCategoria: [],
-            totalPorDia: [],
-          },
-        );
+        setSummary({
+          ...summaryData,
+          total: totalValue,
+        });
         setEntriesCount(normalizedEntries.length);
         setLatestEntries(sortedEntries.slice(0, 10));
         setPlanningTotals({ salary, extras, fixed });
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Erro ao carregar o dashboard.";
-        setError(message);
+        setError("Falha ao carregar resumo do mes");
+        setToast({ message: "Falha ao carregar resumo do mes", type: "error" });
         setSummary(null);
         setLatestEntries([]);
         setEntriesCount(0);
@@ -347,6 +358,14 @@ const DashboardPage = () => {
       </div>
 
       {renderContent()}
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 };
