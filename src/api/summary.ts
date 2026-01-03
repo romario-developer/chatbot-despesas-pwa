@@ -1,7 +1,8 @@
 import { apiFetch } from "./client";
-import type { Summary } from "../types";
+import type { Summary, SummaryCategory, SummaryDay } from "../types";
 
 type RawSummary = {
+  month?: unknown;
   total?: unknown;
   totalPorCategoria?: unknown;
   totalPorDia?: unknown;
@@ -12,32 +13,56 @@ const normalizeNumber = (value: unknown) => {
   return Number.isFinite(num) ? num : 0;
 };
 
-const normalizeRecord = (value: unknown): Record<string, number> => {
-  if (!value || typeof value !== "object") return {};
-
-  const entries = Object.entries(value as Record<string, unknown>);
-  const result: Record<string, number> = {};
-
-  for (const [key, val] of entries) {
-    result[key] = normalizeNumber(val);
+const normalizeCategories = (value: unknown): SummaryCategory[] => {
+  if (Array.isArray(value)) {
+    return value.map((item) => ({
+      category: typeof item?.category === "string" ? item.category : "Sem categoria",
+      total: normalizeNumber((item as { total?: unknown })?.total),
+    }));
   }
 
-  return result;
+  if (value && typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>).map(
+      ([category, total]) => ({
+        category,
+        total: normalizeNumber(total),
+      }),
+    );
+  }
+
+  return [];
+};
+
+const normalizeDays = (value: unknown): SummaryDay[] => {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => ({
+        date: typeof item?.date === "string" ? item.date : "",
+        total: normalizeNumber((item as { total?: unknown })?.total),
+      }))
+      .filter((item) => item.date);
+  }
+
+  if (value && typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>)
+      .map(([date, total]) => ({
+        date,
+        total: normalizeNumber(total),
+      }))
+      .filter((item) => item.date);
+  }
+
+  return [];
 };
 
 export const getSummary = async (month: string): Promise<Summary> => {
   const search = new URLSearchParams({ month });
   const data = await apiFetch<RawSummary>(`/api/summary?${search.toString()}`);
 
-  if (!data || typeof data !== "object") {
-    return { total: 0, totalPorCategoria: {}, totalPorDia: {} };
-  }
+  const total = normalizeNumber(data?.total);
+  const totalPorCategoria = normalizeCategories(data?.totalPorCategoria);
+  const totalPorDia = normalizeDays(data?.totalPorDia);
+  const monthValue = typeof data?.month === "string" ? data.month : month;
 
-  const total = normalizeNumber((data as { total?: unknown }).total);
-  const totalPorCategoria = normalizeRecord(
-    (data as { totalPorCategoria?: unknown }).totalPorCategoria,
-  );
-  const totalPorDia = normalizeRecord((data as { totalPorDia?: unknown }).totalPorDia);
-
-  return { total, totalPorCategoria, totalPorDia };
+  return { month: monthValue, total, totalPorCategoria, totalPorDia };
 };

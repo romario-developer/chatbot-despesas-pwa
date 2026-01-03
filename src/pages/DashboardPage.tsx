@@ -59,11 +59,6 @@ const DashboardPage = () => {
         ]);
 
         const normalizedEntries = Array.isArray(entriesData) ? entriesData : [];
-        const normalizedSummary: Summary = {
-          total: summaryData?.total ?? 0,
-          totalPorCategoria: summaryData?.totalPorCategoria ?? {},
-          totalPorDia: summaryData?.totalPorDia ?? {},
-        };
 
         const sortedEntries = [...normalizedEntries].sort(
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
@@ -86,7 +81,14 @@ const DashboardPage = () => {
             }, 0)
           : 0;
 
-        setSummary(normalizedSummary);
+        setSummary(
+          summaryData ?? {
+            month,
+            total: 0,
+            totalPorCategoria: [],
+            totalPorDia: [],
+          },
+        );
         setEntriesCount(normalizedEntries.length);
         setLatestEntries(sortedEntries.slice(0, 10));
         setPlanningTotals({ salary, extras, fixed });
@@ -113,22 +115,24 @@ const DashboardPage = () => {
 
     return list
       .map((item) => ({
-        name: item.category ?? "Sem categoria",
+        name: item.category || "Sem categoria",
         value: Number(item.total) || 0,
       }))
       .filter((item) => item.value > 0);
-  }, [summary?.totalPorCategoria]);
+  }, [summary]);
 
   const dayData = useMemo(() => {
-    const list = Array.isArray(summary?.totalPorDia) ? summary.totalPorDia : [];
+    const list = Array.isArray(summary?.totalPorDia)
+      ? summary.totalPorDia
+      : [];
+
     return list
       .map((item) => ({
         date: item.date,
         total: Number(item.total) || 0,
       }))
-      .filter((x) => x.date)
       .sort((a, b) => a.date.localeCompare(b.date));
-  }, [summary?.totalPorDia]);
+  }, [summary]);
 
   const daysInMonth = useMemo(() => {
     const [year, monthStr] = month.split("-").map(Number);

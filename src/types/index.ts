@@ -13,11 +13,22 @@ export interface Entry {
   updatedAt: string;
 }
 
-export interface Summary {
+export type SummaryCategory = {
+  category: string;
   total: number;
-  totalPorCategoria: Record<string, number>;
-  totalPorDia: Record<string, number>;
-}
+};
+
+export type SummaryDay = {
+  date: string;
+  total: number;
+};
+
+export type Summary = {
+  month: string;
+  total: number;
+  totalPorCategoria: SummaryCategory[];
+  totalPorDia: SummaryDay[];
+};
 
 export type EntriesResponse = Entry[];
 
