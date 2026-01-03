@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createTelegramLinkCode, type TelegramLinkCodeResponse } from "../api/telegram";
 import MonthPicker from "../components/MonthPicker";
 import Toast from "../components/Toast";
 import {
@@ -45,6 +46,8 @@ const PlanningPage = () => {
   });
   const [errors, setErrors] = useState<{ salary?: string; extra?: string; bill?: string }>({});
   const [toast, setToast] = useState<ToastState>(null);
+  const [telegramLink, setTelegramLink] = useState<TelegramLinkCodeResponse | null>(null);
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
 
   useEffect(() => {
     const data = loadPlanning();
@@ -203,6 +206,39 @@ const PlanningPage = () => {
     setToast({ message: "Conta fixa removida", type: "success" });
     if (billForm.id === bill.id) {
       resetBillForm();
+    }
+  };
+
+  const handleGenerateTelegramCode = async () => {
+    setIsGeneratingLink(true);
+    try {
+      const data = await createTelegramLinkCode();
+      setTelegramLink(data);
+      setToast({ message: "Codigo gerado", type: "success" });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Erro ao gerar o codigo.";
+      setToast({ message, type: "error" });
+    } finally {
+      setIsGeneratingLink(false);
+    }
+  };
+
+  const handleCopyTelegramCode = async () => {
+    if (!telegramLink?.code) return;
+    if (!navigator.clipboard?.writeText) {
+      setToast({
+        message: "Copie manualmente: recurso de copia indisponivel.",
+        type: "error",
+      });
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(telegramLink.code);
+      setToast({ message: "Codigo copiado", type: "success" });
+    } catch {
+      setToast({ message: "Nao foi possivel copiar o codigo.", type: "error" });
     }
   };
 
@@ -451,6 +487,61 @@ const PlanningPage = () => {
             <p className="py-2 text-sm text-slate-500">Nenhuma conta fixa cadastrada.</p>
           )}
         </div>
+      </div>
+
+      <div className="card space-y-3 p-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-900">Conectar Telegram</h3>
+            <p className="text-sm text-slate-600">
+              Gere um codigo e use no bot para vincular sua conta.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleGenerateTelegramCode}
+            disabled={isGeneratingLink}
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-80"
+          >
+            {isGeneratingLink ? "Gerando..." : "Conectar Telegram"}
+          </button>
+        </div>
+
+        {telegramLink ? (
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+              Seu codigo
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+              <span className="text-2xl font-mono font-semibold text-slate-900">
+                {telegramLink.code}
+              </span>
+              <button
+                type="button"
+                onClick={handleCopyTelegramCode}
+                className="w-fit rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-primary hover:text-primary"
+              >
+                Copiar
+              </button>
+            </div>
+            <div className="text-sm text-slate-700">
+              No Telegram, envie:{" "}
+              <code className="rounded bg-white px-2 py-1 font-mono text-primary">
+                /link {telegramLink.code}
+              </code>
+            </div>
+            {telegramLink.expiresAt && (
+              <p className="text-xs text-slate-500">
+                Valido ate: {telegramLink.expiresAt}
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-slate-600">
+            Clique em "Conectar Telegram" para gerar um codigo e, no aplicativo do Telegram,
+            envie: <span className="font-mono font-semibold text-primary">/link CODIGO</span>.
+          </p>
+        )}
       </div>
 
       {toast && (
