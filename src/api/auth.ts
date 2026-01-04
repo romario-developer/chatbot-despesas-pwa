@@ -1,9 +1,10 @@
-import { apiFetch } from "./client";
+import { apiRequest } from "./client";
 import type { AuthResponse } from "../types";
 
 export const login = async (password: string): Promise<AuthResponse> => {
-  return apiFetch<AuthResponse>("/api/auth/login", {
+  return apiRequest<AuthResponse>({
+    url: "/api/auth/login",
     method: "POST",
-    body: JSON.stringify({ password }),
+    data: { password },
   });
 };

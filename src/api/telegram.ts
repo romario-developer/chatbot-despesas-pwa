@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { apiRequest } from "./client";
 
 export type TelegramLinkCodeResponse = {
   code: string;
@@ -6,7 +6,8 @@ export type TelegramLinkCodeResponse = {
 };
 
 export const createTelegramLinkCode = () => {
-  return apiFetch<TelegramLinkCodeResponse>("/api/telegram/link-code", {
+  return apiRequest<TelegramLinkCodeResponse>({
+    url: "/api/telegram/link-code",
     method: "POST",
   });
 };

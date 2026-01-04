@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { apiRequest } from "./client";
 import {
   DEFAULT_PLANNING,
   type Planning,
@@ -93,18 +93,19 @@ const normalizePlanning = (data?: Partial<Planning> | null): Planning => {
 };
 
 export async function getPlanning(): Promise<Planning> {
-  const data = await apiFetch<Planning | null>("/api/planning");
+  const data = await apiRequest<Planning | null>({
+    url: "/api/planning",
+    method: "GET",
+  });
   return normalizePlanning(data ?? DEFAULT_PLANNING);
 }
 
 export async function savePlanning(planning: Planning): Promise<Planning> {
   const payload = normalizePlanning(planning);
-  const data = await apiFetch<Planning | null>("/api/planning", {
+  const data = await apiRequest<Planning | null>({
+    url: "/api/planning",
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
+    data: payload,
   });
 
   return normalizePlanning(data ?? DEFAULT_PLANNING);

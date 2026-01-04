@@ -1,4 +1,8 @@
-import { apiFetch } from "./client";
+import { apiRequest } from "./client";
 import type { CategoriesResponse } from "../types";
 
-export const listCategories = () => apiFetch<CategoriesResponse>("/api/categories");
+export const listCategories = () =>
+  apiRequest<CategoriesResponse>({
+    url: "/api/categories",
+    method: "GET",
+  });

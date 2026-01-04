@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { apiRequest } from "./client";
 import type { Summary, SummaryCategory, SummaryDay } from "../types";
 
 type RawSummary = {
@@ -57,7 +57,10 @@ const normalizeDays = (value: unknown): SummaryDay[] => {
 
 export const getSummary = async (month: string): Promise<Summary> => {
   const search = new URLSearchParams({ month });
-  const data = await apiFetch<RawSummary>(`/api/summary?${search.toString()}`);
+  const data = await apiRequest<RawSummary>({
+    url: `/api/summary?${search.toString()}`,
+    method: "GET",
+  });
 
   const total = normalizeNumber(data?.total);
   const totalPorCategoria = normalizeCategories(data?.totalPorCategoria);

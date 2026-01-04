@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { login } from "../api/auth";
 import { getStoredToken, saveToken } from "../api/client";
+import { apiBaseURL } from "../services/api";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -25,6 +26,11 @@ const LoginPage = () => {
     setError(null);
     setIsLoading(true);
     try {
+      if (import.meta.env.DEV) {
+        console.log("[login] baseURL:", apiBaseURL);
+        console.log("[login] endpoint:", "/api/auth/login");
+      }
+
       const response = await login(password);
       saveToken(response.token);
       navigate(from, { replace: true });

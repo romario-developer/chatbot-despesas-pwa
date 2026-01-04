@@ -1,5 +1,12 @@
-const API_BASE_URL = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+import type { AxiosError, AxiosRequestConfig } from "axios";
+import { api } from "../services/api";
+
 const AUTH_TOKEN_KEY = "despesas_token";
+
+type ApiErrorResponse = {
+  message?: string;
+  error?: string;
+};
 
 export const getStoredToken = () => localStorage.getItem(AUTH_TOKEN_KEY);
 
@@ -13,70 +20,50 @@ const redirectToLogin = () => {
   }
 };
 
-export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const baseUrl = API_BASE_URL || window.location.origin;
-  const headers = new Headers(options.headers);
+const parseErrorMessage = (error: AxiosError<ApiErrorResponse>) => {
+  const responseData = error.response?.data;
+  if (responseData && typeof responseData === "object") {
+    return responseData.message || responseData.error;
+  }
+
+  if (typeof error.response?.data === "string") {
+    return error.response.data;
+  }
+
+  return error.message || "Nao foi possivel completar a requisicao.";
+};
+
+api.interceptors.request.use((config) => {
   const token = getStoredToken();
-
   if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
+    config.headers = config.headers ?? {};
+    (config.headers as Record<string, string>).Authorization = `Bearer ${token}`;
   }
+  return config;
+});
 
-  const hasBody = options.body !== undefined;
-  if (hasBody && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
-  }
+api.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError<ApiErrorResponse>) => {
+    const status = error.response?.status;
 
-  let response: Response;
-  try {
-    response = await fetch(`${baseUrl}${path}`, {
-      ...options,
-      headers,
-      cache: "no-store",
-    });
-  } catch (err) {
-    const message =
-      err instanceof Error
-        ? err.message
-        : "Nao foi possivel se conectar ao servidor.";
-    throw new Error(message);
-  }
+    if (status === 401) {
+      clearToken();
+      redirectToLogin();
+      return Promise.reject(new Error("Credenciais inválidas ou token ausente."));
+    }
 
-  if (response.status === 401) {
-    clearToken();
-    redirectToLogin();
-    throw new Error("Sessao expirada. Faca login novamente.");
-  }
+    if (status === 404) {
+      return Promise.reject(
+        new Error("Endpoint não encontrado. Verifique VITE_API_URL e rota /api/auth/login."),
+      );
+    }
 
-  if (response.status === 204) {
-    return null as T;
-  }
+    return Promise.reject(new Error(parseErrorMessage(error)));
+  },
+);
 
-  const contentType = response.headers.get("content-type") ?? "";
-  const isJson = contentType.toLowerCase().includes("application/json");
-  const text = await response.text();
-
-  const parsed = isJson && text
-    ? (() => {
-        try {
-          return JSON.parse(text);
-        } catch {
-          return null;
-        }
-      })()
-    : null;
-
-  if (!response.ok) {
-    const message =
-      (parsed as { message?: string } | null)?.message ||
-      (typeof parsed === "string" ? parsed : text) ||
-      "Nao foi possivel completar a requisicao.";
-    throw new Error(message);
-  }
-
-  if (!isJson) {
-    return null as T;
-  }
-
-  return (parsed ?? null) as T;
-}
+export const apiRequest = async <T>(config: AxiosRequestConfig): Promise<T> => {
+  const response = await api.request<T>(config);
+  return (response.data ?? null) as T;
+};

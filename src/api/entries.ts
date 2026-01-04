@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { apiRequest } from "./client";
 import type { Entry, EntryPayload } from "../types";
 
 export type ListEntriesParams = {
@@ -21,7 +21,10 @@ export async function listEntries(params: ListEntriesParams = {}): Promise<Entry
   const query = search.toString();
   const path = query ? `/api/entries?${query}` : "/api/entries";
 
-  const data = await apiFetch<EntriesApiResponse>(path);
+  const data = await apiRequest<EntriesApiResponse>({
+    url: path,
+    method: "GET",
+  });
 
   if (Array.isArray(data)) {
     return data;
@@ -35,25 +38,31 @@ export async function listEntries(params: ListEntriesParams = {}): Promise<Entry
 }
 
 export const getEntry = (id: string) => {
-  return apiFetch<Entry>(`/api/entries/${id}`);
+  return apiRequest<Entry>({
+    url: `/api/entries/${id}`,
+    method: "GET",
+  });
 };
 
 export const createEntry = (payload: EntryPayload) => {
-  return apiFetch<Entry>("/api/entries", {
+  return apiRequest<Entry>({
+    url: "/api/entries",
     method: "POST",
-    body: JSON.stringify(payload),
+    data: payload,
   });
 };
 
 export const updateEntry = (id: string, payload: EntryPayload) => {
-  return apiFetch<Entry>(`/api/entries/${id}`, {
+  return apiRequest<Entry>({
+    url: `/api/entries/${id}`,
     method: "PUT",
-    body: JSON.stringify(payload),
+    data: payload,
   });
 };
 
 export const deleteEntry = (id: string) => {
-  return apiFetch<void>(`/api/entries/${id}`, {
+  return apiRequest<void>({
+    url: `/api/entries/${id}`,
     method: "DELETE",
   });
 };
