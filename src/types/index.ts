@@ -23,12 +23,12 @@ export type SummaryDay = {
   total: number;
 };
 
-export interface Summary {
+export type Summary = {
   month: string;
   total: number;
   totalPorCategoria: SummaryCategory[];
   totalPorDia: SummaryDay[];
-}
+};
 
 export type EntriesResponse = Entry[];
 
@@ -42,40 +42,20 @@ export interface EntryPayload {
   source?: string;
 }
 
-export interface ExtraEntry {
-  id: string;
-  date: string;
-  description: string;
-  amount: number;
-}
-
-export interface FixedBill {
-  id: string;
-  name: string;
-  amount: number;
-  dueDay: number;
-}
-
-export interface PlanningData {
-  salaryByMonth: Record<string, number>;
-  extrasByMonth: Record<string, ExtraEntry[]>;
-  fixedBills: FixedBill[];
-}
-
 export type PlanningExtra = {
   id: string;
   label?: string;
+  amount: number;
   description?: string;
   date?: string;
-  amount: number;
 };
 
 export type PlanningBill = {
   id: string;
   label?: string;
-  name?: string;
   amount: number;
   dueDay?: number;
+  name?: string;
 };
 
 export type Planning = {
@@ -89,3 +69,7 @@ export const DEFAULT_PLANNING: Planning = {
   extrasByMonth: {},
   fixedBills: [],
 };
+
+export type ExtraEntry = PlanningExtra;
+export type FixedBill = PlanningBill;
+export type PlanningData = Planning;
