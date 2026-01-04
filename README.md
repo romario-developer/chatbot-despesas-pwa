@@ -13,14 +13,20 @@ PWA em React + TypeScript + Tailwind consumindo a API de despesas.
 
 ## Variaveis de ambiente
 ```
+# Base da API - nao inclua /api no final
 VITE_API_URL=https://chatbot-despesas.onrender.com
 ```
-Use `import.meta.env.VITE_API_URL` no codigo (ja configurado).
+O frontend prefixa todas as rotas com `/api/...`. Se `VITE_API_URL` terminar com `/api`, a URL final ficara duplicada (`/api/api/...`) e resultara em 404.
+
+## Testes rapidos da API (curl)
+- `curl -i https://<host>/api/health`
+- `curl -i -X POST https://<host>/api/auth/login -H "Content-Type: application/json" -d '{"password":"<senha>"}'`
+As respostas esperadas sao HTTP 200 para `/api/health` (ou 401 se protegido) e HTTP 200/401 para `/api/auth/login` dependendo das credenciais.
 
 ## Build / Producao (Render Static Site)
 - Build command: `npm ci && npm run build`
 - Publish directory: `dist`
-- Environment: defina `VITE_API_URL`
+- Environment: defina `VITE_API_URL` (sem `/api`) nas variaveis do Render ou do host escolhido, garantindo que o valor exista tambem no ambiente de build.
 
 ## Funcionalidades
 - Autenticacao por senha unica, token em `localStorage`, rotas protegidas, logout
