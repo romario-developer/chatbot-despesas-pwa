@@ -4,6 +4,7 @@ import { getEntry, listEntries, updateEntry } from "../api/entries";
 import { listCategories } from "../api/categories";
 import EntryForm from "../components/EntryForm";
 import { monthToRange } from "../utils/dateRange";
+import { notifyEntriesChanged } from "../utils/entriesEvents";
 import type { Entry } from "../types";
 
 const currentMonth = () => new Date().toISOString().slice(0, 7);
@@ -86,6 +87,7 @@ const EntryEditPage = () => {
     setError(null);
     try {
       await updateEntry(id, payload);
+      notifyEntriesChanged();
       navigate("/entries", {
         replace: true,
         state: { toast: { message: "Lancamento atualizado", type: "success" as const } },

@@ -12,6 +12,12 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith("/api/"),
+            handler: "NetworkOnly",
+          },
+        ],
       },
       includeAssets: ["icons/icon-192x192.png", "icons/icon-512x512.png"],
       manifest: {

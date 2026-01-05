@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -19,6 +19,7 @@ import { getPlanning } from "../api/planning";
 import { monthToRange } from "../utils/dateRange";
 import { formatBRL, formatCurrency, formatDate } from "../utils/format";
 import { DEFAULT_PLANNING, type Entry, type Planning, type Summary } from "../types";
+import { ENTRIES_CHANGED } from "../utils/entriesEvents";
 
 const currentMonth = () => new Date().toISOString().slice(0, 7);
 
@@ -49,10 +50,12 @@ const DashboardPage = () => {
     null,
   );
 
-  useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      setError(null);
+  const loadData = useCallback(
+    async ({ silent }: { silent?: boolean } = {}) => {
+      if (!silent) {
+        setIsLoading(true);
+        setError(null);
+      }
 
       try {
         const range = monthToRange(month);
@@ -104,22 +107,53 @@ const DashboardPage = () => {
         setEntriesCount(normalizedEntries.length);
         setLatestEntries(sortedEntries.slice(0, 10));
         setPlanningTotals({ salary, extras, fixed });
+        setError(null);
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Falha ao carregar resumo do mes";
-        setError(message);
-        setToast({ message, type: "error" });
-        setSummary(null);
-        setLatestEntries([]);
-        setEntriesCount(0);
-        setPlanningTotals({ salary: 0, extras: 0, fixed: 0 });
+        if (!silent) {
+          setError(message);
+          setToast({ message, type: "error" });
+          setSummary(null);
+          setLatestEntries([]);
+          setEntriesCount(0);
+          setPlanningTotals({ salary: 0, extras: 0, fixed: 0 });
+        }
       } finally {
-        setIsLoading(false);
+        if (!silent) {
+          setIsLoading(false);
+        }
+      }
+    },
+    [month],
+  );
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    const refresh = () => loadData({ silent: true });
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        refresh();
       }
     };
 
-    loadData();
-  }, [month]);
+    const intervalId = window.setInterval(refresh, 30000);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("online", refresh);
+    window.addEventListener(ENTRIES_CHANGED, refresh);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("online", refresh);
+      window.removeEventListener(ENTRIES_CHANGED, refresh);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [loadData]);
 
   const pieData = useMemo(() => {
     const list = Array.isArray(summary?.totalPorCategoria)

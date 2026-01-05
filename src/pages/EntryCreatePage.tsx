@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { createEntry } from "../api/entries";
 import { listCategories } from "../api/categories";
 import EntryForm from "../components/EntryForm";
+import { notifyEntriesChanged } from "../utils/entriesEvents";
 
 const EntryCreatePage = () => {
   const navigate = useNavigate();
@@ -33,6 +34,7 @@ const EntryCreatePage = () => {
     setError(null);
     try {
       await createEntry(payload);
+      notifyEntriesChanged();
       navigate("/entries", {
         replace: true,
         state: { toast: { message: "Lancamento criado", type: "success" as const } },

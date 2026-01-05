@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { listCategories } from "../api/categories";
 import { deleteEntry, listEntries } from "../api/entries";
@@ -6,6 +6,7 @@ import MonthPicker from "../components/MonthPicker";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Toast from "../components/Toast";
 import { monthToRange } from "../utils/dateRange";
+import { ENTRIES_CHANGED, notifyEntriesChanged } from "../utils/entriesEvents";
 import { formatCurrency, formatDate } from "../utils/format";
 import type { Entry } from "../types";
 
@@ -48,9 +49,11 @@ const EntriesPage = () => {
     loadCategories();
   }, []);
 
-  useEffect(() => {
-    const loadEntries = async () => {
-      setIsLoading(true);
+  const loadEntries = useCallback(
+    async ({ silent }: { silent?: boolean } = {}) => {
+      if (!silent) {
+        setIsLoading(true);
+      }
       setError(null);
 
       try {
@@ -68,18 +71,49 @@ const EntriesPage = () => {
         );
 
         setEntries(sorted);
+        setError(null);
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Erro ao carregar os lancamentos.";
-        setError(message);
-        setEntries([]);
+        if (!silent) {
+          setError(message);
+          setEntries([]);
+        }
       } finally {
-        setIsLoading(false);
+        if (!silent) {
+          setIsLoading(false);
+        }
+      }
+    },
+    [month, category, search],
+  );
+
+  useEffect(() => {
+    loadEntries();
+  }, [loadEntries]);
+
+  useEffect(() => {
+    const refresh = () => loadEntries({ silent: true });
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        refresh();
       }
     };
 
-    loadEntries();
-  }, [month, category, search]);
+    const intervalId = window.setInterval(refresh, 30000);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("online", refresh);
+    window.addEventListener(ENTRIES_CHANGED, refresh);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("online", refresh);
+      window.removeEventListener(ENTRIES_CHANGED, refresh);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [loadEntries]);
 
   const safeCategories = Array.isArray(categories)
     ? categories
@@ -101,6 +135,7 @@ const EntriesPage = () => {
         const current = Array.isArray(prev) ? prev : [];
         return current.filter((item) => item.id !== entryToDelete.id);
       });
+      notifyEntriesChanged();
       setToast({ message: "Lancamento removido", type: "success" });
     } catch (err) {
       const message =
