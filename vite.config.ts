@@ -14,6 +14,11 @@ export default defineConfig({
         clientsClaim: true,
         runtimeCaching: [
           {
+            urlPattern: ({ url }) =>
+              url.pathname.startsWith("/api/admin/exports/expenses.csv"),
+            handler: "NetworkOnly",
+          },
+          {
             urlPattern: ({ url }) => url.pathname.startsWith("/api/"),
             handler: "NetworkOnly",
           },
