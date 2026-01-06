@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import MonthPicker from "../components/MonthPicker";
 import Toast from "../components/Toast";
+import ExportCsvButton from "../components/ExportCsvButton";
 import { listEntries } from "../api/entries";
 import { getSummary } from "../api/summary";
 import { getPlanning } from "../api/planning";
@@ -388,8 +389,11 @@ const DashboardPage = () => {
             Resumo mensal, graficos e ultimos lancamentos.
           </p>
         </div>
-        <div className="sm:w-60">
-          <MonthPicker label="Mes" value={month} onChange={setMonth} />
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">
+          <div className="sm:w-60">
+            <MonthPicker label="Mes" value={month} onChange={setMonth} />
+          </div>
+          <ExportCsvButton selectedMonth={month} />
         </div>
       </div>
 
