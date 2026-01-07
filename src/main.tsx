@@ -12,6 +12,12 @@ export const updateSW = registerSW({
   onOfflineReady() {
     console.log("PWA pronto para uso offline");
   },
+  onRegisteredSW(_swUrl, registration) {
+    if (!registration) return;
+    // Periodic update check to surface new versions without disrupting offline usage.
+    registration.update();
+    window.setInterval(() => registration.update(), 60 * 60 * 1000);
+  },
 });
 
 const rootElement = document.getElementById("root");

@@ -12,6 +12,7 @@ const linkClasses = ({ isActive }: { isActive: boolean }) =>
 const AppLayout = () => {
   const navigate = useNavigate();
   const [showUpdate, setShowUpdate] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     const handler = () => setShowUpdate(true);
@@ -22,6 +23,15 @@ const AppLayout = () => {
   const handleLogout = () => {
     clearToken();
     navigate("/login", { replace: true });
+  };
+
+  const handleUpdate = async () => {
+    setIsUpdating(true);
+    try {
+      await updateSW(true);
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   return (
@@ -55,13 +65,15 @@ const AppLayout = () => {
       {showUpdate && (
         <div className="fixed bottom-4 left-4 right-4 z-50">
           <div className="flex flex-col items-start justify-between gap-3 rounded-lg bg-blue-600 p-4 text-white shadow-lg sm:flex-row sm:items-center">
-            <span className="text-sm font-semibold">Nova versão disponível</span>
+            <span className="text-sm font-semibold">Nova versao disponivel</span>
             <button
               type="button"
-              onClick={() => updateSW(true)}
-              className="rounded bg-white px-3 py-1 text-sm font-semibold text-blue-600 transition hover:bg-blue-50"
+              onClick={handleUpdate}
+              className="rounded bg-white px-3 py-1 text-sm font-semibold text-blue-600 transition hover:bg-blue-50 disabled:opacity-70"
+              disabled={isUpdating}
+              aria-label="Atualizar agora"
             >
-              Atualizar
+              {isUpdating ? "Atualizando..." : "Atualizar"}
             </button>
           </div>
         </div>
