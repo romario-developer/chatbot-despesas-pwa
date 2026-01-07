@@ -23,3 +23,17 @@ export const parseCurrencyInput = (input: string) => {
   const value = Number(normalized);
   return Number.isFinite(value) ? value : NaN;
 };
+
+export const safeNumber = (value: unknown): number => {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+export const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+
+export const formatPercent = (value: number) => {
+  const clamped = clamp(value, 0, 100);
+  const decimals = Number.isInteger(clamped) ? 0 : 1;
+  return `${clamped.toFixed(decimals)}%`;
+};

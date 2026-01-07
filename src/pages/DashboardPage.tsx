@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -11,16 +11,22 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { useNavigate } from "react-router-dom";
 import MonthPicker from "../components/MonthPicker";
 import Toast from "../components/Toast";
 import ExportCsvButton from "../components/ExportCsvButton";
+import DashboardSection from "../components/ui/DashboardSection";
+import InsightCard from "../components/dashboard/cards/InsightCard";
+import MetricCard from "../components/dashboard/cards/MetricCard";
+import ProgressCard from "../components/dashboard/cards/ProgressCard";
 import { listEntries } from "../api/entries";
 import { getSummary } from "../api/summary";
 import { getPlanning } from "../api/planning";
 import { monthToRange } from "../utils/dateRange";
-import { formatBRL, formatCurrency, formatDate } from "../utils/format";
+import { formatBRL, formatDate, safeNumber } from "../utils/format";
 import { DEFAULT_PLANNING, type Entry, type Planning, type Summary } from "../types";
 import { ENTRIES_CHANGED } from "../utils/entriesEvents";
+import { cardBase, cardHover, gridGap, subtleText } from "../styles/dashboardTokens";
 
 const currentMonth = () => new Date().toISOString().slice(0, 7);
 
@@ -36,6 +42,7 @@ const CATEGORY_COLORS = [
 ];
 
 const DashboardPage = () => {
+  const navigate = useNavigate();
   const [month, setMonth] = useState(currentMonth());
   const [summary, setSummary] = useState<Summary | null>(null);
   const [latestEntries, setLatestEntries] = useState<Entry[]>([]);
@@ -50,6 +57,9 @@ const DashboardPage = () => {
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(
     null,
   );
+  const [chartMode, setChartMode] = useState<"summary" | "daily">("summary");
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const actionsRef = useRef<HTMLDivElement | null>(null);
 
   const loadData = useCallback(
     async ({ silent }: { silent?: boolean } = {}) => {
@@ -156,6 +166,30 @@ const DashboardPage = () => {
     };
   }, [loadData]);
 
+  useEffect(() => {
+    if (!actionsOpen) return;
+
+    const handleClick = (event: MouseEvent) => {
+      if (!actionsRef.current?.contains(event.target as Node)) {
+        setActionsOpen(false);
+      }
+    };
+
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setActionsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [actionsOpen]);
+
   const pieData = useMemo(() => {
     const list = Array.isArray(summary?.totalPorCategoria)
       ? summary.totalPorCategoria
@@ -192,20 +226,87 @@ const DashboardPage = () => {
 
   const safeLatestEntries = Array.isArray(latestEntries) ? latestEntries : [];
   const receita = planningTotals.salary + planningTotals.extras;
-  const gastos = summary?.total ?? 0;
+  const gastos = safeNumber(summary?.total);
   const saldo = receita - gastos;
   const saldoPrevisto = receita - (gastos + planningTotals.fixed);
+  const dividasTotal = 0;
+
+  const topCategory = useMemo(() => {
+    if (!pieData.length) return null;
+    const sorted = [...pieData].sort((a, b) => b.value - a.value);
+    return sorted[0] ?? null;
+  }, [pieData]);
+
+  const insights = useMemo(() => {
+    const items: Array<{
+      title: string;
+      description: string;
+      tag?: string;
+      tone?: "info" | "warning" | "success";
+    }> = [];
+
+    if (gastos > receita) {
+      items.push({
+        title: "Voce gastou mais do que ganhou",
+        description: "Considere revisar seus gastos para fechar o mes no azul.",
+        tag: "Alerta",
+        tone: "warning",
+      });
+    }
+
+    if (topCategory) {
+      items.push({
+        title: "Maior gasto do mes",
+        description: `${topCategory.name} lidera com ${formatBRL(topCategory.value)}.`,
+        tag: "Dica",
+        tone: "info",
+      });
+    }
+
+    if (saldo > 0) {
+      items.push({
+        title: "Saldo positivo",
+        description: `Voce terminou o mes com ${formatBRL(saldo)} disponiveis.`,
+        tag: "Boa noticia",
+        tone: "success",
+      });
+    }
+
+    return items;
+  }, [gastos, receita, saldo, topCategory]);
+
+  const receitaDespesasData = useMemo(
+    () => [
+      { name: "Receitas", value: receita, color: "#0ea5e9" },
+      { name: "Despesas", value: gastos, color: "#f97316" },
+    ],
+    [receita, gastos],
+  );
+
+  const handleMissingRoute = (label: string) => {
+    // eslint-disable-next-line no-console
+    console.log(`TODO: rota para ${label}`);
+  };
+
+  const handleQuickAction = (type: "expense" | "income" | "debt") => {
+    setActionsOpen(false);
+    if (type === "debt") {
+      handleMissingRoute("dividas");
+      return;
+    }
+    navigate("/entries/new");
+  };
 
   const renderContent = () => {
     if (isLoading) {
       return (
-        <div className="card p-4 text-sm text-slate-600">Carregando dados...</div>
+        <div className={`${cardBase} ${subtleText}`}>Carregando dados...</div>
       );
     }
 
     if (error) {
       return (
-        <div className="card border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <div className={`${cardBase} border-rose-200 bg-rose-50 text-sm text-rose-700`}>
           {error}
         </div>
       );
@@ -213,191 +314,354 @@ const DashboardPage = () => {
 
     if (!summary) {
       return (
-        <div className="card p-4 text-sm text-slate-600">
+        <div className={`${cardBase} ${subtleText}`}>
           Selecione um mes para visualizar o resumo.
         </div>
       );
     }
 
+    const quickLinks = [
+      {
+        title: "Transacoes",
+        subtitle: "Lancamentos e filtros",
+        onClick: () => navigate("/entries"),
+      },
+      {
+        title: "Categorias",
+        subtitle: "Em breve",
+        onClick: () => handleMissingRoute("categorias"),
+      },
+      {
+        title: "Dividas",
+        subtitle: "Em breve",
+        onClick: () => handleMissingRoute("dividas"),
+      },
+      {
+        title: "Economias/Metas",
+        subtitle: "Em breve",
+        onClick: () => handleMissingRoute("metas"),
+      },
+    ];
+
+    const hasReceitaDespesas = receitaDespesasData.some((item) => item.value > 0);
+
     return (
-      <div className="space-y-6">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="card p-4">
-            <p className="text-sm text-slate-600">Total do mes</p>
-            <p className="mt-2 text-2xl font-semibold text-primary">
-              {formatCurrency(summary.total)}
-            </p>
+      <div className="space-y-8">
+        <DashboardSection title="Resumo do mes">
+          <div className={`grid ${gridGap} sm:grid-cols-2 lg:grid-cols-4`}>
+            <MetricCard
+              title="Total de ganhos"
+              value={formatBRL(receita)}
+              subtitle="Salario + extras"
+              variant="positive"
+            />
+            <MetricCard
+              title="Total de despesas"
+              value={formatBRL(gastos)}
+              subtitle="Lancamentos do mes"
+              variant={gastos > receita ? "negative" : "default"}
+            />
+            <MetricCard
+              title="Total de dividas"
+              value={formatBRL(dividasTotal)}
+              subtitle="Sem dados"
+            />
+            <MetricCard
+              title="Saldo disponivel"
+              value={formatBRL(saldo)}
+              subtitle={`Previsto: ${formatBRL(saldoPrevisto)}`}
+              variant="highlight"
+            />
           </div>
-          <div className="card p-4">
-            <p className="text-sm text-slate-600">Qtd de lancamentos</p>
-            <p className="mt-2 text-2xl font-semibold text-slate-900">
-              {entriesCount}
-            </p>
+          <div className={`mt-5 grid ${gridGap} sm:grid-cols-2 lg:grid-cols-4`}>
+            <MetricCard
+              title="Lancamentos no mes"
+              value={entriesCount}
+              subtitle="Total de transacoes"
+            />
+            <MetricCard
+              title="Media por dia"
+              value={averagePerDay !== undefined ? formatBRL(averagePerDay) : "-"}
+              subtitle={`${daysInMonth} dias no mes`}
+            />
+            <MetricCard
+              title="Fixas (previsto)"
+              value={formatBRL(planningTotals.fixed)}
+              subtitle="Despesas recorrentes"
+            />
+            <ProgressCard
+              title="Gastos vs receitas"
+              current={gastos}
+              target={receita}
+              labelLeft={`Gastos ${formatBRL(gastos)}`}
+              labelRight={`Receitas ${formatBRL(receita)}`}
+              tone={gastos > receita ? "warning" : "success"}
+            />
           </div>
-          <div className="card p-4">
-            <p className="text-sm text-slate-600">Media por dia</p>
-            <p className="mt-2 text-2xl font-semibold text-slate-900">
-              {averagePerDay !== undefined ? formatCurrency(averagePerDay) : "-"}
-            </p>
-          </div>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <div className="card p-4">
-            <p className="text-sm text-slate-600">Receita (salario + extras)</p>
-            <p className="mt-2 text-xl font-semibold text-slate-900">
-              {formatBRL(receita)}
-            </p>
-          </div>
-          <div className="card p-4">
-            <p className="text-sm text-slate-600">Gastos do mes</p>
-            <p className="mt-2 text-xl font-semibold text-slate-900">
-              {formatBRL(gastos)}
-            </p>
-          </div>
-          <div className="card p-4">
-            <p className="text-sm text-slate-600">Fixas (previsto)</p>
-            <p className="mt-2 text-xl font-semibold text-slate-900">
-              {formatBRL(planningTotals.fixed)}
-            </p>
-          </div>
-          <div className="card p-4">
-            <p className="text-sm text-slate-600">Saldo</p>
-            <p className="mt-2 text-xl font-semibold text-slate-900">
-              {formatBRL(saldo)}
-            </p>
-          </div>
-          <div className="card p-4">
-            <p className="text-sm text-slate-600">Saldo previsto</p>
-            <p className="mt-2 text-xl font-semibold text-slate-900">
-              {formatBRL(saldoPrevisto)}
-            </p>
-          </div>
-        </div>
+        </DashboardSection>
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="card p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-900">
-                Total por categoria
-              </h3>
-            </div>
-            {pieData.length === 0 ? (
-              <div className="text-sm text-slate-500">Sem dados neste mes</div>
-            ) : (
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius={55}
-                      outerRadius={90}
-                      paddingAngle={2}
-                    >
-                      {pieData.map((_, index) => (
-                        <Cell
-                          key={index}
-                          fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(v: unknown) => formatBRL(Number(v) || 0)}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </div>
-
-          <div className="card p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-900">Total por dia</h3>
-            </div>
-            {dayData.length === 0 ? (
-              <div className="text-sm text-slate-500">Sem dados neste mes</div>
-            ) : (
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dayData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="date"
-                      tickFormatter={(d: string) => d.slice(8, 10)}
-                    />
-                    <YAxis
-                      tickFormatter={(v: number | string) =>
-                        formatBRL(Number(v) || 0)
-                      }
-                    />
-                    <Tooltip
-                      labelFormatter={(label: string) => `Dia ${label}`}
-                      formatter={(v: unknown) =>
-                        formatBRL(Number(v) || 0)
-                      }
-                    />
-                    <Bar dataKey="total" fill="#0f766e" radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </div>
-        </div>
-
-
-        <div className="card p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-slate-900">
-              Ultimos lancamentos
-            </h3>
-          </div>
-          {safeLatestEntries.length ? (
-            <ul className="divide-y divide-slate-100">
-              {safeLatestEntries.map((entry) => (
-                <li key={entry.id} className="flex items-start justify-between py-3">
-                  <div>
-                    <p className="text-sm font-medium text-slate-900">
-                      {entry.description}
-                    </p>
-                    <p className="text-xs text-slate-600">
-                      {formatDate(entry.date)} - {entry.category}
-                    </p>
-                  </div>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {formatCurrency(entry.amount)}
-                  </p>
-                </li>
+        <DashboardSection title="Insights do mes">
+          {insights.length ? (
+            <div className={`grid ${gridGap} sm:grid-cols-2 lg:grid-cols-3`}>
+              {insights.map((item, index) => (
+                <InsightCard
+                  key={`${item.title}-${index}`}
+                  title={item.title}
+                  description={item.description}
+                  tag={item.tag}
+                  tone={item.tone}
+                />
               ))}
-            </ul>
+            </div>
           ) : (
-            <p className="text-sm text-slate-500">
-              Nenhum lancamento encontrado para este mes.
-            </p>
+            <div className={`${cardBase} ${subtleText}`}>
+              Sem insights disponiveis para este mes.
+            </div>
           )}
-        </div>
+        </DashboardSection>
+
+        <DashboardSection title="Graficos do mes">
+          <div className={`grid ${gridGap} lg:grid-cols-2`}>
+            <div className={`${cardBase} ${cardHover}`}>
+              <div className="mb-3 flex items-center justify-between">
+                <h4 className="text-base font-semibold text-slate-900">
+                  Gastos por categoria
+                </h4>
+              </div>
+              {pieData.length === 0 ? (
+                <div className="text-sm text-slate-500">Sem dados neste mes</div>
+              ) : (
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius={55}
+                        outerRadius={90}
+                        paddingAngle={2}
+                      >
+                        {pieData.map((_, index) => (
+                          <Cell
+                            key={index}
+                            fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(v: unknown) => formatBRL(Number(v) || 0)} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+
+            <div className={`${cardBase} ${cardHover}`}>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h4 className="text-base font-semibold text-slate-900">
+                    Receitas x despesas
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Resumo geral e detalhe diario
+                  </p>
+                </div>
+                <div className="flex items-center rounded-full bg-slate-100 p-1 text-xs font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => setChartMode("summary")}
+                    className={`rounded-full px-3 py-1 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40 ${
+                      chartMode === "summary"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700"
+                    }`}
+                  >
+                    Resumo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setChartMode("daily")}
+                    className={`rounded-full px-3 py-1 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40 ${
+                      chartMode === "daily"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700"
+                    }`}
+                  >
+                    Por dia
+                  </button>
+                </div>
+              </div>
+              {chartMode === "summary" ? (
+                hasReceitaDespesas ? (
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={receitaDespesasData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis
+                          tickFormatter={(v: number | string) =>
+                            formatBRL(Number(v) || 0)
+                          }
+                        />
+                        <Tooltip
+                          formatter={(v: unknown) => formatBRL(Number(v) || 0)}
+                        />
+                        <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                          {receitaDespesasData.map((entry) => (
+                            <Cell key={entry.name} fill={entry.color} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="text-sm text-slate-500">Sem dados neste mes</div>
+                )
+              ) : dayData.length === 0 ? (
+                <div className="text-sm text-slate-500">Sem dados neste mes</div>
+              ) : (
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={dayData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="date"
+                        tickFormatter={(d: string) => d.slice(8, 10)}
+                      />
+                      <YAxis
+                        tickFormatter={(v: number | string) =>
+                          formatBRL(Number(v) || 0)
+                        }
+                      />
+                      <Tooltip
+                        labelFormatter={(label: string) => `Dia ${label}`}
+                        formatter={(v: unknown) => formatBRL(Number(v) || 0)}
+                      />
+                      <Bar dataKey="total" fill="#0f766e" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+          </div>
+        </DashboardSection>
+
+        <DashboardSection title="Acessos rapidos">
+          <div className={`grid ${gridGap} sm:grid-cols-2 lg:grid-cols-4`}>
+            {quickLinks.map((item) => (
+              <MetricCard
+                key={item.title}
+                title={item.title}
+                value="Abrir"
+                subtitle={item.subtitle}
+                onClick={item.onClick}
+              />
+            ))}
+          </div>
+        </DashboardSection>
+
+        <DashboardSection
+          title="Ultimos lancamentos"
+          actionLabel="Ver detalhes"
+          onAction={() => navigate("/entries")}
+        >
+          <div className={`${cardBase} ${cardHover}`}>
+            {safeLatestEntries.length ? (
+              <ul className="divide-y divide-slate-100/80">
+                {safeLatestEntries.map((entry) => (
+                  <li key={entry.id} className="flex items-start justify-between py-3">
+                    <div>
+                      <p className="text-sm font-medium text-slate-900">
+                        {entry.description}
+                      </p>
+                      <p className="text-xs text-slate-600">
+                        {formatDate(entry.date)} - {entry.category}
+                      </p>
+                    </div>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {formatBRL(entry.amount)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className={subtleText}>
+                Nenhum lancamento encontrado para este mes.
+              </p>
+            )}
+          </div>
+        </DashboardSection>
       </div>
     );
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-slate-900">Dashboard</h2>
-          <p className="text-sm text-slate-600">
-            Resumo mensal, graficos e ultimos lancamentos.
-          </p>
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">
-          <div className="sm:w-60">
-            <MonthPicker label="Mes" value={month} onChange={setMonth} />
+      <div className="rounded-3xl bg-gradient-to-br from-white via-slate-50 to-teal-50/40 p-4 sm:p-6">
+        <div className="space-y-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-2xl font-semibold text-slate-900">Visao Mensal</h2>
+              <p className="text-sm text-slate-600">
+                Resumo mensal, graficos e atalhos para acompanhar seus gastos.
+              </p>
+            </div>
+            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-end">
+              <div className="sm:w-52">
+                <MonthPicker label="Mes" value={month} onChange={setMonth} />
+              </div>
+              <div className="flex items-center gap-2">
+                <ExportCsvButton selectedMonth={month} />
+                <div ref={actionsRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setActionsOpen((prev) => !prev)}
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-lg font-semibold text-slate-700 shadow-sm transition hover:border-teal-300 hover:text-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40"
+                    aria-label="Acoes rapidas"
+                    aria-haspopup="menu"
+                    aria-expanded={actionsOpen}
+                  >
+                    +
+                  </button>
+                  {actionsOpen && (
+                    <div
+                      role="menu"
+                      className="absolute right-0 mt-2 w-52 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg"
+                    >
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => handleQuickAction("expense")}
+                        className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40"
+                      >
+                        Adicionar despesa
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => handleQuickAction("income")}
+                        className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40"
+                      >
+                        Adicionar ganho
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => handleQuickAction("debt")}
+                        className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40"
+                      >
+                        Adicionar divida
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
-          <ExportCsvButton selectedMonth={month} />
+
+          {renderContent()}
         </div>
       </div>
-
-      {renderContent()}
 
       {toast && (
         <Toast
