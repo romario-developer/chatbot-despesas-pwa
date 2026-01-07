@@ -26,7 +26,7 @@ import { monthToRange } from "../utils/dateRange";
 import { formatBRL, formatDate, safeNumber } from "../utils/format";
 import { DEFAULT_PLANNING, type Entry, type Planning, type Summary } from "../types";
 import { ENTRIES_CHANGED } from "../utils/entriesEvents";
-import { cardBase, cardHover, gridGap, subtleText } from "../styles/dashboardTokens";
+import { cardBase, cardHover, subtleText } from "../styles/dashboardTokens";
 
 const currentMonth = () => new Date().toISOString().slice(0, 7);
 
@@ -85,7 +85,7 @@ const DashboardPage = () => {
         const totalValue = Number(summaryData?.total);
         const summaryValid = summaryData && Number.isFinite(totalValue);
         if (!summaryValid) {
-          throw new Error("Falha ao carregar resumo do mes");
+          throw new Error("Falha ao carregar resumo do mês");
         }
 
         const normalizedEntries = Array.isArray(entriesData) ? entriesData : [];
@@ -121,7 +121,7 @@ const DashboardPage = () => {
         setError(null);
       } catch (err) {
         const message =
-          err instanceof Error ? err.message : "Falha ao carregar resumo do mes";
+          err instanceof Error ? err.message : "Falha ao carregar resumo do mês";
         if (!silent) {
           setError(message);
           setToast({ message, type: "error" });
@@ -247,8 +247,8 @@ const DashboardPage = () => {
 
     if (gastos > receita) {
       items.push({
-        title: "Voce gastou mais do que ganhou",
-        description: "Considere revisar seus gastos para fechar o mes no azul.",
+        title: "Você gastou mais do que ganhou",
+        description: "Considere revisar seus gastos para fechar o mês no azul.",
         tag: "Alerta",
         tone: "warning",
       });
@@ -256,7 +256,7 @@ const DashboardPage = () => {
 
     if (topCategory) {
       items.push({
-        title: "Maior gasto do mes",
+        title: "Maior gasto do mês",
         description: `${topCategory.name} lidera com ${formatBRL(topCategory.value)}.`,
         tag: "Dica",
         tone: "info",
@@ -266,8 +266,8 @@ const DashboardPage = () => {
     if (saldo > 0) {
       items.push({
         title: "Saldo positivo",
-        description: `Voce terminou o mes com ${formatBRL(saldo)} disponiveis.`,
-        tag: "Boa noticia",
+        description: `Você terminou o mês com ${formatBRL(saldo)} disponíveis.`,
+        tag: "Boa notícia",
         tone: "success",
       });
     }
@@ -315,15 +315,15 @@ const DashboardPage = () => {
     if (!summary) {
       return (
         <div className={`${cardBase} ${subtleText}`}>
-          Selecione um mes para visualizar o resumo.
+          Selecione um mês para visualizar o resumo.
         </div>
       );
     }
 
     const quickLinks = [
       {
-        title: "Transacoes",
-        subtitle: "Lancamentos e filtros",
+        title: "Transações",
+        subtitle: "Lançamentos e filtros",
         onClick: () => navigate("/entries"),
       },
       {
@@ -332,7 +332,7 @@ const DashboardPage = () => {
         onClick: () => handleMissingRoute("categorias"),
       },
       {
-        title: "Dividas",
+        title: "Dívidas",
         subtitle: "Em breve",
         onClick: () => handleMissingRoute("dividas"),
       },
@@ -346,43 +346,43 @@ const DashboardPage = () => {
     const hasReceitaDespesas = receitaDespesasData.some((item) => item.value > 0);
 
     return (
-      <div className="space-y-8">
-        <DashboardSection title="Resumo do mes">
-          <div className={`grid ${gridGap} sm:grid-cols-2 lg:grid-cols-4`}>
+      <div className="space-y-6 sm:space-y-8">
+        <DashboardSection title="Resumo do mês">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <MetricCard
               title="Total de ganhos"
               value={formatBRL(receita)}
-              subtitle="Salario + extras"
+              subtitle="Salário + extras"
               variant="positive"
             />
             <MetricCard
               title="Total de despesas"
               value={formatBRL(gastos)}
-              subtitle="Lancamentos do mes"
+              subtitle="Lançamentos do mês"
               variant={gastos > receita ? "negative" : "default"}
             />
             <MetricCard
-              title="Total de dividas"
+              title="Total de dívidas"
               value={formatBRL(dividasTotal)}
               subtitle="Sem dados"
             />
             <MetricCard
-              title="Saldo disponivel"
+              title="Saldo disponível"
               value={formatBRL(saldo)}
               subtitle={`Previsto: ${formatBRL(saldoPrevisto)}`}
               variant="highlight"
             />
           </div>
-          <div className={`mt-5 grid ${gridGap} sm:grid-cols-2 lg:grid-cols-4`}>
+          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <MetricCard
-              title="Lancamentos no mes"
+              title="Lançamentos no mês"
               value={entriesCount}
-              subtitle="Total de transacoes"
+              subtitle="Total de transações"
             />
             <MetricCard
-              title="Media por dia"
+              title="Média por dia"
               value={averagePerDay !== undefined ? formatBRL(averagePerDay) : "-"}
-              subtitle={`${daysInMonth} dias no mes`}
+              subtitle={`${daysInMonth} dias no mês`}
             />
             <MetricCard
               title="Fixas (previsto)"
@@ -400,9 +400,9 @@ const DashboardPage = () => {
           </div>
         </DashboardSection>
 
-        <DashboardSection title="Insights do mes">
+        <DashboardSection title="Insights do mês">
           {insights.length ? (
-            <div className={`grid ${gridGap} sm:grid-cols-2 lg:grid-cols-3`}>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               {insights.map((item, index) => (
                 <InsightCard
                   key={`${item.title}-${index}`}
@@ -415,13 +415,13 @@ const DashboardPage = () => {
             </div>
           ) : (
             <div className={`${cardBase} ${subtleText}`}>
-              Sem insights disponiveis para este mes.
+              Sem insights disponíveis para este mês.
             </div>
           )}
         </DashboardSection>
 
-        <DashboardSection title="Graficos do mes">
-          <div className={`grid ${gridGap} lg:grid-cols-2`}>
+        <DashboardSection title="Gráficos do mês">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div className={`${cardBase} ${cardHover}`}>
               <div className="mb-3 flex items-center justify-between">
                 <h4 className="text-base font-semibold text-slate-900">
@@ -429,7 +429,7 @@ const DashboardPage = () => {
                 </h4>
               </div>
               {pieData.length === 0 ? (
-                <div className="text-sm text-slate-500">Sem dados neste mes</div>
+                <div className="text-sm text-slate-500">Sem dados neste mês</div>
               ) : (
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
@@ -463,7 +463,7 @@ const DashboardPage = () => {
                     Receitas x despesas
                   </h4>
                   <p className="text-xs text-slate-500">
-                    Resumo geral e detalhe diario
+                    Resumo geral e detalhe diário
                   </p>
                 </div>
                 <div className="flex items-center rounded-full bg-slate-100 p-1 text-xs font-semibold">
@@ -515,10 +515,10 @@ const DashboardPage = () => {
                     </ResponsiveContainer>
                   </div>
                 ) : (
-                  <div className="text-sm text-slate-500">Sem dados neste mes</div>
+                  <div className="text-sm text-slate-500">Sem dados neste mês</div>
                 )
               ) : dayData.length === 0 ? (
-                <div className="text-sm text-slate-500">Sem dados neste mes</div>
+                <div className="text-sm text-slate-500">Sem dados neste mês</div>
               ) : (
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
@@ -546,8 +546,8 @@ const DashboardPage = () => {
           </div>
         </DashboardSection>
 
-        <DashboardSection title="Acessos rapidos">
-          <div className={`grid ${gridGap} sm:grid-cols-2 lg:grid-cols-4`}>
+        <DashboardSection title="Acessos rápidos">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {quickLinks.map((item) => (
               <MetricCard
                 key={item.title}
@@ -555,41 +555,40 @@ const DashboardPage = () => {
                 value="Abrir"
                 subtitle={item.subtitle}
                 onClick={item.onClick}
+                className="min-h-[88px] flex flex-col justify-between"
               />
             ))}
           </div>
         </DashboardSection>
 
         <DashboardSection
-          title="Ultimos lancamentos"
+          title="Últimos lançamentos"
           actionLabel="Ver detalhes"
           onAction={() => navigate("/entries")}
         >
-          <div className={`${cardBase} ${cardHover}`}>
-            {safeLatestEntries.length ? (
-              <ul className="divide-y divide-slate-100/80">
-                {safeLatestEntries.map((entry) => (
-                  <li key={entry.id} className="flex items-start justify-between py-3">
-                    <div>
-                      <p className="text-sm font-medium text-slate-900">
-                        {entry.description}
-                      </p>
-                      <p className="text-xs text-slate-600">
-                        {formatDate(entry.date)} - {entry.category}
-                      </p>
-                    </div>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {formatBRL(entry.amount)}
+          {safeLatestEntries.length ? (
+            <ul className="divide-y divide-slate-100/80">
+              {safeLatestEntries.map((entry) => (
+                <li key={entry.id} className="flex items-start justify-between py-3">
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">
+                      {entry.description}
                     </p>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className={subtleText}>
-                Nenhum lancamento encontrado para este mes.
-              </p>
-            )}
-          </div>
+                    <p className="text-xs text-slate-600">
+                      {formatDate(entry.date)} - {entry.category}
+                    </p>
+                  </div>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {formatBRL(entry.amount)}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className={subtleText}>
+              Nenhum lançamento encontrado para este mês.
+            </p>
+          )}
         </DashboardSection>
       </div>
     );
@@ -601,14 +600,14 @@ const DashboardPage = () => {
         <div className="space-y-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-2xl font-semibold text-slate-900">Visao Mensal</h2>
+              <h2 className="text-2xl font-semibold text-slate-900">Visão Mensal</h2>
               <p className="text-sm text-slate-600">
-                Resumo mensal, graficos e atalhos para acompanhar seus gastos.
+                Resumo mensal, gráficos e atalhos para acompanhar seus gastos.
               </p>
             </div>
             <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-end">
               <div className="sm:w-52">
-                <MonthPicker label="Mes" value={month} onChange={setMonth} />
+                <MonthPicker label="Mês" value={month} onChange={setMonth} />
               </div>
               <div className="flex items-center gap-2">
                 <ExportCsvButton selectedMonth={month} />
@@ -617,7 +616,7 @@ const DashboardPage = () => {
                     type="button"
                     onClick={() => setActionsOpen((prev) => !prev)}
                     className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-lg font-semibold text-slate-700 shadow-sm transition hover:border-teal-300 hover:text-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40"
-                    aria-label="Acoes rapidas"
+                    aria-label="Ações rápidas"
                     aria-haspopup="menu"
                     aria-expanded={actionsOpen}
                   >
@@ -650,7 +649,7 @@ const DashboardPage = () => {
                         onClick={() => handleQuickAction("debt")}
                         className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40"
                       >
-                        Adicionar divida
+                        Adicionar dívida
                       </button>
                     </div>
                   )}

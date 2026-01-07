@@ -8,13 +8,14 @@ type MetricCardProps = {
   icon?: ReactNode;
   variant?: "default" | "positive" | "negative" | "highlight";
   onClick?: () => void;
+  className?: string;
 };
 
 const variantClasses: Record<NonNullable<MetricCardProps["variant"]>, string> = {
   default: "border-slate-200/80",
   positive: "border-emerald-200/70 bg-emerald-50/60",
   negative: "border-rose-200/70 bg-rose-50/60",
-  highlight: "border-teal-300/80 bg-teal-50/70 shadow-teal-100/60",
+  highlight: "border-teal-300/80 bg-teal-50/80 ring-1 ring-teal-200/60",
 };
 
 const MetricCard = ({
@@ -24,12 +25,14 @@ const MetricCard = ({
   icon,
   variant = "default",
   onClick,
+  className,
 }: MetricCardProps) => {
   const baseClasses = [
     cardBase,
     cardHover,
     "text-left",
     variantClasses[variant],
+    className,
   ]
     .filter(Boolean)
     .join(" ");

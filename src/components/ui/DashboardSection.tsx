@@ -2,18 +2,28 @@ import type { ReactNode } from "react";
 
 type DashboardSectionProps = {
   title: string;
+  subtitle?: string;
   actionLabel?: string;
   onAction?: () => void;
   children: ReactNode;
 };
 
-const DashboardSection = ({ title, actionLabel, onAction, children }: DashboardSectionProps) => {
+const DashboardSection = ({
+  title,
+  subtitle,
+  actionLabel,
+  onAction,
+  children,
+}: DashboardSectionProps) => {
   const showAction = Boolean(actionLabel);
 
   return (
-    <section className="space-y-4">
+    <section className="rounded-2xl border border-slate-200/70 bg-white/70 p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+        <div className="space-y-1">
+          <h3 className="text-base font-semibold text-slate-900">{title}</h3>
+          {subtitle ? <p className="text-xs text-slate-500">{subtitle}</p> : null}
+        </div>
         {showAction && (
           <button
             type="button"
@@ -26,7 +36,7 @@ const DashboardSection = ({ title, actionLabel, onAction, children }: DashboardS
           </button>
         )}
       </div>
-      {children}
+      <div className="mt-4">{children}</div>
     </section>
   );
 };
