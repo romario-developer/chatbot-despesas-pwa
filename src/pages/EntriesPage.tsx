@@ -5,7 +5,6 @@ import { deleteEntry, listEntries } from "../api/entries";
 import MonthPicker from "../components/MonthPicker";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Toast from "../components/Toast";
-import EmptyState from "../components/EmptyState";
 import { monthToRange } from "../utils/dateRange";
 import { ENTRIES_CHANGED, notifyEntriesChanged } from "../utils/entriesEvents";
 import { formatCurrency, formatDate } from "../utils/format";
@@ -121,8 +120,6 @@ const EntriesPage = () => {
     : Object.keys((categories ?? {}) as Record<string, unknown>);
 
   const safeEntries = Array.isArray(entries) ? entries : [];
-  const hasFilters = Boolean(category || search);
-  const showEmptyState = !isLoading && !error && safeEntries.length === 0 && !hasFilters;
 
   const totalAmount = useMemo(
     () => safeEntries.reduce((sum, entry) => sum + entry.amount, 0),
@@ -221,32 +218,7 @@ const EntriesPage = () => {
           </p>
         )}
 
-        {!isLoading && !error && showEmptyState && (
-          <div className="mt-4">
-            <EmptyState
-              title="Nenhum lancamento ainda"
-              description="Adicione um ganho ou despesa para comecar a construir seu historico."
-              actions={
-                <>
-                  <Link
-                    to="/entries/new"
-                    className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90"
-                  >
-                    Adicionar ganho
-                  </Link>
-                  <Link
-                    to="/entries/new"
-                    className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-primary hover:text-primary"
-                  >
-                    Adicionar despesa
-                  </Link>
-                </>
-              }
-            />
-          </div>
-        )}
-
-        {!isLoading && !error && !showEmptyState && (
+        {!isLoading && !error && (
           <>
             <div className="mt-4 space-y-3 md:hidden">
               {safeEntries.length ? (

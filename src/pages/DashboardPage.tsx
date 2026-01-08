@@ -19,15 +19,13 @@ import DashboardSection from "../components/ui/DashboardSection";
 import InsightCard from "../components/dashboard/cards/InsightCard";
 import MetricCard from "../components/dashboard/cards/MetricCard";
 import ProgressCard from "../components/dashboard/cards/ProgressCard";
-import EmptyState from "../components/EmptyState";
 import { listEntries } from "../api/entries";
 import { getSummary } from "../api/summary";
 import { getPlanning } from "../api/planning";
-import { addSampleData } from "../api/sampleData";
 import { monthToRange } from "../utils/dateRange";
 import { formatBRL, formatDate, safeNumber } from "../utils/format";
 import { DEFAULT_PLANNING, type Entry, type Planning, type Summary } from "../types";
-import { ENTRIES_CHANGED, notifyEntriesChanged } from "../utils/entriesEvents";
+import { ENTRIES_CHANGED } from "../utils/entriesEvents";
 import { cardBase, cardHover, subtleText } from "../styles/dashboardTokens";
 
 const currentMonth = () => new Date().toISOString().slice(0, 7);
@@ -61,8 +59,6 @@ const DashboardPage = () => {
   );
   const [chartMode, setChartMode] = useState<"summary" | "daily">("summary");
   const [actionsOpen, setActionsOpen] = useState(false);
-  const [isSeeding, setIsSeeding] = useState(false);
-  const [sampleDataAvailable, setSampleDataAvailable] = useState(true);
   const actionsRef = useRef<HTMLDivElement | null>(null);
 
   const loadData = useCallback(
@@ -301,47 +297,6 @@ const DashboardPage = () => {
     navigate("/entries/new");
   };
 
-  const handleCreateEntry = () => {
-    navigate("/entries/new");
-  };
-
-  const handleAddSampleData = async () => {
-    if (isSeeding || !sampleDataAvailable) return;
-
-    setIsSeeding(true);
-    try {
-      await addSampleData();
-      notifyEntriesChanged();
-      await loadData({ silent: true });
-      setToast({ message: "Dados de exemplo adicionados.", type: "success" });
-    } catch (err) {
-      let message =
-        err instanceof Error ? err.message : "Erro ao adicionar dados de exemplo.";
-      const normalized = message.toLowerCase();
-
-      if (normalized.includes("endpoint nao encontrado") || normalized.includes("404")) {
-        setSampleDataAvailable(false);
-        setToast({
-          message: "Dados de exemplo indisponiveis no momento. Em breve.",
-          type: "error",
-        });
-        return;
-      }
-
-      if (
-        normalized.includes("network") ||
-        normalized.includes("timeout") ||
-        normalized.includes("failed to fetch")
-      ) {
-        message = "Falha de rede. Verifique sua conexao e tente novamente.";
-      }
-
-      setToast({ message, type: "error" });
-    } finally {
-      setIsSeeding(false);
-    }
-  };
-
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -362,50 +317,6 @@ const DashboardPage = () => {
         <div className={`${cardBase} ${subtleText}`}>
           Selecione um mês para visualizar o resumo.
         </div>
-      );
-    }
-
-    const showEmptyState =
-      entriesCount === 0 && receita === 0 && gastos === 0 && planningTotals.fixed === 0;
-
-    if (showEmptyState) {
-      return (
-        <EmptyState
-          title="Comece registrando seus lancamentos"
-          description="Ainda nao ha dados neste mes. Adicione ganhos ou despesas para ver o resumo."
-          actions={
-            <>
-              <button
-                type="button"
-                onClick={handleCreateEntry}
-                className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90"
-              >
-                Adicionar ganho
-              </button>
-              <button
-                type="button"
-                onClick={handleCreateEntry}
-                className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-primary hover:text-primary"
-              >
-                Adicionar despesa
-              </button>
-            </>
-          }
-          helper={
-            <div className="flex flex-col items-center gap-2">
-              <button
-                type="button"
-                onClick={handleAddSampleData}
-                disabled={!sampleDataAvailable || isSeeding}
-                title={!sampleDataAvailable ? "Em breve" : undefined}
-                className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-teal-300 hover:text-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isSeeding ? "Adicionando..." : "Adicionar dados de exemplo"}
-              </button>
-              {!sampleDataAvailable && <span>Em breve</span>}
-            </div>
-          }
-        />
       );
     }
 

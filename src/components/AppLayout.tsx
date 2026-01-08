@@ -60,12 +60,6 @@ const AppLayout = () => {
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-6">
-        {/* TODO: remover aviso beta antes do lancamento. */}
-        <div className="mb-4 flex justify-center">
-          <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-            Ambiente de testes • Seus dados são privados
-          </div>
-        </div>
         <Outlet />
       </main>
       {showUpdate && (
