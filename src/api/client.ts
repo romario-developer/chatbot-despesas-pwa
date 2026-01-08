@@ -21,7 +21,18 @@ type ApiErrorResponse = {
 
 export const getStoredToken = () => localStorage.getItem(AUTH_TOKEN_KEY);
 
-export const saveToken = (token: string) => localStorage.setItem(AUTH_TOKEN_KEY, token);
+const setAuthHeader = (token?: string | null) => {
+  if (token) {
+    api.defaults.headers.common.Authorization = `Bearer ${token}`;
+  } else {
+    delete api.defaults.headers.common.Authorization;
+  }
+};
+
+export const saveToken = (token: string) => {
+  localStorage.setItem(AUTH_TOKEN_KEY, token);
+  setAuthHeader(token);
+};
 
 export const getStoredMustChangePassword = () =>
   localStorage.getItem(AUTH_MUST_CHANGE_KEY) === "true";
@@ -34,6 +45,7 @@ export const clearMustChangePassword = () => localStorage.removeItem(AUTH_MUST_C
 export const clearToken = () => {
   localStorage.removeItem(AUTH_TOKEN_KEY);
   clearMustChangePassword();
+  setAuthHeader(null);
 };
 
 const redirectToLogin = () => {
@@ -130,8 +142,10 @@ api.interceptors.request.use((config) => {
 
   const token = getStoredToken();
   if (token) {
-    config.headers = config.headers ?? {};
-    (config.headers as Record<string, string>).Authorization = `Bearer ${token}`;
+    config.headers = {
+      ...(config.headers ?? {}),
+      Authorization: `Bearer ${token}`,
+    };
   }
 
   if (shouldLogApi) {
