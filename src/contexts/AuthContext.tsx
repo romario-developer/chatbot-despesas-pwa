@@ -1,7 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { getMe } from "../api/me";
-import { getStoredToken, logoutAndRedirect } from "../api/client";
+import {
+  clearAuthUser,
+  getStoredAuthUser,
+  getStoredToken,
+  logoutAndRedirect,
+  saveAuthUser,
+} from "../api/client";
 import type { UserMe } from "../types";
 
 type AuthStatus = "idle" | "loading" | "ready" | "error";
@@ -16,13 +22,14 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<UserMe | null>(null);
+  const [user, setUser] = useState<UserMe | null>(() => getStoredAuthUser());
   const [status, setStatus] = useState<AuthStatus>("idle");
 
   const refreshMe = useCallback(async () => {
     const token = getStoredToken();
     if (!token) {
       setUser(null);
+      clearAuthUser();
       setStatus("idle");
       return null;
     }
@@ -31,10 +38,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const me = await getMe();
       setUser(me);
+      saveAuthUser({ name: me.name, email: me.email });
       setStatus("ready");
       return me;
     } catch {
-      setUser(null);
       setStatus("error");
       return null;
     }

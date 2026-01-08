@@ -1,5 +1,14 @@
+export type AuthUser = {
+  name?: string;
+  email?: string;
+};
+
 export interface AuthResponse {
-  token: string;
+  token?: string;
+  accessToken?: string;
+  user?: AuthUser;
+  name?: string;
+  email?: string;
 }
 
 export type UserMe = {

@@ -1,7 +1,9 @@
 import type { AxiosError, AxiosRequestConfig } from "axios";
 import { api, apiBaseURL, apiHadApiSuffix, shouldLogApi } from "../services/api";
 
-const AUTH_TOKEN_KEY = "despesas_token";
+const AUTH_TOKEN_KEY = "auth_token";
+const LEGACY_AUTH_TOKEN_KEY = "despesas_token";
+const AUTH_USER_KEY = "auth_user";
 const PLANNING_STORAGE_KEY = "despesas_pwa_planning_v1";
 const LOGIN_MESSAGE_KEY = "despesas_login_message";
 const FAILURE_WINDOW_MS = 30_000;
@@ -20,11 +22,53 @@ type ApiErrorResponse = {
   error?: string;
 };
 
-export const getStoredToken = () => localStorage.getItem(AUTH_TOKEN_KEY);
+export const getStoredToken = () =>
+  localStorage.getItem(AUTH_TOKEN_KEY) ?? localStorage.getItem(LEGACY_AUTH_TOKEN_KEY);
 
-export const saveToken = (token: string) => localStorage.setItem(AUTH_TOKEN_KEY, token);
+export const saveToken = (token: string) => {
+  localStorage.setItem(AUTH_TOKEN_KEY, token);
+  localStorage.removeItem(LEGACY_AUTH_TOKEN_KEY);
+};
 
-export const clearToken = () => localStorage.removeItem(AUTH_TOKEN_KEY);
+export const clearToken = () => {
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+  localStorage.removeItem(LEGACY_AUTH_TOKEN_KEY);
+};
+
+type StoredAuthUser = {
+  name?: string;
+  email?: string;
+};
+
+const normalizeStoredUser = (value: unknown): StoredAuthUser | null => {
+  if (!value || typeof value !== "object") return null;
+  const data = value as Record<string, unknown>;
+  const name = typeof data.name === "string" ? data.name.trim() : "";
+  const email = typeof data.email === "string" ? data.email.trim() : "";
+  if (!name && !email) return null;
+  return {
+    name: name || undefined,
+    email: email || undefined,
+  };
+};
+
+export const saveAuthUser = (user: StoredAuthUser) => {
+  const payload = normalizeStoredUser(user);
+  if (!payload) return;
+  localStorage.setItem(AUTH_USER_KEY, JSON.stringify(payload));
+};
+
+export const getStoredAuthUser = (): StoredAuthUser | null => {
+  const raw = localStorage.getItem(AUTH_USER_KEY);
+  if (!raw) return null;
+  try {
+    return normalizeStoredUser(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+};
+
+export const clearAuthUser = () => localStorage.removeItem(AUTH_USER_KEY);
 
 export const resetApiFailureTracker = () => {
   failureTracker.clear();
@@ -46,7 +90,8 @@ export const consumeLoginMessage = () => {
 
 export const clearAppStorage = () => {
   if (typeof localStorage !== "undefined") {
-    localStorage.removeItem(AUTH_TOKEN_KEY);
+    clearToken();
+    clearAuthUser();
     localStorage.removeItem(PLANNING_STORAGE_KEY);
   }
   if (typeof sessionStorage !== "undefined") {
@@ -177,6 +222,7 @@ api.interceptors.response.use(
   (error: AxiosError<ApiErrorResponse>) => {
     const status = error.response?.status;
     const fullUrl = resolveFullUrl(error.config ?? {});
+    const path = extractPathname(fullUrl);
     const endpointKey =
       (error.config as AxiosRequestConfig & { __endpointKey?: string })?.__endpointKey ||
       buildEndpointKey(error.config ?? {});
@@ -189,6 +235,9 @@ api.interceptors.response.use(
     }
 
     if (status === 401) {
+      if (path === "/api/auth/login") {
+        return Promise.reject(new Error("Credenciais invalidas."));
+      }
       logoutAndRedirect("Sessao expirada, faca login novamente.");
       return Promise.reject(new Error("Sessao expirada ou nao autenticado."));
     }
