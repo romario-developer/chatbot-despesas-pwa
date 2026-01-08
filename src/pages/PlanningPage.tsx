@@ -77,8 +77,8 @@ const PlanningPage = () => {
       : statusError
         ? "Falha ao verificar"
         : isTelegramConnected
-          ? "Conectado"
-          : "Nao conectado";
+          ? "Status: Conectado"
+          : "Status: Nao conectado";
   const telegramStatusClass =
     loadingStatus
       ? "bg-slate-100 text-slate-600"
@@ -688,7 +688,7 @@ const PlanningPage = () => {
             <span
               className={`rounded-full px-3 py-1 text-xs font-semibold ${telegramStatusClass}`}
             >
-              Status: {telegramStatusLabel}
+              {telegramStatusLabel}
             </span>
             <button
               type="button"

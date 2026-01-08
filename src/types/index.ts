@@ -4,16 +4,12 @@ export type AuthUser = {
 };
 
 export interface AuthResponse {
-<<<<<<< HEAD
-  token: string;
-  mustChangePassword?: boolean;
-=======
   token?: string;
   accessToken?: string;
+  mustChangePassword?: boolean;
   user?: AuthUser;
   name?: string;
   email?: string;
->>>>>>> 379f1e03b89eb5f8e29aaf5abc851d46bda4215d
 }
 
 export type UserMe = {

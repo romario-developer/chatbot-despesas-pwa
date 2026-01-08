@@ -2,16 +2,12 @@ import { AxiosHeaders } from "axios";
 import type { AxiosError, AxiosRequestConfig } from "axios";
 import { api, apiBaseURL, apiHadApiSuffix, shouldLogApi } from "../services/api";
 
-<<<<<<< HEAD
-const AUTH_TOKEN_KEY = "despesas_token";
-const AUTH_MUST_CHANGE_KEY = "despesas_must_change_password";
-=======
 const AUTH_TOKEN_KEY = "auth_token";
 const LEGACY_AUTH_TOKEN_KEY = "despesas_token";
+const AUTH_MUST_CHANGE_KEY = "despesas_must_change_password";
 const AUTH_USER_KEY = "auth_user";
 const PLANNING_STORAGE_KEY = "despesas_pwa_planning_v1";
 const LOGIN_MESSAGE_KEY = "despesas_login_message";
->>>>>>> 379f1e03b89eb5f8e29aaf5abc851d46bda4215d
 const FAILURE_WINDOW_MS = 30_000;
 const FAILURE_LIMIT = 5;
 const BLOCK_DURATION_MS = 60_000;
@@ -31,7 +27,6 @@ type ApiErrorResponse = {
 export const getStoredToken = () =>
   localStorage.getItem(AUTH_TOKEN_KEY) ?? localStorage.getItem(LEGACY_AUTH_TOKEN_KEY);
 
-<<<<<<< HEAD
 const setAuthHeader = (token?: string | null) => {
   if (token) {
     api.defaults.headers.common.Authorization = `Bearer ${token}`;
@@ -42,6 +37,7 @@ const setAuthHeader = (token?: string | null) => {
 
 export const saveToken = (token: string) => {
   localStorage.setItem(AUTH_TOKEN_KEY, token);
+  localStorage.removeItem(LEGACY_AUTH_TOKEN_KEY);
   setAuthHeader(token);
 };
 
@@ -55,17 +51,9 @@ export const clearMustChangePassword = () => localStorage.removeItem(AUTH_MUST_C
 
 export const clearToken = () => {
   localStorage.removeItem(AUTH_TOKEN_KEY);
+  localStorage.removeItem(LEGACY_AUTH_TOKEN_KEY);
   clearMustChangePassword();
   setAuthHeader(null);
-=======
-export const saveToken = (token: string) => {
-  localStorage.setItem(AUTH_TOKEN_KEY, token);
-  localStorage.removeItem(LEGACY_AUTH_TOKEN_KEY);
-};
-
-export const clearToken = () => {
-  localStorage.removeItem(AUTH_TOKEN_KEY);
-  localStorage.removeItem(LEGACY_AUTH_TOKEN_KEY);
 };
 
 type StoredAuthUser = {
@@ -139,7 +127,6 @@ export const logoutAndRedirect = (message?: string) => {
     setLoginMessage(message);
   }
   redirectToLogin();
->>>>>>> 379f1e03b89eb5f8e29aaf5abc851d46bda4215d
 };
 
 const redirectToLogin = () => {

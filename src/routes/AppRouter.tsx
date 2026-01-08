@@ -15,41 +15,19 @@ const ChangePasswordPage = lazy(() => import("../pages/ChangePasswordPage"));
 
 const AppRouter = () => (
   <BrowserRouter>
-<<<<<<< HEAD
-    <ApiHealthCheck />
-    <Suspense fallback={<div className="p-6">Carregando.</div>}>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route
-          path="/change-password"
-          element={
-            <ProtectedRoute>
-              <ChangePasswordPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          element={
-            <ProtectedRoute>
-              <AppLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/entries" element={<EntriesPage />} />
-          <Route path="/entries/new" element={<EntryCreatePage />} />
-          <Route path="/entries/:id/edit" element={<EntryEditPage />} />
-          <Route path="/planning" element={<PlanningPage />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Suspense>
-=======
     <AuthProvider>
       <ApiHealthCheck />
       <Suspense fallback={<div className="p-6">Carregando.</div>}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route
+            path="/change-password"
+            element={
+              <ProtectedRoute>
+                <ChangePasswordPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             element={
               <ProtectedRoute>
@@ -67,7 +45,6 @@ const AppRouter = () => (
         </Routes>
       </Suspense>
     </AuthProvider>
->>>>>>> 379f1e03b89eb5f8e29aaf5abc851d46bda4215d
   </BrowserRouter>
 );
 

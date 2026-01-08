@@ -1,27 +1,22 @@
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { login } from "../api/auth";
 import {
-<<<<<<< HEAD
-  getStoredMustChangePassword,
-  getStoredToken,
-  saveToken,
-  setMustChangePassword,
-} from "../api/client";
-=======
   clearAppStorage,
   consumeLoginMessage,
+  getStoredMustChangePassword,
   getStoredToken,
   saveAuthUser,
   saveToken,
+  setMustChangePassword,
 } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
->>>>>>> 379f1e03b89eb5f8e29aaf5abc851d46bda4215d
 import { apiBaseURL } from "../services/api";
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { refreshMe } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,18 +26,15 @@ const LoginPage = () => {
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>(
     {},
   );
+  const from = (location.state as { from?: string } | null)?.from ?? "/";
 
   useEffect(() => {
     const existingToken = getStoredToken();
     const mustChangePassword = getStoredMustChangePassword();
     if (existingToken) {
-<<<<<<< HEAD
       navigate(mustChangePassword ? "/change-password" : from, { replace: true });
-=======
-      navigate("/", { replace: true });
->>>>>>> 379f1e03b89eb5f8e29aaf5abc851d46bda4215d
     }
-  }, [navigate]);
+  }, [from, navigate]);
 
   const validate = () => {
     const nextErrors: { email?: string; password?: string } = {};
@@ -79,19 +71,14 @@ const LoginPage = () => {
         console.log("[login] submit controlado via React (sem reload).");
       }
 
-<<<<<<< HEAD
-      const response = await login(password);
-      saveToken(response.token);
-      const mustChangePassword = Boolean(response.mustChangePassword);
-      setMustChangePassword(mustChangePassword);
-      navigate(mustChangePassword ? "/change-password" : from, { replace: true });
-=======
       const response = await login({ email: email.trim(), password });
       const token = response.token ?? response.accessToken;
       if (!token) {
         throw new Error("Token nao encontrado.");
       }
       saveToken(token);
+      const mustChangePassword = Boolean(response.mustChangePassword);
+      setMustChangePassword(mustChangePassword);
       const responseUser = response.user ?? {
         name: response.name,
         email: response.email,
@@ -99,9 +86,12 @@ const LoginPage = () => {
       if (responseUser?.name || responseUser?.email) {
         saveAuthUser(responseUser);
       }
+      if (mustChangePassword) {
+        navigate("/change-password", { replace: true });
+        return;
+      }
       await refreshMe();
-      navigate("/", { replace: true });
->>>>>>> 379f1e03b89eb5f8e29aaf5abc851d46bda4215d
+      navigate(from, { replace: true });
     } catch (err) {
       const message = err instanceof Error ? err.message : "";
       if (message === "Credenciais invalidas.") {
