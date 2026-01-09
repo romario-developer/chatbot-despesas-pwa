@@ -103,7 +103,14 @@ const CreditCardsSection = () => {
     try {
       const result = await listCards();
       // eslint-disable-next-line no-console
-      console.info("[cards] list status:", result.status, "length:", result.rawLength);
+      console.log(
+        "[cards] list status:",
+        result.status,
+        "response.length:",
+        result.rawLength,
+      );
+      // eslint-disable-next-line no-console
+      console.log("GET /api/cards ->", result.cards);
       setCards(result.cards);
       if (result.cards.length === 0 && createdRecentlyRef.current) {
         setToast({
@@ -316,6 +323,10 @@ const CreditCardsSection = () => {
           {error}
         </div>
       )}
+
+      <div className="text-xs font-semibold text-slate-500">
+        Cards carregados: {cardsList.length}
+      </div>
 
       {isLoading ? (
         <div className={`${cardBase} ${subtleText}`}>Carregando cartoes...</div>
