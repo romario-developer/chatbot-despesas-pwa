@@ -3,6 +3,7 @@ import type { DashboardCategory, DashboardSummary } from "../types";
 
 type RawCategory = {
   category?: unknown;
+  categoryName?: unknown;
   name?: unknown;
   total?: unknown;
   amount?: unknown;
@@ -22,17 +23,20 @@ const normalizeNumber = (value: unknown) => {
   return Number.isFinite(num) ? num : 0;
 };
 
-const normalizeCategory = (value: RawCategory, fallbackLabel: string): DashboardCategory => {
+const normalizeCategory = (value: RawCategory): DashboardCategory | null => {
   const label =
-    typeof value.category === "string"
-      ? value.category
-      : typeof value.name === "string"
-        ? value.name
-        : fallbackLabel;
+    typeof value.categoryName === "string"
+      ? value.categoryName
+      : typeof value.category === "string"
+        ? value.category
+        : typeof value.name === "string"
+          ? value.name
+          : "";
   const total = normalizeNumber(value.total ?? value.amount);
+  if (!label) return null;
   const color = typeof value.color === "string" ? value.color : undefined;
   return {
-    category: label || fallbackLabel,
+    category: label,
     total,
     color,
   };
@@ -40,18 +44,18 @@ const normalizeCategory = (value: RawCategory, fallbackLabel: string): Dashboard
 
 const normalizeCategories = (value: unknown): DashboardCategory[] => {
   if (Array.isArray(value)) {
-    return value.map((item, index) =>
-      normalizeCategory(item as RawCategory, `Categoria ${index + 1}`),
-    );
+    return value
+      .map((item) => normalizeCategory(item as RawCategory))
+      .filter(Boolean) as DashboardCategory[];
   }
 
   if (value && typeof value === "object") {
-    return Object.entries(value as Record<string, unknown>).map(
-      ([category, total]) => ({
+    return Object.entries(value as Record<string, unknown>)
+      .map(([category, total]) => ({
         category,
         total: normalizeNumber(total),
-      }),
-    );
+      }))
+      .filter((item) => Boolean(item.category));
   }
 
   return [];
