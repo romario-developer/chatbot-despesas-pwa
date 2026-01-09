@@ -258,10 +258,16 @@ api.interceptors.response.use(
 
     if (status === 401) {
       if (path === "/api/auth/login") {
-        return Promise.reject(new Error("Credenciais invalidas."));
+        const authError = new Error("Credenciais invalidas.") as Error & { status?: number };
+        authError.status = status;
+        return Promise.reject(authError);
       }
       logoutAndRedirect("Sessao expirada, faca login novamente.");
-      return Promise.reject(new Error("Sessao expirada ou nao autenticado."));
+      const authError = new Error("Sessao expirada ou nao autenticado.") as Error & {
+        status?: number;
+      };
+      authError.status = status;
+      return Promise.reject(authError);
     }
 
     if (status === 404) {
@@ -270,12 +276,18 @@ api.interceptors.response.use(
         // eslint-disable-next-line no-console
         console.warn("[API BLOCKED] retry loop detected for", endpointKey, "until", blockedUntil);
       }
-      return Promise.reject(
-        new Error("Endpoint nao encontrado. Verifique VITE_API_URL e paths /api."),
-      );
+      const notFoundError = new Error(
+        "Endpoint nao encontrado. Verifique VITE_API_URL e paths /api.",
+      ) as Error & { status?: number };
+      notFoundError.status = status;
+      return Promise.reject(notFoundError);
     }
 
-    return Promise.reject(new Error(parseErrorMessage(error)));
+    const apiError = new Error(parseErrorMessage(error)) as Error & { status?: number };
+    if (typeof status === "number") {
+      apiError.status = status;
+    }
+    return Promise.reject(apiError);
   },
 );
 

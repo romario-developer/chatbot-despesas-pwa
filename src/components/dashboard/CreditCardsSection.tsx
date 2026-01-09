@@ -9,6 +9,7 @@ import {
 import { formatBRL, parseCurrencyInput } from "../../utils/format";
 import { getReadableTextColor } from "../../utils/colors";
 import { cardBase, cardHover, subtleText } from "../../styles/dashboardTokens";
+import Toast from "../Toast";
 import ConfirmDialog from "../ConfirmDialog";
 import DayPickerSheet from "../DayPickerSheet";
 import type { CreditCard } from "../../types";
@@ -68,6 +69,9 @@ const CreditCardsSection = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [dayPickerField, setDayPickerField] = useState<DayField>(null);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(
+    null,
+  );
   const [cardToDelete, setCardToDelete] = useState<CreditCard | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -79,7 +83,14 @@ const CreditCardsSection = () => {
       setCards(data);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao carregar cartoes.";
+      const status = (err as Error & { status?: number }).status;
+      if (status) {
+        // eslint-disable-next-line no-console
+        console.warn("[cards] erro ao carregar:", status);
+      }
       setError(message);
+      setCards([]);
+      setToast({ message, type: "error" });
     } finally {
       setIsLoading(false);
     }
@@ -169,26 +180,20 @@ const CreditCardsSection = () => {
     setIsSaving(true);
     setFormError(null);
     try {
-      const saved = editingCard
-        ? await updateCard(editingCard.id, payload)
-        : await createCard(payload);
-      if (saved) {
-        setCards((prev) => {
-          if (editingCard) {
-            return prev.map((item) => (item.id === saved.id ? saved : item));
-          }
-          return [saved, ...prev];
-        });
+      if (editingCard) {
+        await updateCard(editingCard.id, payload);
       } else {
-        await loadCards();
+        await createCard(payload);
       }
       setFlowStep("closed");
       setSelectedMethod(null);
       setDayPickerField(null);
       setEditingCard(null);
+      await loadCards();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao salvar cartao.";
       setFormError(message);
+      setToast({ message, type: "error" });
     } finally {
       setIsSaving(false);
     }
@@ -541,6 +546,10 @@ const CreditCardsSection = () => {
         onConfirm={handleDelete}
         onCancel={() => !isDeleting && setCardToDelete(null)}
       />
+
+      {toast && (
+        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
+      )}
     </div>
   );
 };
