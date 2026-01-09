@@ -14,7 +14,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import MonthPicker from "../components/MonthPicker";
 import Toast from "../components/Toast";
-import ExportCsvButton from "../components/ExportCsvButton";
 import DashboardSection from "../components/ui/DashboardSection";
 import InsightCard from "../components/dashboard/cards/InsightCard";
 import MetricCard from "../components/dashboard/cards/MetricCard";
@@ -624,7 +623,6 @@ const DashboardPage = () => {
                 <MonthPicker label="Mês" value={month} onChange={setMonth} />
               </div>
               <div className="flex items-center gap-2">
-                <ExportCsvButton selectedMonth={month} />
                 <div ref={actionsRef} className="relative">
                   <button
                     type="button"
