@@ -210,7 +210,7 @@ const DashboardPage = () => {
                   className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-teal-300 hover:text-teal-700"
                   aria-label="Mes anterior"
                 >
-                  <
+                  &lt;
                 </button>
                 <div className="relative">
                   <span className="text-2xl font-semibold text-slate-900">
@@ -230,7 +230,7 @@ const DashboardPage = () => {
                   className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-teal-300 hover:text-teal-700"
                   aria-label="Proximo mes"
                 >
-                  >
+                  &gt;
                 </button>
               </div>
             </div>
