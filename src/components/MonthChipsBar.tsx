@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useRef } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { formatMonthName, getCurrentMonthInTimeZone } from "../utils/months";
 
 type MonthChipsBarProps = {
@@ -24,7 +30,15 @@ const MonthChipsBar = ({
   onSelect,
   onClose,
 }: MonthChipsBarProps) => {
+  const [isDragging, setIsDragging] = useState(false);
   const selectedRef = useRef<HTMLButtonElement | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const dragState = useRef({
+    startX: 0,
+    scrollLeft: 0,
+    moved: false,
+    pointerId: null as number | null,
+  });
   const currentYear = useMemo(() => {
     const currentMonth = getCurrentMonthInTimeZone("America/Bahia");
     const year = Number(currentMonth.slice(0, 4));
@@ -67,8 +81,52 @@ const MonthChipsBar = ({
   };
 
   const handleSelect = (monthValue: string) => {
+    if (dragState.current.moved) {
+      dragState.current.moved = false;
+      return;
+    }
     onSelect(monthValue);
     onClose();
+  };
+
+  const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    const container = scrollRef.current;
+    if (!container) return;
+    dragState.current = {
+      startX: event.clientX,
+      scrollLeft: container.scrollLeft,
+      moved: false,
+      pointerId: event.pointerId,
+    };
+    setIsDragging(true);
+    container.setPointerCapture(event.pointerId);
+  };
+
+  const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!isDragging) return;
+    const container = scrollRef.current;
+    if (!container) return;
+    const delta = event.clientX - dragState.current.startX;
+    if (Math.abs(delta) > 4) {
+      dragState.current.moved = true;
+    }
+    container.scrollLeft = dragState.current.scrollLeft - delta;
+    event.preventDefault();
+  };
+
+  const handlePointerUp = () => {
+    if (!isDragging) return;
+    const container = scrollRef.current;
+    if (container && dragState.current.pointerId !== null) {
+      container.releasePointerCapture(dragState.current.pointerId);
+    }
+    setIsDragging(false);
+    if (dragState.current.moved) {
+      window.setTimeout(() => {
+        dragState.current.moved = false;
+      }, 0);
+    }
   };
 
   return (
@@ -85,14 +143,24 @@ const MonthChipsBar = ({
 
       <div
         id={id}
-        className={`absolute left-0 right-0 top-full z-30 mt-3 rounded-2xl bg-slate-900/95 px-4 py-3 text-white shadow-xl transition-all duration-200 ${
+        className={`absolute left-0 right-0 top-full z-30 mt-3 rounded-2xl bg-transparent px-0 py-1 transition-all duration-200 ${
           open ? "translate-y-0 opacity-100" : "pointer-events-none -translate-y-2 opacity-0"
         }`}
         role="dialog"
         aria-hidden={!open}
         aria-label="Selecionar mes"
       >
-        <div className="flex gap-2 overflow-x-auto overflow-y-hidden pb-1 pt-1">
+        <div
+          ref={scrollRef}
+          className={`no-scrollbar flex gap-2 overflow-x-auto overflow-y-hidden pb-1 pt-1 select-none ${
+            isDragging ? "cursor-grabbing" : "cursor-grab"
+          }`}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+        >
           {months.map((monthValue) => {
             const isSelected = monthValue === valueMonth;
             return (

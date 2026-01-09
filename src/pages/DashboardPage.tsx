@@ -15,8 +15,8 @@ import {
   buildMonthList,
   formatMonthLabel,
   getCurrentMonthInTimeZone,
-  getDefaultMonthRange,
   isMonthInRange,
+  shiftMonth,
 } from "../utils/months";
 import { cardBase, cardHover, subtleText } from "../styles/dashboardTokens";
 import { buildTag } from "../constants/build";
@@ -39,10 +39,11 @@ const DashboardPage = () => {
     () => getCurrentMonthInTimeZone("America/Bahia"),
     [],
   );
-  const monthRange = useMemo(
-    () => getDefaultMonthRange({ endMonth: currentMonth, monthsBack: 24 }),
-    [currentMonth],
-  );
+  const monthRange = useMemo(() => {
+    const start = shiftMonth(currentMonth, -12);
+    const end = shiftMonth(currentMonth, 6);
+    return { start, end };
+  }, [currentMonth]);
   const [month, setMonth] = useState(() => {
     if (typeof window === "undefined") return currentMonth;
     const stored = localStorage.getItem("selectedMonth");

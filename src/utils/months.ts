@@ -57,7 +57,7 @@ export const buildMonthList = ({ start, end }: { start: string; end: string }) =
   if (startIndex > endIndex) return [];
 
   const list: string[] = [];
-  for (let index = endIndex; index >= startIndex; index -= 1) {
+  for (let index = startIndex; index <= endIndex; index += 1) {
     const year = Math.floor(index / 12);
     const month = (index % 12) + 1;
     list.push(formatMonthValue(year, month));
