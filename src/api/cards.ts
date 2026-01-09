@@ -1,4 +1,5 @@
 import { apiRequest } from "./client";
+import { api } from "../services/api";
 import type { CreditCard } from "../types";
 
 export type CardPayload = {
@@ -109,14 +110,25 @@ const normalizeCard = (value: RawCard): CreditCard | null => {
   };
 };
 
-export const listCards = async (): Promise<CreditCard[]> => {
-  const data = await apiRequest<RawCard[] | null>({
+export type ListCardsResult = {
+  cards: CreditCard[];
+  status: number;
+  rawLength: number;
+};
+
+export const listCards = async (): Promise<ListCardsResult> => {
+  const response = await api.request<RawCard[] | null>({
     url: "/api/cards",
     method: "GET",
   });
 
-  const list = Array.isArray(data) ? data : [];
-  return list.map((item) => normalizeCard(item)).filter(Boolean) as CreditCard[];
+  const list = Array.isArray(response.data) ? response.data : [];
+  const cards = list.map((item) => normalizeCard(item)).filter(Boolean) as CreditCard[];
+  return {
+    cards,
+    status: response.status,
+    rawLength: list.length,
+  };
 };
 
 export const createCard = async (payload: CardPayload): Promise<CreditCard | null> => {

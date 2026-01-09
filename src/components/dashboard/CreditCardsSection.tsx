@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   createCard,
   deleteCard,
@@ -81,6 +81,7 @@ const buildApiErrorMessage = (err: unknown) => {
 
 const CreditCardsSection = () => {
   const [cards, setCards] = useState<CreditCard[]>([]);
+  const createdRecentlyRef = useRef(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [flowStep, setFlowStep] = useState<FlowStep>("closed");
@@ -100,8 +101,18 @@ const CreditCardsSection = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await listCards();
-      setCards(data);
+      const result = await listCards();
+      // eslint-disable-next-line no-console
+      console.info("[cards] list status:", result.status, "length:", result.rawLength);
+      setCards(result.cards);
+      if (result.cards.length === 0 && createdRecentlyRef.current) {
+        setToast({
+          message:
+            "Nenhum cartao encontrado. Verifique autenticacao/filtro no backend.",
+          type: "error",
+        });
+      }
+      createdRecentlyRef.current = false;
     } catch (err) {
       const message = buildApiErrorMessage(err);
       const status = (err as Error & { status?: number }).status;
@@ -113,6 +124,7 @@ const CreditCardsSection = () => {
       setError(message);
       setCards([]);
       setToast({ message, type: "error" });
+      createdRecentlyRef.current = false;
     } finally {
       setIsLoading(false);
     }
@@ -224,6 +236,7 @@ const CreditCardsSection = () => {
         await updateCard(editingCard.id, payload);
       } else {
         await createCard(payload);
+        createdRecentlyRef.current = true;
       }
       setFlowStep("closed");
       setSelectedMethod(null);
