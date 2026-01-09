@@ -25,7 +25,7 @@ const AppLayout = () => {
     const email = user?.email?.trim();
     if (name) return `Ola, ${name}`;
     if (email) return email;
-    return "Conta";
+    return "";
   };
 
   const handleLogout = () => {
@@ -41,15 +41,19 @@ const AppLayout = () => {
     }
   };
 
+  const label = userLabel();
+
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             <div className="text-lg font-semibold text-primary">Despesas</div>
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-              {userLabel()}
-            </span>
+            {label && (
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                {label}
+              </span>
+            )}
           </div>
           <nav className="flex items-center gap-4">
             <NavLink to="/" end className={linkClasses}>
