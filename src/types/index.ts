@@ -24,6 +24,7 @@ export interface Entry {
   description: string;
   amount: number;
   category: string;
+  categoryInferred?: boolean;
   date: string;
   source: string;
   createdAt: string;

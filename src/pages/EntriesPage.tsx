@@ -237,6 +237,11 @@ const EntriesPage = () => {
                     </div>
                     <p className="text-xs text-slate-600">
                       {formatDate(entry.date)} - {entry.category}
+                      {entry.categoryInferred && (
+                        <span className="ml-2 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-500">
+                          auto
+                        </span>
+                      )}
                     </p>
                     <p className="text-xs text-slate-500">Origem: {entry.source}</p>
                     <div className="mt-3 flex items-center gap-2">
@@ -283,7 +288,16 @@ const EntriesPage = () => {
                         <td className="px-4 py-3 text-slate-700">
                           {formatDate(entry.date)}
                         </td>
-                        <td className="px-4 py-3 text-slate-700">{entry.category}</td>
+                        <td className="px-4 py-3 text-slate-700">
+                          <span className="inline-flex items-center gap-2">
+                            <span>{entry.category}</span>
+                            {entry.categoryInferred && (
+                              <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-500">
+                                auto
+                              </span>
+                            )}
+                          </span>
+                        </td>
                         <td className="px-4 py-3 text-slate-700">{entry.source}</td>
                         <td className="px-4 py-3 text-right font-semibold text-slate-900">
                           {formatCurrency(entry.amount)}

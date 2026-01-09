@@ -589,6 +589,11 @@ const DashboardPage = () => {
                     </p>
                     <p className="text-xs text-slate-600">
                       {formatDate(entry.date)} - {entry.category}
+                      {entry.categoryInferred && (
+                        <span className="ml-2 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-500">
+                          auto
+                        </span>
+                      )}
                     </p>
                   </div>
                   <p className="text-sm font-semibold text-slate-900">
