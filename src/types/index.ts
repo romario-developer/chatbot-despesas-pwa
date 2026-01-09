@@ -48,6 +48,20 @@ export type Summary = {
   totalPorDia: SummaryDay[];
 };
 
+export type DashboardCategory = {
+  category: string;
+  total: number;
+  color?: string;
+};
+
+export type DashboardSummary = {
+  month: string;
+  balance: number;
+  incomeTotal: number;
+  expenseTotal: number;
+  byCategory: DashboardCategory[];
+};
+
 export type EntriesResponse = Entry[];
 
 export type CategoriesResponse = string[];
@@ -59,6 +73,15 @@ export interface EntryPayload {
   date: string;
   source?: string;
 }
+
+export type CreditCard = {
+  id: string;
+  name: string;
+  brand?: string;
+  limit: number;
+  closingDay?: number;
+  dueDay?: number;
+};
 
 export type PlanningExtra = {
   id: string;
