@@ -28,6 +28,7 @@ import { formatBRL, formatDate, safeNumber } from "../utils/format";
 import { DEFAULT_PLANNING, type Entry, type Planning, type Summary } from "../types";
 import { ENTRIES_CHANGED } from "../utils/entriesEvents";
 import { cardBase, cardHover, subtleText } from "../styles/dashboardTokens";
+import { buildTag } from "../constants/build";
 
 const currentMonth = () => new Date().toISOString().slice(0, 7);
 
@@ -61,6 +62,8 @@ const DashboardPage = () => {
   const [chartMode, setChartMode] = useState<"summary" | "daily">("summary");
   const [actionsOpen, setActionsOpen] = useState(false);
   const actionsRef = useRef<HTMLDivElement | null>(null);
+  const buildVersion = import.meta.env.VITE_APP_VERSION || buildTag;
+  const showBuildTag = !import.meta.env.VITE_APP_VERSION;
 
   const loadData = useCallback(
     async ({ silent }: { silent?: boolean } = {}) => {
@@ -143,6 +146,17 @@ const DashboardPage = () => {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    const isLocalHost =
+      typeof window !== "undefined" &&
+      (window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1");
+    if (import.meta.env.DEV || isLocalHost) {
+      // eslint-disable-next-line no-console
+      console.info("[build] version:", buildVersion);
+    }
+  }, [buildVersion]);
 
   useEffect(() => {
     const refresh = () => loadData({ silent: true });
@@ -348,7 +362,6 @@ const DashboardPage = () => {
 
     return (
       <div className="space-y-6 sm:space-y-8">
-        <QuickEntryCard onCreated={() => loadData({ silent: true })} />
         <DashboardSection title="Resumo do mês">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <MetricCard
@@ -659,7 +672,15 @@ const DashboardPage = () => {
             </div>
           </div>
 
+          <QuickEntryCard onCreated={() => loadData({ silent: true })} />
+
           {renderContent()}
+
+          {showBuildTag && (
+            <div className="text-[11px] text-slate-400">
+              build: {buildVersion}
+            </div>
+          )}
         </div>
       </div>
 
