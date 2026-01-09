@@ -1,46 +1,26 @@
 import type { FormEvent } from "react";
 import { useRef, useState } from "react";
 import { createQuickEntry, type QuickEntryResult } from "../../services/quickEntryService";
-import { formatBRL, parseCurrencyInput } from "../../utils/format";
+import { formatBRL } from "../../utils/format";
 import { cardBase, cardHover, subtleText } from "../../styles/dashboardTokens";
+import { notifyEntriesChanged } from "../../utils/entriesEvents";
 
 type QuickEntryCardProps = {
   onCreated?: () => void | Promise<void>;
 };
 
-const capitalize = (value: string) => {
-  if (!value) return value;
-  return `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
-};
+const buildSuccessMessage = (result: QuickEntryResult) => {
+  const description = result.description;
+  const amount = result.amount;
 
-const parseFallbackDetails = (text: string): QuickEntryResult => {
-  const trimmed = text.trim();
-  if (!trimmed) return {};
-  const parts = trimmed.split(/\s+/);
-  if (parts.length < 2) {
-    return { description: capitalize(trimmed) };
+  if (typeof amount === "number" && Number.isFinite(amount)) {
+    if (description) {
+      return `Despesa registrada: ${description} - ${formatBRL(amount)}`;
+    }
+    return `Despesa registrada: ${formatBRL(amount)}`;
   }
-  const rawAmount = parts[parts.length - 1];
-  const description = capitalize(parts.slice(0, -1).join(" "));
-  const amount = parseCurrencyInput(rawAmount);
-  return {
-    description: description || undefined,
-    amount: Number.isFinite(amount) ? amount : undefined,
-  };
-};
 
-const buildSuccessMessage = (result: QuickEntryResult, fallbackText: string) => {
-  const fallback = parseFallbackDetails(fallbackText);
-  const description = result.description ?? fallback.description;
-  const amount = result.amount ?? fallback.amount;
-
-  if (description && typeof amount === "number" && Number.isFinite(amount)) {
-    return `Lançamento registrado: ${description} • ${formatBRL(amount)}`;
-  }
-  if (description) {
-    return `Lançamento registrado: ${description}`;
-  }
-  return "Lançamento registrado.";
+  return "Despesa registrada com sucesso.";
 };
 
 const resolveErrorMessage = (err: unknown) => {
@@ -84,10 +64,12 @@ const QuickEntryCard = ({ onCreated }: QuickEntryCardProps) => {
 
     try {
       const result = await createQuickEntry(trimmed);
-      setSuccessMessage(buildSuccessMessage(result, trimmed));
+      setSuccessMessage(buildSuccessMessage(result));
       setText("");
       if (onCreated) {
         await onCreated();
+      } else {
+        notifyEntriesChanged();
       }
       requestAnimationFrame(() => {
         inputRef.current?.focus();

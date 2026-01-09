@@ -19,8 +19,11 @@ const normalizeQuickEntry = (value: unknown): QuickEntryResult => {
   const data = value as Record<string, unknown>;
   const description =
     typeof data.description === "string" ? data.description.trim() : undefined;
-  const amountValue = Number(data.amount);
-  const amount = Number.isFinite(amountValue) ? amountValue : undefined;
+  const amountValue = data.amount;
+  const amount =
+    typeof amountValue === "number" && Number.isFinite(amountValue)
+      ? amountValue
+      : undefined;
 
   return {
     description: description || undefined,

@@ -1,6 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { getMe } from "../api/me";
 import {
   clearAuthUser,
   getStoredAuthUser,
@@ -35,16 +34,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     setStatus("loading");
-    try {
-      const me = await getMe();
-      setUser(me);
-      saveAuthUser({ name: me.name, email: me.email });
+    const storedUser = getStoredAuthUser();
+    if (storedUser) {
+      const nextUser: UserMe = { name: storedUser.name, email: storedUser.email };
+      setUser(nextUser);
+      saveAuthUser({ name: nextUser.name, email: nextUser.email });
       setStatus("ready");
-      return me;
-    } catch {
-      setStatus("error");
-      return null;
+      return nextUser;
     }
+
+    setStatus("ready");
+    return null;
   }, []);
 
   useEffect(() => {

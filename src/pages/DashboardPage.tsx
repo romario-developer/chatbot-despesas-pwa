@@ -26,7 +26,7 @@ import { getPlanning } from "../api/planning";
 import { monthToRange } from "../utils/dateRange";
 import { formatBRL, formatDate, safeNumber } from "../utils/format";
 import { DEFAULT_PLANNING, type Entry, type Planning, type Summary } from "../types";
-import { ENTRIES_CHANGED } from "../utils/entriesEvents";
+import { ENTRIES_CHANGED, notifyEntriesChanged } from "../utils/entriesEvents";
 import { cardBase, cardHover, subtleText } from "../styles/dashboardTokens";
 import { buildTag } from "../constants/build";
 
@@ -152,11 +152,11 @@ const DashboardPage = () => {
       typeof window !== "undefined" &&
       (window.location.hostname === "localhost" ||
         window.location.hostname === "127.0.0.1");
-    if (import.meta.env.DEV || isLocalHost) {
+    if (import.meta.env.DEV || isLocalHost || showBuildTag) {
       // eslint-disable-next-line no-console
       console.info("[build] version:", buildVersion);
     }
-  }, [buildVersion]);
+  }, [buildVersion, showBuildTag]);
 
   useEffect(() => {
     const refresh = () => loadData({ silent: true });
@@ -672,7 +672,7 @@ const DashboardPage = () => {
             </div>
           </div>
 
-          <QuickEntryCard onCreated={() => loadData({ silent: true })} />
+          <QuickEntryCard onCreated={notifyEntriesChanged} />
 
           {renderContent()}
 
