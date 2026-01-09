@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { useNavigate } from "react-router-dom";
 import Toast from "../components/Toast";
 import DashboardSection from "../components/ui/DashboardSection";
 import QuickEntryCard from "../components/dashboard/QuickEntryCard";
 import CreditCardsSection from "../components/dashboard/CreditCardsSection";
+import MonthChipsBar from "../components/MonthChipsBar";
 import { listEntries } from "../api/entries";
 import { getDashboardSummary } from "../api/dashboard";
 import { monthToRange } from "../utils/dateRange";
@@ -60,7 +61,6 @@ const DashboardPage = () => {
     null,
   );
   const [isMonthPanelOpen, setIsMonthPanelOpen] = useState(false);
-  const selectedChipRef = useRef<HTMLButtonElement | null>(null);
   const buildVersion = import.meta.env.VITE_APP_VERSION || buildTag;
   const showBuildTag = !import.meta.env.VITE_APP_VERSION;
 
@@ -128,29 +128,6 @@ const DashboardPage = () => {
   }, [loadDashboard]);
 
   useEffect(() => {
-    if (!isMonthPanelOpen) return;
-    const handleKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsMonthPanelOpen(false);
-      }
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [isMonthPanelOpen]);
-
-  useEffect(() => {
-    if (!isMonthPanelOpen) return;
-    const raf = window.requestAnimationFrame(() => {
-      selectedChipRef.current?.scrollIntoView({
-        block: "nearest",
-        inline: "center",
-        behavior: "smooth",
-      });
-    });
-    return () => window.cancelAnimationFrame(raf);
-  }, [isMonthPanelOpen, month]);
-
-  useEffect(() => {
     if (typeof window === "undefined") return;
     localStorage.setItem("selectedMonth", month);
   }, [month]);
@@ -215,25 +192,10 @@ const DashboardPage = () => {
     setIsMonthPanelOpen((prev) => !prev);
   };
 
-  const handleSelectMonth = (value: string) => {
-    setMonth(value);
-    setIsMonthPanelOpen(false);
-  };
-
   return (
     <div className="space-y-4">
       <div className="rounded-3xl bg-gradient-to-br from-white via-slate-50 to-teal-50/40 p-4 sm:p-6">
-        <div className="relative space-y-6">
-          {isMonthPanelOpen && (
-            <button
-              type="button"
-              onClick={() => setIsMonthPanelOpen(false)}
-              className="absolute inset-0 z-20 cursor-default bg-transparent"
-              aria-hidden="true"
-              tabIndex={-1}
-            />
-          )}
-
+        <div className="space-y-6">
           <div className="relative">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -271,40 +233,14 @@ const DashboardPage = () => {
               </div>
             </div>
 
-            <div
+            <MonthChipsBar
               id="dashboard-month-panel"
-              className={`absolute left-0 right-0 top-full z-30 mt-3 rounded-2xl bg-slate-900/95 px-4 py-3 text-white shadow-xl transition-all duration-200 ${
-                isMonthPanelOpen
-                  ? "translate-y-0 opacity-100"
-                  : "pointer-events-none -translate-y-2 opacity-0"
-              }`}
-            >
-              <div className="flex items-center justify-between text-xs font-semibold uppercase text-slate-300">
-                <span>Selecionar mes</span>
-                <span>{monthOptions.length} meses</span>
-              </div>
-              <div className="mt-3 flex gap-2 overflow-x-auto pb-1 pt-1">
-                {monthOptions.map((monthValue) => {
-                  const isSelected = monthValue === month;
-                  return (
-                    <button
-                      key={monthValue}
-                      type="button"
-                      onClick={() => handleSelectMonth(monthValue)}
-                      ref={isSelected ? selectedChipRef : null}
-                      className={`flex shrink-0 items-center rounded-full px-4 py-2 text-sm font-semibold transition ${
-                        isSelected
-                          ? "bg-purple-600 text-white shadow-lg shadow-purple-900/40"
-                          : "bg-purple-500/20 text-purple-200 hover:bg-purple-500/30"
-                      }`}
-                      aria-pressed={isSelected}
-                    >
-                      {formatMonthLabel(monthValue)}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+              open={isMonthPanelOpen}
+              valueMonth={month}
+              months={monthOptions}
+              onSelect={setMonth}
+              onClose={() => setIsMonthPanelOpen(false)}
+            />
           </div>
 
           {summaryError && (

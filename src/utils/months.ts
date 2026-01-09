@@ -72,6 +72,12 @@ export const formatMonthLabel = (value: string) => {
   return `${label} ${parts.year}`.trim();
 };
 
+export const formatMonthName = (value: string) => {
+  const parts = parseMonthValue(value);
+  if (!parts) return value;
+  return MONTH_LABELS[parts.month - 1] ?? value;
+};
+
 export const getCurrentMonthInTimeZone = (timeZone = "America/Bahia") => {
   const now = new Date();
   const formatter = new Intl.DateTimeFormat("en-CA", {
