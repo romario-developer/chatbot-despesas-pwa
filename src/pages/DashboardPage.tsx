@@ -7,7 +7,7 @@ import QuickEntryCard from "../components/dashboard/QuickEntryCard";
 import CreditCardsSection from "../components/dashboard/CreditCardsSection";
 import MonthChipsBar from "../components/MonthChipsBar";
 import { listEntries } from "../api/entries";
-import { listCardInvoices, payCardInvoice } from "../api/cards";
+import { payCardInvoice } from "../api/cards";
 import { getDashboardSummary } from "../api/dashboard";
 import { monthToRange } from "../utils/dateRange";
 import { formatBRL, formatDate } from "../utils/format";
@@ -24,6 +24,7 @@ import {
 import { cardBase, cardHover, subtleText } from "../styles/dashboardTokens";
 import { buildTag } from "../constants/build";
 import type { CardInvoice, DashboardSummary, Entry } from "../types";
+import { api } from "../services/api";
 
 const CATEGORY_FALLBACK_COLORS = [
   "#0ea5e9",
@@ -35,6 +36,11 @@ const CATEGORY_FALLBACK_COLORS = [
   "#eab308",
   "#3b82f6",
 ];
+
+type CardInvoicesApiResponse = {
+  asOf?: string;
+  invoices?: CardInvoice[];
+};
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -139,8 +145,20 @@ const DashboardPage = () => {
     setInvoicesLoading(true);
     setInvoicesError(null);
     try {
-      const data = await listCardInvoices();
-      const invoiceList = Array.isArray(data) ? data : [];
+      const response = await api.request<CardInvoicesApiResponse>({
+        url: "/api/cards/invoices",
+        method: "GET",
+      });
+
+      // eslint-disable-next-line no-console
+      console.log("raw invoices api result:", response.data);
+
+      const invoicesPayload = response.data?.invoices;
+      const invoiceList = Array.isArray(invoicesPayload) ? invoicesPayload : [];
+
+      // eslint-disable-next-line no-console
+      console.log("parsed invoices:", invoiceList);
+
       setInvoices(invoiceList);
     } catch (err) {
       const message =
@@ -358,7 +376,7 @@ const DashboardPage = () => {
                 <h4 className="text-base font-semibold text-slate-900">Faturas</h4>
                 <p className="text-xs text-slate-500">Total da fatura atual de cada cartao</p>
                 <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  Faturas carregadas: {Array.isArray(invoices) ? invoices.length : 0}
+                  FATURAS CARREGADAS: {invoiceCount}
                 </p>
               </div>
               {invoicesError && (

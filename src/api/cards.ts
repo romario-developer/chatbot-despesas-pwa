@@ -225,7 +225,9 @@ const normalizeInvoice = (value: RawInvoice): CardInvoice | null => {
       ? data.cardName.trim()
       : typeof data.name === "string"
         ? data.name.trim()
-        : undefined;
+        : typeof data.card === "string"
+          ? data.card.trim()
+          : undefined;
   if (!cardName) return null;
   const brand = typeof data.brand === "string" ? data.brand.trim() : undefined;
   const color = typeof data.color === "string" ? data.color.trim() : undefined;
