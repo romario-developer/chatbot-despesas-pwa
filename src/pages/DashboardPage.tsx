@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { useNavigate } from "react-router-dom";
 import Toast from "../components/Toast";
@@ -75,6 +75,7 @@ const DashboardPage = () => {
   const [paymentDate, setPaymentDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [isPaying, setIsPaying] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const invoicesFetchedRef = useRef(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(
     null,
   );
@@ -150,14 +151,8 @@ const DashboardPage = () => {
         method: "GET",
       });
 
-      // eslint-disable-next-line no-console
-      console.log("raw invoices api result:", response.data);
-
       const invoicesPayload = response.data?.invoices;
       const invoiceList = Array.isArray(invoicesPayload) ? invoicesPayload : [];
-
-      // eslint-disable-next-line no-console
-      console.log("parsed invoices:", invoiceList);
 
       setInvoices(invoiceList);
     } catch (err) {
@@ -218,6 +213,8 @@ const DashboardPage = () => {
   }, [loadDashboard, loadInvoices]);
 
   useEffect(() => {
+    if (invoicesFetchedRef.current) return;
+    invoicesFetchedRef.current = true;
     loadInvoices();
   }, [loadInvoices]);
 
