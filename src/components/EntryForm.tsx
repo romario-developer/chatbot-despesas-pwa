@@ -53,6 +53,7 @@ const EntryForm = ({ initialValues, categories = [], onSubmit, onCancel }: Entry
   const [errors, setErrors] = useState<FormErrors>({});
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isInstallmentEntry = Boolean(initialValues?.installmentGroupId);
 
   useEffect(() => {
     setDescription(initialValues?.description ?? "");
@@ -187,10 +188,16 @@ const EntryForm = ({ initialValues, categories = [], onSubmit, onCancel }: Entry
             className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
             placeholder="0,00"
             required
+            disabled={isInstallmentEntry}
           />
         </label>
         {errors.amount && (
           <p className="mt-1 text-xs text-red-600">{errors.amount}</p>
+        )}
+        {isInstallmentEntry && (
+          <p className="mt-1 text-xs text-slate-500">
+            Valor faz parte de um parcelamento e nao pode ser alterado.
+          </p>
         )}
       </div>
 
@@ -232,6 +239,7 @@ const EntryForm = ({ initialValues, categories = [], onSubmit, onCancel }: Entry
               }
             }}
             className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+            disabled={isInstallmentEntry}
           >
             {PAYMENT_METHODS.map((method) => (
               <option key={method} value={method}>
@@ -253,7 +261,7 @@ const EntryForm = ({ initialValues, categories = [], onSubmit, onCancel }: Entry
               value={cardId}
               onChange={(e) => setCardId(e.target.value)}
               className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-              disabled={cardsLoading}
+              disabled={cardsLoading || isInstallmentEntry}
             >
               <option value="">Selecionar cartao</option>
               {cards.map((card) => (

@@ -206,15 +206,28 @@ const EntriesPage = () => {
     );
   };
 
+  const formatInstallmentLabel = (entry: Entry) => {
+    const number = entry.installmentNumber;
+    const total = entry.installmentTotal;
+    if (typeof number === "number" && typeof total === "number" && total > 1) {
+      return ` (${number}/${total})`;
+    }
+    return "";
+  };
+
   const renderEntryBadges = (entry: Entry) => {
     const methodBadge = renderPaymentBadge(entry);
     const shouldShowCard = isPaymentMethodCredit(entry.paymentMethod);
     const cardBadge = shouldShowCard ? getCardBadge(entry) : null;
-    if (!methodBadge && !cardBadge) return null;
+    const installmentBadge = entry.installmentGroupId ? (
+      <span className={badgeBaseClass}>Parcelado</span>
+    ) : null;
+    if (!methodBadge && !cardBadge && !installmentBadge) return null;
     return (
       <div className="mt-2 flex flex-wrap gap-2">
         {methodBadge}
         {cardBadge}
+        {installmentBadge}
       </div>
     );
   };
@@ -359,48 +372,51 @@ const EntriesPage = () => {
           <>
             <div className="mt-4 space-y-3 md:hidden">
               {safeEntries.length ? (
-                safeEntries.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
+                safeEntries.map((entry) => {
+                  const descriptionLabel = `${entry.description}${formatInstallmentLabel(entry)}`;
+                  return (
+                    <div
+                      key={entry.id}
+                      className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">
+                            {descriptionLabel}
+                          </p>
+                          {renderEntryBadges(entry)}
+                        </div>
                         <p className="text-sm font-semibold text-slate-900">
-                          {entry.description}
+                          {formatCurrency(entry.amount)}
                         </p>
-                        {renderEntryBadges(entry)}
                       </div>
-                      <p className="text-sm font-semibold text-slate-900">
-                        {formatCurrency(entry.amount)}
+                      <p className="text-xs text-slate-600">
+                        {formatDate(entry.date)} - {entry.category}
+                        {entry.categoryInferred && (
+                          <span className="ml-2 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-500">
+                            auto
+                          </span>
+                        )}
                       </p>
+                      <p className="text-xs text-slate-500">Origem: {entry.source}</p>
+                      <div className="mt-3 flex items-center gap-2">
+                        <Link
+                          to={`/entries/${entry.id}/edit`}
+                          className="text-xs font-semibold text-primary hover:underline"
+                        >
+                          Editar
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteClick(entry)}
+                          className="text-xs font-semibold text-red-600 hover:underline"
+                        >
+                          Excluir
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-xs text-slate-600">
-                      {formatDate(entry.date)} - {entry.category}
-                      {entry.categoryInferred && (
-                        <span className="ml-2 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-500">
-                          auto
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-xs text-slate-500">Origem: {entry.source}</p>
-                    <div className="mt-3 flex items-center gap-2">
-                      <Link
-                        to={`/entries/${entry.id}/edit`}
-                        className="text-xs font-semibold text-primary hover:underline"
-                      >
-                        Editar
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteClick(entry)}
-                        className="text-xs font-semibold text-red-600 hover:underline"
-                      >
-                        Excluir
-                      </button>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <p className="text-sm text-slate-500">Nenhum lancamento encontrado.</p>
               )}
@@ -420,50 +436,53 @@ const EntriesPage = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {safeEntries.length ? (
-                    safeEntries.map((entry) => (
-                      <tr key={entry.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-3 font-medium text-slate-900">
-                          <div className="flex flex-col gap-1">
-                            <span>{entry.description}</span>
-                            {renderEntryBadges(entry)}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-slate-700">
-                          {formatDate(entry.date)}
-                        </td>
-                        <td className="px-4 py-3 text-slate-700">
-                          <span className="inline-flex items-center gap-2">
-                            <span>{entry.category}</span>
-                            {entry.categoryInferred && (
-                              <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-500">
-                                auto
-                              </span>
-                            )}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-slate-700">{entry.source}</td>
-                        <td className="px-4 py-3 text-right font-semibold text-slate-900">
-                          {formatCurrency(entry.amount)}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex justify-end gap-2">
-                            <Link
-                              to={`/entries/${entry.id}/edit`}
-                              className="text-xs font-semibold text-primary hover:underline"
-                            >
-                              Editar
-                            </Link>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteClick(entry)}
-                              className="text-xs font-semibold text-red-600 hover:underline"
-                            >
-                              Excluir
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                    safeEntries.map((entry) => {
+                      const descriptionLabel = `${entry.description}${formatInstallmentLabel(entry)}`;
+                      return (
+                        <tr key={entry.id} className="hover:bg-slate-50">
+                          <td className="px-4 py-3 font-medium text-slate-900">
+                            <div className="flex flex-col gap-1">
+                              <span>{descriptionLabel}</span>
+                              {renderEntryBadges(entry)}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-slate-700">
+                            {formatDate(entry.date)}
+                          </td>
+                          <td className="px-4 py-3 text-slate-700">
+                            <span className="inline-flex items-center gap-2">
+                              <span>{entry.category}</span>
+                              {entry.categoryInferred && (
+                                <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-500">
+                                  auto
+                                </span>
+                              )}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-slate-700">{entry.source}</td>
+                          <td className="px-4 py-3 text-right font-semibold text-slate-900">
+                            {formatCurrency(entry.amount)}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex justify-end gap-2">
+                              <Link
+                                to={`/entries/${entry.id}/edit`}
+                                className="text-xs font-semibold text-primary hover:underline"
+                              >
+                                Editar
+                              </Link>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteClick(entry)}
+                                className="text-xs font-semibold text-red-600 hover:underline"
+                              >
+                                Excluir
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     <tr>
                       <td className="px-4 py-4 text-sm text-slate-500" colSpan={6}>

@@ -1,6 +1,6 @@
 import type { FormEvent } from "react";
 import { useRef, useState } from "react";
-import { createQuickEntry, type QuickEntryResult } from "../../services/quickEntryService";
+import { createQuickEntry, type QuickEntryResponse } from "../../services/quickEntryService";
 import { formatBRL } from "../../utils/format";
 import { cardBase, cardHover, subtleText } from "../../styles/dashboardTokens";
 import { notifyEntriesChanged } from "../../utils/entriesEvents";
@@ -10,9 +10,14 @@ type QuickEntryCardProps = {
   onCreated?: () => void | Promise<void>;
 };
 
-const buildSuccessMessage = (result: QuickEntryResult) => {
+const buildSuccessMessage = (result: QuickEntryResponse) => {
   const description = result.description;
   const amount = result.amount;
+  const installments = result.createdCount;
+
+  if (installments && installments > 1) {
+    return `Despesa registrada em ${installments} parcelas.`;
+  }
 
   if (typeof amount === "number" && Number.isFinite(amount)) {
     if (description) {
@@ -33,7 +38,7 @@ const formatQuickEntryBadge = (() => {
   };
 })();
 
-const formatQuickEntryCardLabel = (card: QuickEntryResult["card"]) => {
+const formatQuickEntryCardLabel = (card: QuickEntryResponse["card"]) => {
   if (!card) return null;
   const parts = [
     card.name?.trim(),
@@ -67,7 +72,7 @@ const QuickEntryCard = ({ onCreated }: QuickEntryCardProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [lastResult, setLastResult] = useState<QuickEntryResult | null>(null);
+  const [lastResult, setLastResult] = useState<QuickEntryResponse | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -120,7 +125,7 @@ const QuickEntryCard = ({ onCreated }: QuickEntryCardProps) => {
     }
   };
 
-  const renderQuickEntryBadges = (result: QuickEntryResult | null) => {
+  const renderQuickEntryBadges = (result: QuickEntryResponse | null) => {
     if (!result) return null;
     const methodLabel = formatPaymentMethodLabel(result.paymentMethod);
     const cardLabel = formatQuickEntryCardLabel(result.card);

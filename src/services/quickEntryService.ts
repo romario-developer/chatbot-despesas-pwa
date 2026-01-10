@@ -10,6 +10,7 @@ type QuickEntryApiResponse =
       card?: unknown;
       entry?: unknown;
       data?: unknown;
+      created?: unknown;
     }
   | null;
 
@@ -25,6 +26,10 @@ export type QuickEntryResult = {
   amount?: number;
   paymentMethod?: PaymentMethod;
   card?: QuickEntryCardInfo;
+};
+
+export type QuickEntryResponse = QuickEntryResult & {
+  createdCount?: number;
 };
 
 const normalizeAmount = (value: unknown) => {
@@ -76,6 +81,15 @@ const normalizeCardInfo = (value: unknown): QuickEntryCardInfo | undefined => {
   return undefined;
 };
 
+const resolveCreatedEntries = (value: QuickEntryApiResponse): Record<string, unknown>[] => {
+  if (!value || typeof value !== "object") return [];
+  const record = value as Record<string, unknown>;
+  if (Array.isArray(record.created)) {
+    return record.created.filter(Boolean).map((item) => (item as Record<string, unknown>));
+  }
+  return [];
+};
+
 const extractRecord = (value: QuickEntryApiResponse): Record<string, unknown> | null => {
   if (!value) return null;
   if (typeof value !== "object") return null;
@@ -89,8 +103,12 @@ const extractRecord = (value: QuickEntryApiResponse): Record<string, unknown> | 
   return record;
 };
 
-const normalizeQuickEntryResult = (data: QuickEntryApiResponse): QuickEntryResult => {
-  const payload = extractRecord(data);
+const normalizeQuickEntryResult = (data: QuickEntryApiResponse): QuickEntryResponse => {
+  const createdEntries = resolveCreatedEntries(data);
+  const payload =
+    createdEntries.length > 0
+      ? createdEntries[0]
+      : extractRecord(data);
   if (!payload) return {};
 
   const description =
@@ -111,10 +129,11 @@ const normalizeQuickEntryResult = (data: QuickEntryApiResponse): QuickEntryResul
     amount,
     paymentMethod,
     card,
+    createdCount: createdEntries.length || undefined,
   };
 };
 
-export const createQuickEntry = async (text: string): Promise<QuickEntryResult> => {
+export const createQuickEntry = async (text: string): Promise<QuickEntryResponse> => {
   const data = await apiRequest<QuickEntryApiResponse>({
     url: "/api/quick-entry",
     method: "POST",

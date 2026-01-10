@@ -31,6 +31,9 @@ export interface Entry {
   cardId?: string | null;
   createdAt: string;
   updatedAt: string;
+  installmentGroupId?: string;
+  installmentNumber?: number;
+  installmentTotal?: number;
 }
 
 export type SummaryCategory = {
