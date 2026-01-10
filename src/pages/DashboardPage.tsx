@@ -58,6 +58,7 @@ const DashboardPage = () => {
   const [entriesCount, setEntriesCount] = useState(0);
   const [entriesLoading, setEntriesLoading] = useState(false);
   const [entriesError, setEntriesError] = useState<string | null>(null);
+  const [entriesPollingEnabled, setEntriesPollingEnabled] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(
     null,
   );
@@ -105,9 +106,18 @@ const DashboardPage = () => {
         setLatestEntries(sortedEntries.slice(0, 6));
         setEntriesCount(normalizedEntries.length);
         setEntriesError(null);
+        setEntriesPollingEnabled(true);
       } else {
+        const reason = entriesResult.reason as Error & { status?: number };
+        const status = reason?.status;
+        const isServerError = typeof status === "number" && status >= 500;
+        if (isServerError) {
+          setEntriesPollingEnabled(false);
+        }
         const message =
-          entriesResult.reason instanceof Error
+          isServerError
+            ? "Erro ao carregar lancamentos"
+            : entriesResult.reason instanceof Error
             ? entriesResult.reason.message
             : "Erro ao carregar lancamentos.";
         setLatestEntries([]);
@@ -133,30 +143,30 @@ const DashboardPage = () => {
     localStorage.setItem("selectedMonth", month);
   }, [month]);
 
+  const refreshDashboard = useCallback(() => {
+    if (!entriesPollingEnabled) return;
+    loadDashboard({ silent: true });
+  }, [entriesPollingEnabled, loadDashboard]);
+
   useEffect(() => {
-    const refresh = () => {
-      loadDashboard({ silent: true });
-    };
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
-        refresh();
+        refreshDashboard();
       }
     };
 
-    const intervalId = window.setInterval(refresh, 30000);
-    window.addEventListener("focus", refresh);
-    window.addEventListener("online", refresh);
-    window.addEventListener(ENTRIES_CHANGED, refresh);
+    window.addEventListener("focus", refreshDashboard);
+    window.addEventListener("online", refreshDashboard);
+    window.addEventListener(ENTRIES_CHANGED, refreshDashboard);
     document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
-      window.clearInterval(intervalId);
-      window.removeEventListener("focus", refresh);
-      window.removeEventListener("online", refresh);
-      window.removeEventListener(ENTRIES_CHANGED, refresh);
+      window.removeEventListener("focus", refreshDashboard);
+      window.removeEventListener("online", refreshDashboard);
+      window.removeEventListener(ENTRIES_CHANGED, refreshDashboard);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [loadDashboard]);
+  }, [refreshDashboard]);
 
   useEffect(() => {
     const isLocalHost =
@@ -193,6 +203,11 @@ const DashboardPage = () => {
   const handleMonthToggle = () => {
     setIsMonthPanelOpen((prev) => !prev);
   };
+
+  const handleRetryEntries = useCallback(() => {
+    setEntriesPollingEnabled(true);
+    loadDashboard();
+  }, [loadDashboard]);
 
   return (
     <div className="space-y-4">
@@ -349,9 +364,16 @@ const DashboardPage = () => {
             {entriesLoading ? (
               <p className={subtleText}>Carregando lancamentos...</p>
             ) : entriesError ? (
-              <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">
-                {entriesError}
-              </p>
+              <div className="rounded-lg border border-rose-100 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                <p>{entriesError}</p>
+                <button
+                  type="button"
+                  onClick={handleRetryEntries}
+                  className="mt-2 inline-flex items-center rounded bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-rose-700 transition hover:bg-rose-100"
+                >
+                  Tentar novamente
+                </button>
+              </div>
             ) : latestEntries.length ? (
               <ul className="divide-y divide-slate-100/80">
                 {latestEntries.map((entry) => (
