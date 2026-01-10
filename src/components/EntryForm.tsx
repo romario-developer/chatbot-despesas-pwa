@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import type { Entry, EntryPayload } from "../types";
+import type { CreditCard, Entry, EntryPayload, PaymentMethod } from "../types";
+import { listCardsCached } from "../services/cardsService";
 
 type EntryFormProps = {
   initialValues?: Partial<Entry>;
@@ -10,10 +11,30 @@ type EntryFormProps = {
 
 type FormErrors = Partial<Record<keyof EntryPayload, string>>;
 
+const PAYMENT_METHODS: PaymentMethod[] = [
+  "Dinheiro",
+  "Debito",
+  "Credito",
+  "Pix",
+  "Transferencia",
+  "Outro",
+];
+
 const normalizeAmount = (value: string) => {
   const sanitized = value.replace(/\./g, "").replace(",", ".");
   return Number(sanitized);
 };
+
+const resolvePaymentMethod = (entry?: Partial<Entry>): PaymentMethod => {
+  if (entry?.paymentMethod && PAYMENT_METHODS.includes(entry.paymentMethod)) {
+    return entry.paymentMethod;
+  }
+  if (entry?.cardId) return "Credito";
+  return "Dinheiro";
+};
+
+const formatCardLabel = (card: CreditCard) =>
+  card.brand ? `${card.name} • ${card.brand}` : card.name;
 
 const EntryForm = ({ initialValues, categories = [], onSubmit, onCancel }: EntryFormProps) => {
   const [description, setDescription] = useState(initialValues?.description ?? "");
@@ -25,6 +46,13 @@ const EntryForm = ({ initialValues, categories = [], onSubmit, onCancel }: Entry
     initialValues?.date?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
   );
   const [source] = useState(initialValues?.source ?? "manual");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(() =>
+    resolvePaymentMethod(initialValues),
+  );
+  const [cardId, setCardId] = useState(initialValues?.cardId ?? "");
+  const [cards, setCards] = useState<CreditCard[]>([]);
+  const [cardsLoading, setCardsLoading] = useState(false);
+  const [cardsError, setCardsError] = useState<string | null>(null);
   const [errors, setErrors] = useState<FormErrors>({});
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -36,7 +64,42 @@ const EntryForm = ({ initialValues, categories = [], onSubmit, onCancel }: Entry
     );
     setCategory(initialValues?.category ?? "");
     setDate(initialValues?.date?.slice(0, 10) ?? new Date().toISOString().slice(0, 10));
+    const nextPayment = resolvePaymentMethod(initialValues);
+    const nextCardId = initialValues?.cardId ?? "";
+    setPaymentMethod(nextPayment);
+    setCardId(nextPayment === "Credito" ? nextCardId : "");
   }, [initialValues]);
+
+  useEffect(() => {
+    let isActive = true;
+    const loadCards = async () => {
+      setCardsLoading(true);
+      setCardsError(null);
+      try {
+        const data = await listCardsCached();
+        if (isActive) {
+          setCards(data);
+        }
+      } catch (err) {
+        if (isActive) {
+          const message =
+            err instanceof Error ? err.message : "Erro ao carregar cartoes.";
+          setCardsError(message);
+          setCards([]);
+        }
+      } finally {
+        if (isActive) {
+          setCardsLoading(false);
+        }
+      }
+    };
+
+    loadCards();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   const safeCategories = Array.isArray(categories)
     ? categories
@@ -47,6 +110,7 @@ const EntryForm = ({ initialValues, categories = [], onSubmit, onCancel }: Entry
     if (!description.trim()) nextErrors.description = "Descricao obrigatoria";
     if (!category.trim()) nextErrors.category = "Categoria obrigatoria";
     if (!date) nextErrors.date = "Data obrigatoria";
+    if (!paymentMethod) nextErrors.paymentMethod = "Pagamento obrigatorio";
 
     const parsedAmount = normalizeAmount(amount);
     if (!amount.trim() || Number.isNaN(parsedAmount)) {
@@ -67,6 +131,8 @@ const EntryForm = ({ initialValues, categories = [], onSubmit, onCancel }: Entry
       category: category.trim(),
       date,
       source,
+      paymentMethod,
+      cardId: paymentMethod === "Credito" && cardId ? cardId : null,
     };
   };
 
@@ -88,6 +154,11 @@ const EntryForm = ({ initialValues, categories = [], onSubmit, onCancel }: Entry
   };
 
   const categoryOptions = useMemo(() => safeCategories, [safeCategories]);
+  const isCredit = paymentMethod === "Credito";
+  const selectedCard = useMemo(
+    () => cards.find((card) => card.id === cardId),
+    [cardId, cards],
+  );
 
   return (
     <form className="card space-y-4 p-4" onSubmit={handleSubmit}>
@@ -150,6 +221,73 @@ const EntryForm = ({ initialValues, categories = [], onSubmit, onCancel }: Entry
           <p className="mt-1 text-xs text-red-600">{errors.category}</p>
         )}
       </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700">
+          Pagamento
+          <select
+            value={paymentMethod}
+            onChange={(e) => {
+              const next = e.target.value as PaymentMethod;
+              setPaymentMethod(next);
+              if (next !== "Credito") {
+                setCardId("");
+              }
+            }}
+            className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+          >
+            {PAYMENT_METHODS.map((method) => (
+              <option key={method} value={method}>
+                {method}
+              </option>
+            ))}
+          </select>
+        </label>
+        {errors.paymentMethod && (
+          <p className="mt-1 text-xs text-red-600">{errors.paymentMethod}</p>
+        )}
+      </div>
+
+      {isCredit && (
+        <div>
+          <label className="block text-sm font-medium text-slate-700">
+            Cartao
+            <select
+              value={cardId}
+              onChange={(e) => setCardId(e.target.value)}
+              className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+              disabled={cardsLoading}
+            >
+              <option value="">Selecionar cartao</option>
+              {cards.map((card) => (
+                <option key={card.id} value={card.id}>
+                  {formatCardLabel(card)}
+                </option>
+              ))}
+            </select>
+          </label>
+          {cardsLoading && (
+            <p className="mt-1 text-xs text-slate-500">Carregando cartoes...</p>
+          )}
+          {cardsError && (
+            <p className="mt-1 text-xs text-red-600">{cardsError}</p>
+          )}
+          {!cardsLoading && !cardsError && cards.length === 0 && (
+            <p className="mt-1 text-xs text-slate-500">
+              Nenhum cartao cadastrado.
+            </p>
+          )}
+          {selectedCard && (
+            <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-600">
+              <span
+                className="h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: selectedCard.color ?? "#94a3b8" }}
+              />
+              <span>{formatCardLabel(selectedCard)}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       <div>
         <label className="block text-sm font-medium text-slate-700">

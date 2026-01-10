@@ -27,6 +27,8 @@ export interface Entry {
   categoryInferred?: boolean;
   date: string;
   source: string;
+  paymentMethod?: PaymentMethod;
+  cardId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -72,7 +74,17 @@ export interface EntryPayload {
   category: string;
   date: string;
   source?: string;
+  paymentMethod?: PaymentMethod;
+  cardId?: string | null;
 }
+
+export type PaymentMethod =
+  | "Dinheiro"
+  | "Debito"
+  | "Credito"
+  | "Pix"
+  | "Transferencia"
+  | "Outro";
 
 export type CreditCard = {
   id: string;

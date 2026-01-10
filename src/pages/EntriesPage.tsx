@@ -8,7 +8,6 @@ import MonthPicker, {
 } from "../components/MonthPicker";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Toast from "../components/Toast";
-import { monthToRange } from "../utils/dateRange";
 import { ENTRIES_CHANGED, notifyEntriesChanged } from "../utils/entriesEvents";
 import { formatCurrency, formatDate } from "../utils/format";
 import {
@@ -16,7 +15,8 @@ import {
   getCurrentMonthInTimeZone,
   getDefaultMonthRange,
 } from "../utils/months";
-import type { Entry } from "../types";
+import { listCardsCached } from "../services/cardsService";
+import type { CreditCard, Entry } from "../types";
 
 const currentMonth = () => getCurrentMonthInTimeZone("America/Bahia");
 
@@ -31,7 +31,11 @@ const EntriesPage = () => {
   const [month, setMonth] = useState(currentMonthValue);
   const [category, setCategory] = useState("");
   const [search, setSearch] = useState("");
+  const [cardId, setCardId] = useState("");
   const [categories, setCategories] = useState<unknown>([]);
+  const [cards, setCards] = useState<CreditCard[]>([]);
+  const [cardsLoading, setCardsLoading] = useState(false);
+  const [cardsError, setCardsError] = useState<string | null>(null);
   const [entries, setEntries] = useState<Entry[] | unknown>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +66,37 @@ const EntriesPage = () => {
     loadCategories();
   }, []);
 
+  useEffect(() => {
+    let isActive = true;
+    const loadCards = async () => {
+      setCardsLoading(true);
+      setCardsError(null);
+      try {
+        const data = await listCardsCached();
+        if (isActive) {
+          setCards(data);
+        }
+      } catch (err) {
+        if (isActive) {
+          const message =
+            err instanceof Error ? err.message : "Erro ao carregar cartoes.";
+          setCardsError(message);
+          setCards([]);
+        }
+      } finally {
+        if (isActive) {
+          setCardsLoading(false);
+        }
+      }
+    };
+
+    loadCards();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
   const loadEntries = useCallback(
     async ({ silent }: { silent?: boolean } = {}) => {
       if (!silent) {
@@ -70,12 +105,11 @@ const EntriesPage = () => {
       setError(null);
 
       try {
-        const { from, to } = monthToRange(month);
         const data = await listEntries({
-          from,
-          to,
+          month,
           category: category || undefined,
           q: search || undefined,
+          cardId: cardId || undefined,
         });
 
         const safeData = Array.isArray(data) ? data : [];
@@ -98,7 +132,7 @@ const EntriesPage = () => {
         }
       }
     },
-    [month, category, search],
+    [month, category, search, cardId],
   );
 
   useEffect(() => {
@@ -133,11 +167,35 @@ const EntriesPage = () => {
     : Object.keys((categories ?? {}) as Record<string, unknown>);
 
   const safeEntries = Array.isArray(entries) ? entries : [];
+  const cardsById = useMemo(
+    () => new Map(cards.map((card) => [card.id, card])),
+    [cards],
+  );
 
   const totalAmount = useMemo(
     () => safeEntries.reduce((sum, entry) => sum + entry.amount, 0),
     [safeEntries],
   );
+
+  const formatCardLabel = (card: CreditCard) =>
+    card.brand ? `${card.name} • ${card.brand}` : card.name;
+
+  const getCardBadge = (entry: Entry) => {
+    if (!entry.cardId) return null;
+    const card = cardsById.get(entry.cardId);
+    const label = card ? formatCardLabel(card) : "Cartao";
+    const dotColor = card?.color ?? "#94a3b8";
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: dotColor }} />
+        <span>{label}</span>
+      </span>
+    );
+  };
+
+  const handleClearCardFilter = () => {
+    setCardId("");
+  };
 
   const handleDeleteConfirm = async () => {
     if (!entryToDelete || isDeleting) return;
@@ -183,7 +241,7 @@ const EntriesPage = () => {
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
         <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
           Mes
           <MonthPicker
@@ -210,6 +268,36 @@ const EntriesPage = () => {
               </option>
             ))}
           </select>
+        </label>
+
+        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+          <span className="flex items-center justify-between">
+            <span>Cartao</span>
+            <button
+              type="button"
+              onClick={handleClearCardFilter}
+              disabled={!cardId}
+              className="text-xs font-semibold text-slate-500 transition hover:text-slate-700 disabled:opacity-50"
+            >
+              Limpar filtro
+            </button>
+          </span>
+          <select
+            value={cardId}
+            onChange={(e) => setCardId(e.target.value)}
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="">Todos os cartoes</option>
+            {cards.map((card) => (
+              <option key={card.id} value={card.id}>
+                {formatCardLabel(card)}
+              </option>
+            ))}
+          </select>
+          {cardsLoading && (
+            <span className="text-xs text-slate-500">Carregando cartoes...</span>
+          )}
+          {cardsError && <span className="text-xs text-red-600">{cardsError}</span>}
         </label>
 
         <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
@@ -245,45 +333,49 @@ const EntriesPage = () => {
           <>
             <div className="mt-4 space-y-3 md:hidden">
               {safeEntries.length ? (
-                safeEntries.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-slate-900">
-                        {entry.description}
+                safeEntries.map((entry) => {
+                  const cardBadge = getCardBadge(entry);
+                  return (
+                    <div
+                      key={entry.id}
+                      className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
+                    >
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-slate-900">
+                          {entry.description}
+                        </p>
+                        <p className="text-sm font-semibold text-slate-900">
+                          {formatCurrency(entry.amount)}
+                        </p>
+                      </div>
+                      <p className="text-xs text-slate-600">
+                        {formatDate(entry.date)} - {entry.category}
+                        {entry.categoryInferred && (
+                          <span className="ml-2 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-500">
+                            auto
+                          </span>
+                        )}
+                        {cardBadge && <span className="ml-2">{cardBadge}</span>}
                       </p>
-                      <p className="text-sm font-semibold text-slate-900">
-                        {formatCurrency(entry.amount)}
-                      </p>
+                      <p className="text-xs text-slate-500">Origem: {entry.source}</p>
+                      <div className="mt-3 flex items-center gap-2">
+                        <Link
+                          to={`/entries/${entry.id}/edit`}
+                          className="text-xs font-semibold text-primary hover:underline"
+                        >
+                          Editar
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteClick(entry)}
+                          className="text-xs font-semibold text-red-600 hover:underline"
+                        >
+                          Excluir
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-xs text-slate-600">
-                      {formatDate(entry.date)} - {entry.category}
-                      {entry.categoryInferred && (
-                        <span className="ml-2 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-500">
-                          auto
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-xs text-slate-500">Origem: {entry.source}</p>
-                    <div className="mt-3 flex items-center gap-2">
-                      <Link
-                        to={`/entries/${entry.id}/edit`}
-                        className="text-xs font-semibold text-primary hover:underline"
-                      >
-                        Editar
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteClick(entry)}
-                        className="text-xs font-semibold text-red-600 hover:underline"
-                      >
-                        Excluir
-                      </button>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <p className="text-sm text-slate-500">Nenhum lancamento encontrado.</p>
               )}
@@ -303,47 +395,51 @@ const EntriesPage = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {safeEntries.length ? (
-                    safeEntries.map((entry) => (
-                      <tr key={entry.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-3 font-medium text-slate-900">
-                          {entry.description}
-                        </td>
-                        <td className="px-4 py-3 text-slate-700">
-                          {formatDate(entry.date)}
-                        </td>
-                        <td className="px-4 py-3 text-slate-700">
-                          <span className="inline-flex items-center gap-2">
-                            <span>{entry.category}</span>
-                            {entry.categoryInferred && (
-                              <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-500">
-                                auto
-                              </span>
-                            )}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-slate-700">{entry.source}</td>
-                        <td className="px-4 py-3 text-right font-semibold text-slate-900">
-                          {formatCurrency(entry.amount)}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex justify-end gap-2">
-                            <Link
-                              to={`/entries/${entry.id}/edit`}
-                              className="text-xs font-semibold text-primary hover:underline"
-                            >
-                              Editar
-                            </Link>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteClick(entry)}
-                              className="text-xs font-semibold text-red-600 hover:underline"
-                            >
-                              Excluir
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                    safeEntries.map((entry) => {
+                      const cardBadge = getCardBadge(entry);
+                      return (
+                        <tr key={entry.id} className="hover:bg-slate-50">
+                          <td className="px-4 py-3 font-medium text-slate-900">
+                            {entry.description}
+                          </td>
+                          <td className="px-4 py-3 text-slate-700">
+                            {formatDate(entry.date)}
+                          </td>
+                          <td className="px-4 py-3 text-slate-700">
+                            <span className="inline-flex items-center gap-2">
+                              <span>{entry.category}</span>
+                              {entry.categoryInferred && (
+                                <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-500">
+                                  auto
+                                </span>
+                              )}
+                              {cardBadge}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-slate-700">{entry.source}</td>
+                          <td className="px-4 py-3 text-right font-semibold text-slate-900">
+                            {formatCurrency(entry.amount)}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex justify-end gap-2">
+                              <Link
+                                to={`/entries/${entry.id}/edit`}
+                                className="text-xs font-semibold text-primary hover:underline"
+                              >
+                                Editar
+                              </Link>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteClick(entry)}
+                                className="text-xs font-semibold text-red-600 hover:underline"
+                              >
+                                Excluir
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     <tr>
                       <td className="px-4 py-4 text-sm text-slate-500" colSpan={6}>
