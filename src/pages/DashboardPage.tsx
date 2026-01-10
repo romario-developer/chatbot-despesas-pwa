@@ -284,8 +284,8 @@ const DashboardPage = () => {
               {summaryLoading && !summary ? (
                 <div className="text-sm text-slate-500">Carregando grafico...</div>
               ) : categoryData.length ? (
-                <div className="h-[220px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
+                <div className="h-[220px] min-h-[220px] w-full">
+                  <ResponsiveContainer width="100%" height={220}>
                     <PieChart>
                       <Pie
                         data={categoryData}
