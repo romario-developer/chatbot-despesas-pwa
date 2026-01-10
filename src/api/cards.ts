@@ -256,6 +256,9 @@ export const listCardInvoices = async (): Promise<CardInvoice[]> => {
     method: "GET",
   });
 
+  // eslint-disable-next-line no-console
+  console.log("invoices response:", response.data);
+
   const list = resolveInvoiceList(response.data);
   const invoices = list.map((item) => normalizeInvoice(item)).filter(Boolean) as CardInvoice[];
   return invoices;

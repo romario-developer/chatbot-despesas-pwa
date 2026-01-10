@@ -140,7 +140,8 @@ const DashboardPage = () => {
     setInvoicesError(null);
     try {
       const data = await listCardInvoices();
-      setInvoices(data);
+      const invoiceList = Array.isArray(data) ? data : [];
+      setInvoices(invoiceList);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Erro ao carregar faturas.";
@@ -265,6 +266,7 @@ const DashboardPage = () => {
   const incomeTotal = summary?.incomeTotal ?? 0;
   const expenseTotal = summary?.expenseTotal ?? 0;
   const renderSummaryValue = (value: number) => (summary ? formatBRL(value) : "--");
+  const invoiceCount = Array.isArray(invoices) ? invoices.length : 0;
 
   const handleMonthToggle = () => {
     setIsMonthPanelOpen((prev) => !prev);
@@ -355,6 +357,9 @@ const DashboardPage = () => {
               <div>
                 <h4 className="text-base font-semibold text-slate-900">Faturas</h4>
                 <p className="text-xs text-slate-500">Total da fatura atual de cada cartao</p>
+                <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Faturas carregadas: {Array.isArray(invoices) ? invoices.length : 0}
+                </p>
               </div>
               {invoicesError && (
                 <p className="text-xs font-semibold text-rose-600">{invoicesError}</p>
@@ -363,7 +368,7 @@ const DashboardPage = () => {
 
             {invoicesLoading ? (
               <p className="mt-3 text-sm text-slate-500">Carregando faturas...</p>
-            ) : invoices.length ? (
+            ) : invoiceCount ? (
               <div className="mt-4 grid gap-4 md:grid-cols-2">
                   {invoices.map((invoice) => {
                     const cardLabel = invoice.brand
