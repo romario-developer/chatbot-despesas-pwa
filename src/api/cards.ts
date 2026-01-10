@@ -238,9 +238,11 @@ const normalizeInvoice = (value: RawInvoice): CardInvoice | null => {
   const cycleStart = typeof data.cycleStart === "string" ? data.cycleStart : undefined;
   const cycleEnd = typeof data.cycleEnd === "string" ? data.cycleEnd : undefined;
 
+  const invoiceName = cardName;
   return {
     cardId: String(id),
     cardName,
+    name: invoiceName,
     brand,
     color: color || undefined,
     textColor: textColor || undefined,

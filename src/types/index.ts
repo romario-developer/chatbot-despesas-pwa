@@ -99,7 +99,8 @@ export type CreditCard = {
 
 export type CardInvoice = {
   cardId: string;
-  cardName: string;
+  name: string;
+  cardName?: string;
   brand?: string;
   color?: string;
   textColor?: string;

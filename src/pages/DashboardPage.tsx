@@ -387,8 +387,8 @@ const DashboardPage = () => {
               <div className="mt-4 grid gap-4 md:grid-cols-2">
                   {invoices.map((invoice) => {
                     const cardLabel = invoice.brand
-                      ? `${invoice.cardName} • ${invoice.brand}`
-                      : invoice.cardName;
+                      ? `${invoice.name} · ${invoice.brand}`
+                      : invoice.name;
                     const background = invoice.color ?? "#0f172a";
                     const textColor = getReadableTextColor(background);
                     const cycleLabel =
@@ -521,7 +521,7 @@ const DashboardPage = () => {
                       {selectedInvoice.brand ?? "Cartao"}
                     </p>
                     <h3 className="text-lg font-semibold text-slate-900">
-                      {selectedInvoice.cardName}
+                      {selectedInvoice.name}
                     </h3>
                   </div>
                   <button
@@ -640,3 +640,4 @@ const DashboardPage = () => {
 };
 
 export default DashboardPage;
+
