@@ -6,12 +6,14 @@ import {
   getCurrentMonthInTimeZone,
 } from "../utils/months";
 import {
-  CreditForecastItem,
-  CreditInvoiceItem,
-  CreditOverviewCard,
   getCreditForecast,
   getCreditInvoice,
   getCreditOverview,
+} from "../api/credit";
+import type {
+  CreditForecastItem,
+  CreditInvoiceItem,
+  CreditOverviewCard,
 } from "../api/credit";
 
 const formatAmount = (value?: number) =>
