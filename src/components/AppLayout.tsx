@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { updateSW } from "../main";
+import ChatWidget from "./assistant/ChatWidget";
 
 const linkClasses = ({ isActive }: { isActive: boolean }) =>
   [
@@ -182,6 +183,8 @@ const AppLayout = () => {
           </div>
         </div>
       )}
+      <ChatWidget />
+
       {showUpdate && (
         <div className="fixed bottom-4 left-4 right-4 z-50">
           <div className="flex flex-col items-start justify-between gap-3 rounded-lg bg-blue-600 p-4 text-white shadow-lg sm:flex-row sm:items-center">
