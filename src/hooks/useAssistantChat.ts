@@ -39,15 +39,27 @@ const resolveMonth = () => {
   return getCurrentMonthInTimeZone("America/Bahia");
 };
 
-const handleActions = (actions: AssistantAction[] | undefined) => {
-  if (!actions?.length) return;
-  const hasExpenseAction = actions.some((item) =>
-    item.type.startsWith("expense_"),
-  );
-  if (hasExpenseAction) {
-    notifyEntriesChanged();
-  }
-};
+  const handleActions = (actions: AssistantAction[] | undefined) => {
+    if (!actions?.length) return;
+    const hasExpenseAction = actions.some((item) =>
+      item.type.startsWith("expense_"),
+    );
+    if (hasExpenseAction) {
+      notifyEntriesChanged();
+    }
+  };
+
+  const resolveErrorMessageFromPayload = (payload: unknown) => {
+    if (!payload || typeof payload !== "object") return null;
+    const data = payload as { message?: unknown; error?: unknown };
+    if (typeof data.message === "string" && data.message.trim()) {
+      return data.message;
+    }
+    if (typeof data.error === "string" && data.error.trim()) {
+      return data.error;
+    }
+    return null;
+  };
 
 export const useAssistantChat = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -111,9 +123,20 @@ export const useAssistantChat = () => {
 
         setSuggestions(payload.suggestions ?? defaultSuggestions);
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Nao foi possivel conversar com o assistente.";
-        setError(message);
+        const apiError = err as Error & { payload?: unknown };
+        const serverMessage =
+          resolveErrorMessageFromPayload(apiError.payload) ??
+          (err instanceof Error ? err.message : null);
+        const friendly =
+          serverMessage ||
+          "Não consegui falar com o servidor agora. Tente novamente.";
+        setError(friendly);
+        const assistantMessage: ChatMessage = {
+          id: `assistant-error-${Date.now()}`,
+          author: "assistant",
+          text: friendly,
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
       } finally {
         setLoading(false);
       }
