@@ -21,7 +21,7 @@ import {
   isPaymentMethodCredit,
 } from "../utils/paymentMethods";
 import { listCardsCached } from "../services/cardsService";
-import type { CreditCard, Entry } from "../types";
+import type { Category, CreditCard, Entry } from "../types";
 
 const currentMonth = () => getCurrentMonthInTimeZone("America/Bahia");
 
@@ -37,7 +37,7 @@ const EntriesPage = () => {
   const [category, setCategory] = useState("");
   const [search, setSearch] = useState("");
   const [cardId, setCardId] = useState("");
-  const [categories, setCategories] = useState<unknown>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [cards, setCards] = useState<CreditCard[]>([]);
   const [cardsLoading, setCardsLoading] = useState(false);
   const [cardsError, setCardsError] = useState<string | null>(null);
@@ -181,10 +181,6 @@ const EntriesPage = () => {
     };
   }, [loadEntries, entriesPollingEnabled]);
 
-  const safeCategories = Array.isArray(categories)
-    ? categories
-    : Object.keys((categories ?? {}) as Record<string, unknown>);
-
   const safeEntries = Array.isArray(entries) ? entries : [];
   const cardsById = useMemo(
     () => new Map(cards.map((card) => [card.id, card])),
@@ -321,9 +317,9 @@ const EntriesPage = () => {
             className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
           >
             <option value="">Todas</option>
-            {safeCategories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.name}>
+                {cat.name}
               </option>
             ))}
           </select>

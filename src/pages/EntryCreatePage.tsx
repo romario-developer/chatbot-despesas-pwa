@@ -1,34 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createEntry } from "../api/entries";
-import { listCategories } from "../api/categories";
 import EntryForm from "../components/EntryForm";
 import { notifyEntriesChanged } from "../utils/entriesEvents";
 
 const EntryCreatePage = () => {
   const navigate = useNavigate();
-  const [categories, setCategories] = useState<unknown>([]);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const data = await listCategories();
-        setCategories(data);
-      } catch {
-        setCategories([]);
-      }
-    };
-    loadCategories();
-  }, []);
-
-  const safeCategories = useMemo(
-    () =>
-      Array.isArray(categories)
-        ? categories
-        : Object.keys((categories ?? {}) as Record<string, unknown>),
-    [categories],
-  );
 
   const handleSubmit = async (payload: Parameters<typeof createEntry>[0]) => {
     setError(null);
@@ -60,7 +38,6 @@ const EntryCreatePage = () => {
       )}
 
       <EntryForm
-        categories={safeCategories}
         initialValues={{ date: new Date().toISOString().slice(0, 10) }}
         onSubmit={handleSubmit}
         onCancel={handleCancel}

@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getEntry, listEntries, updateEntry } from "../api/entries";
-import { listCategories } from "../api/categories";
 import EntryForm from "../components/EntryForm";
 import { monthToRange } from "../utils/dateRange";
 import { notifyEntriesChanged } from "../utils/entriesEvents";
@@ -12,22 +11,9 @@ const currentMonth = () => new Date().toISOString().slice(0, 7);
 const EntryEditPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [categories, setCategories] = useState<unknown>([]);
   const [entry, setEntry] = useState<Entry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const data = await listCategories();
-        setCategories(data);
-      } catch {
-        setCategories([]);
-      }
-    };
-    loadCategories();
-  }, []);
 
   useEffect(() => {
     const loadEntry = async () => {
@@ -73,14 +59,6 @@ const EntryEditPage = () => {
 
     loadEntry();
   }, [id]);
-
-  const safeCategories = useMemo(
-    () =>
-      Array.isArray(categories)
-        ? categories
-        : Object.keys((categories ?? {}) as Record<string, unknown>),
-    [categories],
-  );
 
   const handleSubmit = async (payload: Parameters<typeof updateEntry>[1]) => {
     if (!id) return;
@@ -139,7 +117,6 @@ const EntryEditPage = () => {
       )}
 
       <EntryForm
-        categories={safeCategories}
         initialValues={entry}
         onSubmit={handleSubmit}
         onCancel={handleCancel}

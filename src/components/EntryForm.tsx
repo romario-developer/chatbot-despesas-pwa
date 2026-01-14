@@ -1,5 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
-import type { CreditCard, Entry, EntryPayload, PaymentMethod } from "../types";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type {
+  Category,
+  CreditCard,
+  Entry,
+  EntryPayload,
+  PaymentMethod,
+} from "../types";
+import { createCategory, listCategories } from "../api/categories";
 import { listCardsCached } from "../services/cardsService";
 import { formatBRL } from "../utils/format";
 import {
@@ -11,7 +18,6 @@ import {
 
 type EntryFormProps = {
   initialValues?: Partial<Entry>;
-  categories?: string[];
   onSubmit: (payload: EntryPayload) => Promise<void>;
   onCancel: () => void;
 };
@@ -39,7 +45,7 @@ const formatFromCents = (digits: string) => {
 const formatCardLabel = (card: CreditCard) =>
   card.brand ? `${card.name} \u2022 ${card.brand}` : card.name;
 
-const EntryForm = ({ initialValues, categories = [], onSubmit, onCancel }: EntryFormProps) => {
+const EntryForm = ({ initialValues, onSubmit, onCancel }: EntryFormProps) => {
   const [description, setDescription] = useState(initialValues?.description ?? "");
   const [amount, setAmount] = useState(() =>
     initialValues?.amount !== undefined ? formatBRL(initialValues.amount) : "",
@@ -47,7 +53,17 @@ const EntryForm = ({ initialValues, categories = [], onSubmit, onCancel }: Entry
   const [amountDigits, setAmountDigits] = useState(() =>
     toInitialAmountDigits(initialValues?.amount),
   );
-  const [category, setCategory] = useState(initialValues?.category ?? "");
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState(
+    initialValues?.categoryId ?? "",
+  );
+  const [categorySearch, setCategorySearch] = useState("");
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [creatingCategory, setCreatingCategory] = useState(false);
+  const [createCategoryError, setCreateCategoryError] = useState<string | null>(null);
   const [date, setDate] = useState(
     initialValues?.date?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
   );
@@ -63,6 +79,23 @@ const EntryForm = ({ initialValues, categories = [], onSubmit, onCancel }: Entry
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isInstallmentEntry = Boolean(initialValues?.installmentGroupId);
+
+  const loadCategories = useCallback(async () => {
+    setCategoriesLoading(true);
+    setCategoriesError(null);
+
+    try {
+      const list = await listCategories({ active: true });
+      setCategories(list);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Erro ao carregar categorias.";
+      setCategoriesError(message);
+      setCategories([]);
+    } finally {
+      setCategoriesLoading(false);
+    }
+  }, []);
 
   const handleAmountInput = (value: string) => {
     const digits = value.replace(/\D/g, "");
@@ -80,7 +113,8 @@ const EntryForm = ({ initialValues, categories = [], onSubmit, onCancel }: Entry
       initialValues?.amount !== undefined ? formatBRL(initialValues.amount) : "",
     );
     setAmountDigits(toInitialAmountDigits(initialValues?.amount));
-    setCategory(initialValues?.category ?? "");
+    setSelectedCategoryId(initialValues?.categoryId ?? "");
+    setCategorySearch("");
     setDate(initialValues?.date?.slice(0, 10) ?? new Date().toISOString().slice(0, 10));
     const nextPayment = resolveEntryPaymentMethod(initialValues);
     const nextCardId = initialValues?.cardId ?? "";
@@ -119,14 +153,26 @@ const EntryForm = ({ initialValues, categories = [], onSubmit, onCancel }: Entry
     };
   }, []);
 
-  const safeCategories = Array.isArray(categories)
-    ? categories
-    : Object.keys((categories ?? {}) as Record<string, unknown>);
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
+
+  useEffect(() => {
+    if (selectedCategoryId) return;
+    const fallbackName = initialValues?.category?.trim();
+    if (!fallbackName) return;
+    const match = categories.find(
+      (item) => item.name.toLowerCase() === fallbackName.toLowerCase(),
+    );
+    if (match) {
+      setSelectedCategoryId(match.id);
+    }
+  }, [categories, initialValues?.category, selectedCategoryId]);
 
   const validate = (): EntryPayload | null => {
     const nextErrors: FormErrors = {};
     if (!description.trim()) nextErrors.description = "Descricao obrigatoria";
-    if (!category.trim()) nextErrors.category = "Categoria obrigatoria";
+    if (!selectedCategoryId) nextErrors.category = "Categoria obrigatoria";
     if (!date) nextErrors.date = "Data obrigatoria";
     if (!paymentMethod) nextErrors.paymentMethod = "Pagamento obrigatorio";
 
@@ -145,10 +191,13 @@ const EntryForm = ({ initialValues, categories = [], onSubmit, onCancel }: Entry
       return null;
     }
 
+    const categoryById = categories.find((item) => item.id === selectedCategoryId);
+
     return {
       description: description.trim(),
       amount: parsedAmount,
-      category: category.trim(),
+      category: categoryById?.name ?? initialValues?.category ?? "",
+      categoryId: selectedCategoryId || null,
       date,
       source,
       paymentMethod,
@@ -173,7 +222,47 @@ const EntryForm = ({ initialValues, categories = [], onSubmit, onCancel }: Entry
     }
   };
 
-  const categoryOptions = useMemo(() => safeCategories, [safeCategories]);
+  const closeCategoryModal = () => {
+    setIsCategoryModalOpen(false);
+    setCreateCategoryError(null);
+    setNewCategoryName("");
+  };
+
+  const handleCreateCategory = async () => {
+    const name = newCategoryName.trim();
+    if (!name) {
+      setCreateCategoryError("Informe o nome da categoria.");
+      return;
+    }
+
+    setCreateCategoryError(null);
+    setCreatingCategory(true);
+    try {
+      const created = await createCategory(name);
+      if (created) {
+        await loadCategories();
+        setSelectedCategoryId(created.id);
+        setCategorySearch("");
+        closeCategoryModal();
+      } else {
+        setCreateCategoryError("Nao foi possivel criar categoria.");
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao criar categoria.";
+      setCreateCategoryError(message);
+    } finally {
+      setCreatingCategory(false);
+    }
+  };
+
+  const categoryOptions = useMemo(() => {
+    const term = categorySearch.trim().toLowerCase();
+    const sorted = [...categories].sort((a, b) => a.name.localeCompare(b.name));
+    if (!term) return sorted;
+    return sorted.filter((item) => item.name.toLowerCase().includes(term));
+  }, [categories, categorySearch]);
+  const hasCategories = categories.length > 0;
+  const showNoCategoriesMessage = !categoriesLoading && !hasCategories;
   const isCredit = isPaymentMethodCredit(paymentMethod);
   const selectedCard = useMemo(
     () => cards.find((card) => card.id === cardId),
@@ -181,7 +270,8 @@ const EntryForm = ({ initialValues, categories = [], onSubmit, onCancel }: Entry
   );
 
   return (
-    <form className="card space-y-4 p-4" onSubmit={handleSubmit}>
+    <>
+      <form className="card space-y-4 p-4" onSubmit={handleSubmit}>
       <div>
         <label className="block text-sm font-medium text-slate-700">
           Descricao
@@ -223,28 +313,60 @@ const EntryForm = ({ initialValues, categories = [], onSubmit, onCancel }: Entry
         )}
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-slate-700">
-          Categoria
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <label className="text-sm font-medium text-slate-700">Categoria</label>
+          <button
+            type="button"
+            onClick={() => setIsCategoryModalOpen(true)}
+            className="text-xs font-semibold text-primary underline-offset-2 transition hover:underline"
+          >
+            + Nova categoria
+          </button>
+        </div>
+        <div className="space-y-2">
           <input
-            list="entry-categories"
             type="text"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-            placeholder="Ex.: Alimentacao"
-            required
+            value={categorySearch}
+            onChange={(event) => setCategorySearch(event.target.value)}
+            disabled={categoriesLoading}
+            placeholder="Buscar categoria"
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
-          {categoryOptions.length > 0 && (
-            <datalist id="entry-categories">
-              {categoryOptions.map((cat) => (
-                <option key={cat} value={cat} />
-              ))}
-            </datalist>
+          <select
+            value={selectedCategoryId}
+            onChange={(event) => setSelectedCategoryId(event.target.value)}
+            disabled={categoriesLoading || !hasCategories}
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="">Selecionar categoria</option>
+            {categoryOptions.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+          {categoriesLoading && (
+            <p className="text-sm text-slate-500">Carregando categorias...</p>
           )}
-        </label>
+          {showNoCategoriesMessage && (
+            <p className="text-sm text-slate-500">Sem categorias ativas.</p>
+          )}
+          {categoriesError && (
+            <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+              <p>{categoriesError}</p>
+              <button
+                type="button"
+                onClick={loadCategories}
+                className="mt-2 inline-flex items-center rounded bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-rose-700 transition hover:bg-rose-100"
+              >
+                Tentar novamente
+              </button>
+            </div>
+          )}
+        </div>
         {errors.category && (
-          <p className="mt-1 text-xs text-red-600">{errors.category}</p>
+          <p className="text-xs text-red-600">{errors.category}</p>
         )}
       </div>
 
@@ -352,7 +474,64 @@ const EntryForm = ({ initialValues, categories = [], onSubmit, onCancel }: Entry
           {isSubmitting ? "Salvando..." : "Salvar"}
         </button>
       </div>
-    </form>
+      </form>
+
+      {isCategoryModalOpen && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-slate-900/70" onClick={closeCategoryModal} />
+          <div className="relative z-10 w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-slate-900">Nova categoria</h3>
+              <button
+                type="button"
+                onClick={closeCategoryModal}
+                className="rounded-full p-1 text-slate-500 transition hover:bg-slate-100"
+                aria-label="Fechar modal"
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                  <path
+                    fillRule="evenodd"
+                    d="M4.72 4.72a.75.75 0 0 1 1.06 0L10 8.94l4.22-4.22a.75.75 0 1 1 1.06 1.06L11.06 10l4.22 4.22a.75.75 0 1 1-1.06 1.06L10 11.06l-4.22 4.22a.75.75 0 0 1-1.06-1.06L8.94 10 4.72 5.78a.75.75 0 0 1 0-1.06z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </div>
+            <label className="block text-sm font-medium text-slate-700">
+              Nome
+              <input
+                type="text"
+                value={newCategoryName}
+                onChange={(event) => setNewCategoryName(event.target.value)}
+                className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                placeholder="Ex.: Alimentacao"
+              />
+            </label>
+            {createCategoryError && (
+              <p className="mt-2 text-xs text-red-600">{createCategoryError}</p>
+            )}
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={closeCategoryModal}
+                className="w-full rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-primary hover:text-primary sm:w-auto"
+                disabled={creatingCategory}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateCategory}
+                disabled={creatingCategory}
+                className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90 sm:w-auto"
+              >
+                {creatingCategory ? "Criando..." : "Criar categoria"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

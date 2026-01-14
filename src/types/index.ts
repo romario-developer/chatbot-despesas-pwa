@@ -24,6 +24,7 @@ export interface Entry {
   description: string;
   amount: number;
   category: string;
+  categoryId?: string | null;
   categoryInferred?: boolean;
   date: string;
   source: string;
@@ -69,14 +70,28 @@ export type DashboardSummary = {
   byCategory: DashboardCategory[];
 };
 
-export type EntriesResponse = Entry[];
+export type Category = {
+  id: string;
+  name: string;
+  isActive?: boolean;
+};
 
-export type CategoriesResponse = string[];
+export type CategoriesResponse =
+  | Category[]
+  | {
+      categories?: Category[];
+      data?: Category[];
+      items?: Category[];
+    }
+  | null;
+
+export type EntriesResponse = Entry[];
 
 export interface EntryPayload {
   description: string;
   amount: number;
-  category: string;
+  category?: string;
+  categoryId?: string | null;
   date: string;
   source?: string;
   paymentMethod?: PaymentMethod;
