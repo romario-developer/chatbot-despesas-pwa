@@ -1,5 +1,5 @@
 import { apiRequest, getStoredToken } from "./client";
-import { api } from "../services/api";
+import { api, shouldLogApi } from "../services/api";
 import { listEntries } from "./entries";
 import type { CardInvoice, CreditCard, Entry } from "../types";
 
@@ -184,15 +184,16 @@ export const getCardsSummary = async (): Promise<CreditCard[]> => {
 
   const list = resolveCardList(response.data);
   if (!list) {
-    const error = new Error("Resposta invalida do endpoint /api/cards/summary.") as Error & {
-      status?: number;
-      payload?: unknown;
-    };
-    error.status = response.status;
-    error.payload = response.data;
-    throw error;
+    if (shouldLogApi) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[cards] /api/cards/summary returned unexpected payload",
+        response.status,
+        response.data,
+      );
+    }
+    return [];
   }
-
   return mapCardList(list);
 };
 

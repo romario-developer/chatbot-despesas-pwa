@@ -295,7 +295,7 @@ const CreditPage = () => {
               );
             })}
           </div>
-        ) : (
+        ) : cardsError ? null : (
           <div className="rounded-3xl border border-dashed bg-white/80 p-6 text-center">
             <p className="text-sm text-slate-500">Nenhum cartao cadastrado ainda.</p>
             <Link
@@ -417,4 +417,8 @@ const CreditPage = () => {
 };
 
 export default CreditPage;
+
+
+
+
 
