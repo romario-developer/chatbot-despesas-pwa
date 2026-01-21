@@ -299,23 +299,28 @@ export const getCardInvoices = async (
 const normalizeInvoice = (value: RawInvoice): CardInvoice | null => {
   if (!value || typeof value !== "object") return null;
   const data = value as Record<string, unknown>;
-  const id =
-    typeof data.cardId === "string"
+  const invoiceCardRaw =
+    data.card && typeof data.card === "object" ? (data.card as RawCard) : null;
+  const invoiceCard = invoiceCardRaw ? normalizeCard(invoiceCardRaw) : null;
+  const derivedCardId =
+    invoiceCard?.id ??
+    (typeof data.cardId === "string"
       ? data.cardId
       : typeof data.id === "string"
         ? data.id
         : typeof data.card === "string"
           ? data.card
-          : undefined;
-  if (!id) return null;
+          : undefined);
+  if (!derivedCardId) return null;
   const cardName =
-    typeof data.cardName === "string"
+    invoiceCard?.name ??
+    (typeof data.cardName === "string"
       ? data.cardName.trim()
       : typeof data.name === "string"
         ? data.name.trim()
         : typeof data.card === "string"
           ? data.card.trim()
-          : undefined;
+          : undefined);
   if (!cardName) return null;
   const brand = typeof data.brand === "string" ? data.brand.trim() : undefined;
   const color = typeof data.color === "string" ? data.color.trim() : undefined;
@@ -368,7 +373,7 @@ const normalizeInvoice = (value: RawInvoice): CardInvoice | null => {
 
   const invoiceName = cardName;
   return {
-    cardId: String(id),
+    cardId: String(derivedCardId),
     cardName,
     name: invoiceName,
     brand,
