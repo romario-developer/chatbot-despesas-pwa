@@ -134,6 +134,7 @@ export type CardInvoice = {
   paidTotal?: number;
   remaining?: number;
   status?: string;
+  card?: CreditCard;
 };
 
 export type PlanningExtra = {

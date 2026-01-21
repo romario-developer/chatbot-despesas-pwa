@@ -141,6 +141,7 @@ const CreditPage = () => {
         params.month = month;
       }
       const data = await getCardInvoices(params);
+      logCreditDebug("invoices payload", data);
       setInvoices(data);
     } catch (error) {
       const message =
@@ -298,19 +299,25 @@ const CreditPage = () => {
           <p className="text-sm text-slate-500">Carregando cartoes...</p>
         ) : cards.length ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {cards.map((card) => {
-              const invoice = invoicesByCardId[card.id];
-              const isActive = card.id === selectedCardId;
-              const entriesCount = invoice?.entriesCount ?? 0;
-              const cardCycleLabel = formatCycleRange(
-                invoice?.cycleStart,
-                invoice?.cycleEnd,
-              );
-              const cardBackground = card.color ?? "#ffffff";
-              const cardTextColor = card.textColor ?? getReadableTextColor(cardBackground);
-              return (
-                <div
-                  key={card.id}
+            {cards.map((card) => {
+              const invoice = invoicesByCardId[card.id];
+              const isActive = card.id === selectedCardId;
+              const entriesCount = invoice?.entriesCount ?? 0;
+              const cardCycleLabel = formatCycleRange(
+                invoice?.cycleStart,
+                invoice?.cycleEnd,
+              );
+              const displayCard = invoice?.card
+                ? { ...card, ...invoice.card }
+                : card;
+              if (!invoice?.card) {
+                logCreditDebug("invoice missing card payload", card.id);
+              }
+              const cardBackground = displayCard.color ?? "#ffffff";
+              const cardTextColor = displayCard.textColor ?? getReadableTextColor(cardBackground);
+              return (
+                <div
+                  key={card.id}
                   role="button"
                   tabIndex={0}
                   onClick={() => setSelectedCardId(card.id)}
@@ -327,21 +334,21 @@ const CreditPage = () => {
                   }`}
                   style={{ backgroundColor: cardBackground, color: cardTextColor }}
                 >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-current">{card.name}</p>
-                      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-current/70">
-                        <span className="rounded-full border border-current/30 px-2 py-0.5">
-                          {card.brand ?? "Cartao"}
-                        </span>
-                        {card.limit !== undefined && card.limit !== null && (
-                          <span className="text-[10px] text-current/70">
-                            Limite {formatBRL(card.limit)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-current">{displayCard.name}</p>
+                      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-current/70">
+                        <span className="rounded-full border border-current/30 px-2 py-0.5">
+                          {displayCard.brand ?? "Cartao"}
+                        </span>
+                        {displayCard.limit !== undefined && displayCard.limit !== null && (
+                          <span className="text-[10px] text-current/70">
+                            Limite {formatBRL(displayCard.limit)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
                       {invoice?.status && (
                         <span className="rounded-full border border-current/30 px-3 py-1 text-[11px] font-semibold uppercase">
                           {invoice.status}
@@ -376,9 +383,9 @@ const CreditPage = () => {
                   <p className="text-2xl font-semibold text-current">
                     {formatBRL(invoice?.invoiceTotal ?? 0)}
                   </p>
-                  <p className="text-xs text-current/70">
-                    Fechamento dia {card.closingDay ?? "-"} · Vencimento dia {card.dueDay ?? "-"}
-                  </p>
+                  <p className="text-xs text-current/70">
+                    Fechamento dia {displayCard.closingDay ?? "-"} · Vencimento dia {displayCard.dueDay ?? "-"}
+                  </p>
                   <p className="text-xs text-current/70">Lancamentos: {entriesCount}</p>
                   {cardCycleLabel && (
                     <p className="text-xs text-current/70">Ciclo: {cardCycleLabel}</p>

@@ -362,6 +362,10 @@ const normalizeInvoice = (value: RawInvoice): CardInvoice | null => {
     ) ?? undefined;
   const status = typeof data.status === "string" ? data.status : undefined;
 
+  const invoiceCardRaw =
+    data.card && typeof data.card === "object" ? (data.card as RawCard) : null;
+  const invoiceCard = invoiceCardRaw ? normalizeCard(invoiceCardRaw) : null;
+
   const invoiceName = cardName;
   return {
     cardId: String(id),
@@ -380,6 +384,7 @@ const normalizeInvoice = (value: RawInvoice): CardInvoice | null => {
     paidTotal,
     remaining,
     status,
+    card: invoiceCard ?? undefined,
   };
 };
 
