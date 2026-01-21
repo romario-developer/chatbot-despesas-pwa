@@ -12,6 +12,15 @@ const logCardDebug = (...args: unknown[]) => {
   console.debug("[card-debug]", ...args);
 };
 
+const CREDIT_DEBUG_KEY = "DEBUG_CREDIT";
+const isCreditDebugEnabled = () =>
+  typeof window !== "undefined" && window.localStorage.getItem(CREDIT_DEBUG_KEY) === "1";
+const logCreditInvoiceResponse = (path: string, payload: unknown) => {
+  if (!isCreditDebugEnabled()) return;
+  // eslint-disable-next-line no-console
+  console.log("[credit-debug] GET", path, payload);
+};
+
 export type CardPayload = {
   name: string;
   brand?: string;
@@ -288,10 +297,12 @@ const buildInvoicesPath = (params?: GetCardInvoicesParams) => {
 export const getCardInvoices = async (
   params?: GetCardInvoicesParams,
 ): Promise<CardInvoice[]> => {
+  const invoicePath = buildInvoicesPath(params);
   const response = await api.request<ListCardInvoicesResponse>({
-    url: buildInvoicesPath(params),
+    url: invoicePath,
     method: "GET",
   });
+  logCreditInvoiceResponse(invoicePath, response.data);
   const list = resolveInvoiceList(response.data);
   return list.map((item) => normalizeInvoice(item)).filter(Boolean) as CardInvoice[];
 };

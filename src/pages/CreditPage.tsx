@@ -141,6 +141,10 @@ const CreditPage = () => {
         params.month = month;
       }
       const data = await getCardInvoices(params);
+      if (isCreditDebugEnabled()) {
+        // eslint-disable-next-line no-console
+        console.log("[credit-debug] invoiceResponse", data);
+      }
       logCreditDebug("invoices payload", data);
       setInvoices(data);
     } catch (error) {
