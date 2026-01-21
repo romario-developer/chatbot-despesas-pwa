@@ -172,17 +172,6 @@ const CreditCardsSection = () => {
   }, [loadCards]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const pendingEditId = window.localStorage.getItem(CARD_EDIT_KEY);
-    if (!pendingEditId) return;
-    const card = cards.find((item) => item.id === pendingEditId);
-    if (card) {
-      openEdit(card);
-    }
-    window.localStorage.removeItem(CARD_EDIT_KEY);
-  }, [cards, openEdit]);
-
-  useEffect(() => {
     loadInvoices();
   }, [loadInvoices]);
 
@@ -210,6 +199,17 @@ const CreditCardsSection = () => {
     setDayPickerField(null);
     setFlowStep("form");
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const pendingEditId = window.localStorage.getItem(CARD_EDIT_KEY);
+    if (!pendingEditId) return;
+    const card = cards.find((item) => item.id === pendingEditId);
+    if (card) {
+      openEdit(card);
+    }
+    window.localStorage.removeItem(CARD_EDIT_KEY);
+  }, [cards, openEdit]);
 
   const closeFlow = () => {
     if (isSaving) return;
