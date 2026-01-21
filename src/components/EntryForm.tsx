@@ -174,7 +174,12 @@ const EntryForm = ({ initialValues, onSubmit, onCancel }: EntryFormProps) => {
     if (!description.trim()) nextErrors.description = "Descricao obrigatoria";
     if (!selectedCategoryId) nextErrors.category = "Categoria obrigatoria";
     if (!date) nextErrors.date = "Data obrigatoria";
-    if (!paymentMethod) nextErrors.paymentMethod = "Pagamento obrigatorio";
+    if (!paymentMethod) {
+      nextErrors.paymentMethod = "Pagamento obrigatorio";
+    }
+    if (isPaymentMethodCredit(paymentMethod) && !cardId) {
+      nextErrors.cardId = "Cartao obrigatorio para pagamentos no credito";
+    }
 
     const hasDigits = Boolean(amountDigits.trim());
     const parsedCents = Number(amountDigits || "0");
@@ -425,6 +430,12 @@ const EntryForm = ({ initialValues, onSubmit, onCancel }: EntryFormProps) => {
             <p className="mt-1 text-xs text-slate-500">
               Nenhum cartao cadastrado.
             </p>
+          )}
+          <p className="mt-2 text-xs text-slate-500">
+            Credito entra na fatura do cartao e nao reduz saldo em conta agora.
+          </p>
+          {errors.cardId && (
+            <p className="mt-1 text-xs text-red-600">{errors.cardId}</p>
           )}
           {selectedCard && (
             <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-600">

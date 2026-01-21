@@ -130,6 +130,10 @@ export type CardInvoice = {
   dueDay?: number;
   cycleStart?: string;
   cycleEnd?: string;
+  entriesCount?: number;
+  paidTotal?: number;
+  remaining?: number;
+  status?: string;
 };
 
 export type PlanningExtra = {

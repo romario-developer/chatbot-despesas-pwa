@@ -4,7 +4,7 @@ import {
   deleteCard,
   listCardInvoices,
   listCards,
-  payCardInvoice,
+  postCardPayment,
   updateCard,
   type CardPayload,
 } from "../../api/cards";
@@ -15,6 +15,7 @@ import { cardBase, cardHover, subtleText } from "../../styles/dashboardTokens";
 import Toast from "../Toast";
 import ConfirmDialog from "../ConfirmDialog";
 import DayPickerSheet from "../DayPickerSheet";
+import { notifyEntriesChanged } from "../../utils/entriesEvents";
 import type { CreditCard, CardInvoice } from "../../types";
 
 type CardFormState = {
@@ -340,13 +341,14 @@ const CreditCardsSection = () => {
     setPaymentError(null);
     setIsPaying(true);
     try {
-      await payCardInvoice({
+      await postCardPayment({
         cardId: selectedInvoice.cardId,
         amount,
-        paymentDate,
+        paidAt: paymentDate,
       });
       setToast({ message: "Fatura paga com sucesso", type: "success" });
       closePaymentDialog();
+      notifyEntriesChanged();
       await loadInvoices();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao registrar pagamento.";

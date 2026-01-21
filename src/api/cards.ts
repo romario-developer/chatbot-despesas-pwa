@@ -1,6 +1,7 @@
 import { apiRequest, getStoredToken } from "./client";
 import { api } from "../services/api";
-import type { CardInvoice, CreditCard } from "../types";
+import { listEntries } from "./entries";
+import type { CardInvoice, CreditCard, Entry } from "../types";
 
 export type CardPayload = {
   name: string;
@@ -34,6 +35,27 @@ type ListCardsResponse =
       items?: RawCard[];
     }
   | null;
+
+const resolveCardList = (payload: ListCardsResponse): RawCard[] | null => {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+  if (payload && typeof payload === "object") {
+    if (Array.isArray(payload.cards)) {
+      return payload.cards;
+    }
+    if (Array.isArray(payload.data)) {
+      return payload.data;
+    }
+    if (Array.isArray(payload.items)) {
+      return payload.items;
+    }
+  }
+  return null;
+};
+
+const mapCardList = (list: RawCard[]): CreditCard[] =>
+  list.map((item) => normalizeCard(item)).filter(Boolean) as CreditCard[];
 
 const normalizeBrand = (value?: string) => {
   const trimmed = value?.trim();
@@ -133,19 +155,7 @@ export const listCards = async (): Promise<ListCardsResult> => {
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   });
 
-  let list: RawCard[] | undefined;
-  if (Array.isArray(response.data)) {
-    list = response.data;
-  } else if (response.data && typeof response.data === "object") {
-    if (Array.isArray(response.data.cards)) {
-      list = response.data.cards;
-    } else if (Array.isArray(response.data.data)) {
-      list = response.data.data;
-    } else if (Array.isArray(response.data.items)) {
-      list = response.data.items;
-    }
-  }
-
+  const list = resolveCardList(response.data);
   if (!list) {
     const error = new Error("Resposta invalida do endpoint /api/cards.") as Error & {
       status?: number;
@@ -156,12 +166,34 @@ export const listCards = async (): Promise<ListCardsResult> => {
     throw error;
   }
 
-  const cards = list.map((item) => normalizeCard(item)).filter(Boolean) as CreditCard[];
+  const cards = mapCardList(list);
   return {
     cards,
     status: response.status,
     rawLength: list.length,
   };
+};
+
+export const getCardsSummary = async (): Promise<CreditCard[]> => {
+  const token = getStoredToken();
+  const response = await api.request<ListCardsResponse>({
+    url: "/api/cards/summary",
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+
+  const list = resolveCardList(response.data);
+  if (!list) {
+    const error = new Error("Resposta invalida do endpoint /api/cards/summary.") as Error & {
+      status?: number;
+      payload?: unknown;
+    };
+    error.status = response.status;
+    error.payload = response.data;
+    throw error;
+  }
+
+  return mapCardList(list);
 };
 
 type RawInvoice = {
@@ -179,6 +211,23 @@ type RawInvoice = {
   dueDay?: unknown;
   cycleStart?: unknown;
   cycleEnd?: unknown;
+  entriesCount?: unknown;
+  entries_count?: unknown;
+  linesCount?: unknown;
+  lines_count?: unknown;
+  itemsCount?: unknown;
+  paidTotal?: unknown;
+  paid_total?: unknown;
+  paidAmount?: unknown;
+  amountPaid?: unknown;
+  paid?: unknown;
+  remaining?: unknown;
+  remainingBalance?: unknown;
+  balance?: unknown;
+  balanceDue?: unknown;
+  toPay?: unknown;
+  to_pay?: unknown;
+  status?: unknown;
 } | null;
 
 type ListCardInvoicesResponse =
@@ -206,6 +255,30 @@ const resolveInvoiceList = (payload: ListCardInvoicesResponse): RawInvoice[] => 
     }
   }
   return [];
+};
+
+export type GetCardInvoicesParams = {
+  asOf?: string;
+  month?: string;
+};
+
+const buildInvoicesPath = (params?: GetCardInvoicesParams) => {
+  const search = new URLSearchParams();
+  if (params?.asOf) search.append("asOf", params.asOf);
+  if (params?.month) search.append("month", params.month);
+  const query = search.toString();
+  return query ? `/api/cards/invoices?${query}` : "/api/cards/invoices";
+};
+
+export const getCardInvoices = async (
+  params?: GetCardInvoicesParams,
+): Promise<CardInvoice[]> => {
+  const response = await api.request<ListCardInvoicesResponse>({
+    url: buildInvoicesPath(params),
+    method: "GET",
+  });
+  const list = resolveInvoiceList(response.data);
+  return list.map((item) => normalizeInvoice(item)).filter(Boolean) as CardInvoice[];
 };
 
 const normalizeInvoice = (value: RawInvoice): CardInvoice | null => {
@@ -241,6 +314,38 @@ const normalizeInvoice = (value: RawInvoice): CardInvoice | null => {
   const dueDay = normalizeDay(data.dueDay);
   const cycleStart = typeof data.cycleStart === "string" ? data.cycleStart : undefined;
   const cycleEnd = typeof data.cycleEnd === "string" ? data.cycleEnd : undefined;
+  const entriesCount =
+    normalizeNumber(
+      data.entriesCount ??
+        data.entries_count ??
+        data.linesCount ??
+        data.lines_count ??
+        data.itemsCount ??
+        data.transactionsCount ??
+        data.entries ??
+        data.items,
+    ) ?? undefined;
+  const paidTotal =
+    normalizeNumber(
+      data.paidTotal ??
+        data.paid_total ??
+        data.paidAmount ??
+        data.amountPaid ??
+        data.paid ??
+        data.paid_value ??
+        data.paidValue,
+    ) ?? undefined;
+  const remaining =
+    normalizeNumber(
+      data.remaining ??
+        data.remainingBalance ??
+        data.balance ??
+        data.balanceDue ??
+        data.toPay ??
+        data.to_pay ??
+        data.balance_remaining,
+    ) ?? undefined;
+  const status = typeof data.status === "string" ? data.status : undefined;
 
   const invoiceName = cardName;
   return {
@@ -256,21 +361,15 @@ const normalizeInvoice = (value: RawInvoice): CardInvoice | null => {
     dueDay,
     cycleStart,
     cycleEnd,
+    entriesCount,
+    paidTotal,
+    remaining,
+    status,
   };
 };
 
 export const listCardInvoices = async (): Promise<CardInvoice[]> => {
-  const response = await api.request<ListCardInvoicesResponse>({
-    url: "/api/cards/invoices",
-    method: "GET",
-  });
-
-  // eslint-disable-next-line no-console
-  console.log("invoices response:", response.data);
-
-  const list = resolveInvoiceList(response.data);
-  const invoices = list.map((item) => normalizeInvoice(item)).filter(Boolean) as CardInvoice[];
-  return invoices;
+  return getCardInvoices();
 };
 
 export const createCard = async (payload: CardPayload): Promise<CreditCard | null> => {
@@ -307,13 +406,39 @@ export const deleteCard = async (id: string): Promise<void> => {
   });
 };
 
+export type GetCardExpensesParams = {
+  cardId: string;
+  from?: string;
+  to?: string;
+};
+
+export const getCreditExpensesByCardAndRange = async ({
+  cardId,
+  from,
+  to,
+}: GetCardExpensesParams): Promise<Entry[]> => {
+  const entries = await listEntries({
+    cardId,
+    from,
+    to,
+    paymentMethod: "CREDIT",
+  });
+
+  return entries.filter(
+    (entry) =>
+      entry.cardId === cardId &&
+      (entry.paymentMethod === "CREDIT" || entry.paymentMethod === undefined),
+  );
+};
+
 export type CardPaymentPayload = {
   cardId: string;
   amount: number;
-  paymentDate: string;
+  paidAt: string;
+  note?: string;
 };
 
-export const payCardInvoice = (payload: CardPaymentPayload) => {
+export const postCardPayment = (payload: CardPaymentPayload) => {
   return apiRequest({
     url: "/api/cards/payments",
     method: "POST",

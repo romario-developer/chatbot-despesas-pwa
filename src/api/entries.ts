@@ -1,5 +1,5 @@
 import { apiRequest } from "./client";
-import type { Entry, EntryPayload } from "../types";
+import type { Entry, EntryPayload, PaymentMethod } from "../types";
 
 export type ListEntriesParams = {
   from?: string;
@@ -7,6 +7,7 @@ export type ListEntriesParams = {
   category?: string;
   q?: string;
   cardId?: string;
+  paymentMethod?: PaymentMethod;
 };
 
 type EntriesApiResponse = Entry[] | { items?: Entry[] } | null;
@@ -19,6 +20,10 @@ export async function listEntries(params: ListEntriesParams = {}): Promise<Entry
   if (params.category) search.append("category", params.category);
   if (params.q) search.append("q", params.q);
   if (params.cardId) search.append("cardId", params.cardId);
+  if (params.paymentMethod) {
+    search.append("paymentMethod", params.paymentMethod);
+    search.append("payment", params.paymentMethod);
+  }
 
   const query = search.toString();
   const path = query ? `/api/entries?${query}` : "/api/entries";
