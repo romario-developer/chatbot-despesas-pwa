@@ -44,6 +44,8 @@ const CARD_COLORS = [
   "#f59e0b",
 ];
 
+const CARD_EDIT_KEY = "pendingEditCard";
+
 const emptyForm: CardFormState = {
   name: "",
   brand: "",
@@ -170,6 +172,17 @@ const CreditCardsSection = () => {
   }, [loadCards]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const pendingEditId = window.localStorage.getItem(CARD_EDIT_KEY);
+    if (!pendingEditId) return;
+    const card = cards.find((item) => item.id === pendingEditId);
+    if (card) {
+      openEdit(card);
+    }
+    window.localStorage.removeItem(CARD_EDIT_KEY);
+  }, [cards, openEdit]);
+
+  useEffect(() => {
     loadInvoices();
   }, [loadInvoices]);
 
@@ -182,7 +195,7 @@ const CreditCardsSection = () => {
     setFlowStep("method");
   };
 
-  const openEdit = (card: CreditCard) => {
+  const openEdit = useCallback((card: CreditCard) => {
     setEditingCard(card);
     setFormState({
       name: card.name ?? "",
@@ -196,7 +209,7 @@ const CreditCardsSection = () => {
     setSelectedMethod("manual");
     setDayPickerField(null);
     setFlowStep("form");
-  };
+  }, []);
 
   const closeFlow = () => {
     if (isSaving) return;

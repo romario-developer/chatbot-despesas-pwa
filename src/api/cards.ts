@@ -3,6 +3,15 @@ import { api, shouldLogApi } from "../services/api";
 import { listEntries } from "./entries";
 import type { CardInvoice, CreditCard, Entry } from "../types";
 
+const CARD_DEBUG_KEY = "DEBUG_CARDS";
+const isCardDebugEnabled = () =>
+  typeof window !== "undefined" && window.localStorage.getItem(CARD_DEBUG_KEY) === "1";
+const logCardDebug = (...args: unknown[]) => {
+  if (!isCardDebugEnabled()) return;
+  // eslint-disable-next-line no-console
+  console.debug("[card-debug]", ...args);
+};
+
 export type CardPayload = {
   name: string;
   brand?: string;
@@ -155,6 +164,8 @@ export const listCards = async (): Promise<ListCardsResult> => {
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   });
 
+  logCardDebug("raw payload", response.data);
+
   const list = resolveCardList(response.data);
   if (!list) {
     const error = new Error("Resposta invalida do endpoint /api/cards.") as Error & {
@@ -167,6 +178,9 @@ export const listCards = async (): Promise<ListCardsResult> => {
   }
 
   const cards = mapCardList(list);
+  if (cards.length) {
+    cards.forEach((card) => logCardDebug("card", card));
+  }
   return {
     cards,
     status: response.status,
