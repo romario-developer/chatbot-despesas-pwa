@@ -299,10 +299,10 @@ const CreditPage = () => {
           <div className="rounded-3xl border border-dashed bg-white/80 p-6 text-center">
             <p className="text-sm text-slate-500">Nenhum cartao cadastrado ainda.</p>
             <Link
-              to="/"
+              to="/cards"
               className="mt-3 inline-flex items-center justify-center rounded-full border border-primary px-4 py-2 text-xs font-semibold uppercase text-primary transition hover:bg-primary/10"
             >
-              Gerenciar cartoes
+              Cadastrar cartão
             </Link>
           </div>
         )}
@@ -417,3 +417,4 @@ const CreditPage = () => {
 };
 
 export default CreditPage;
+
