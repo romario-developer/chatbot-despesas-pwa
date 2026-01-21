@@ -1,5 +1,5 @@
 import { AxiosHeaders } from "axios";
-import type { AxiosError, AxiosRequestConfig } from "axios";
+import type { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 import { api, apiBaseURL, apiHadApiSuffix, shouldLogApi } from "../services/api";
 
 const AUTH_TOKEN_KEY = "auth_token";
@@ -18,6 +18,14 @@ const failureTracker = new Map<
     blockedUntil?: number;
   }
 >();
+
+type DashboardDebugMeta = {
+  label: string;
+};
+
+type ApiRequestConfig = AxiosRequestConfig & {
+  dashboardDebug?: DashboardDebugMeta;
+};
 
 type ApiErrorResponse = {
   message?: string;
@@ -156,6 +164,38 @@ const resolveFullUrl = (config: AxiosRequestConfig) => {
   const base = (config.baseURL ?? apiBaseURL).replace(/\/+$/, "");
   const trimmedUrl = url.replace(/^\/+/, "");
   return trimmedUrl ? `${base}/${trimmedUrl}` : base;
+};
+
+const isDashboardDebugEnabled = () => {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem("DEBUG_DASHBOARD") === "1";
+};
+
+const logDashboardDebug = (...args: unknown[]) => {
+  if (!isDashboardDebugEnabled()) return;
+  // eslint-disable-next-line no-console
+  console.debug("[dashboard-debug]", ...args);
+};
+
+const buildDashboardLogPrefix = (config: ApiRequestConfig, note: string) => {
+  const label = config.dashboardDebug?.label ? `[${config.dashboardDebug.label}] ` : "";
+  const method = (config.method ?? "GET").toUpperCase();
+  const url = resolveFullUrl(config);
+  return `${label}${method} ${url} -> ${note}`;
+};
+
+const logDashboardDebugResponse = (config: ApiRequestConfig, response: AxiosResponse<unknown>) => {
+  if (!config.dashboardDebug) return;
+  const prefix = buildDashboardLogPrefix(config, `status ${response.status}`);
+  logDashboardDebug(prefix, "payload:", response.data);
+};
+
+const logDashboardDebugError = (config: ApiRequestConfig, error: AxiosError) => {
+  if (!config.dashboardDebug) return;
+  const status = error.response?.status;
+  const payload = error.response?.data ?? error.message;
+  const prefix = buildDashboardLogPrefix(config, `error status ${status ?? "unknown"}`);
+  logDashboardDebug(prefix, "payload:", payload);
 };
 
 const extractPathname = (fullUrl: string) => {
@@ -297,7 +337,16 @@ api.interceptors.response.use(
   },
 );
 
-export const apiRequest = async <T>(config: AxiosRequestConfig): Promise<T> => {
-  const response = await api.request<T>(config);
-  return (response.data ?? null) as T;
+export const apiRequest = async <T>(config: ApiRequestConfig): Promise<T> => {
+  try {
+    const response = await api.request<T>(config);
+    logDashboardDebugResponse(config, response);
+    return (response.data ?? null) as T;
+  } catch (error) {
+    const axiosError = error as AxiosError<unknown>;
+    if (axiosError?.isAxiosError) {
+      logDashboardDebugError(config, axiosError);
+    }
+    throw error;
+  }
 };

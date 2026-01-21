@@ -32,6 +32,17 @@ const CATEGORY_FALLBACK_COLORS = [
   "#3b82f6",
 ];
 
+const isDashboardDebugEnabled = () => {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem("DEBUG_DASHBOARD") === "1";
+};
+
+const logDashboardDebug = (...args: unknown[]) => {
+  if (!isDashboardDebugEnabled()) return;
+  // eslint-disable-next-line no-console
+  console.debug("[dashboard-debug]", ...args);
+};
+
 const DashboardPage = () => {
   const navigate = useNavigate();
   const currentMonth = useMemo(
@@ -75,9 +86,13 @@ const DashboardPage = () => {
       }
 
       const range = monthToRange(month);
+      logDashboardDebug("loading month", month, range);
       const [summaryResult, entriesResult] = await Promise.allSettled([
         getDashboardSummary(month),
-        listEntries({ from: range.from, to: range.to }),
+        listEntries(
+          { from: range.from, to: range.to },
+          { dashboardDebugLabel: "dashboard-entries" },
+        ),
       ]);
 
       if (summaryResult.status === "fulfilled") {
@@ -142,6 +157,10 @@ const DashboardPage = () => {
     localStorage.setItem("selectedMonth", month);
   }, [month]);
 
+  useEffect(() => {
+    logDashboardDebug("month selected", month);
+  }, [month]);
+
   const refreshDashboard = useCallback(() => {
     if (!entriesPollingEnabled) return;
     loadDashboard({ silent: true });
@@ -203,6 +222,18 @@ const DashboardPage = () => {
   const handleMonthToggle = () => {
     setIsMonthPanelOpen((prev) => !prev);
   };
+
+  useEffect(() => {
+    if (!summary) return;
+    logDashboardDebug("totals", {
+      month: summary.month,
+      balance,
+      incomeTotal,
+      expenseCash: cashExpenses,
+      expenseCredit: creditExpenses,
+      entriesCount,
+    });
+  }, [summary, balance, incomeTotal, cashExpenses, creditExpenses, entriesCount]);
 
   const handleRetryEntries = useCallback(() => {
     setEntriesPollingEnabled(true);

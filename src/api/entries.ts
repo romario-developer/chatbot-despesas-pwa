@@ -10,9 +10,16 @@ export type ListEntriesParams = {
   paymentMethod?: PaymentMethod;
 };
 
+export type ListEntriesOptions = {
+  dashboardDebugLabel?: string;
+};
+
 type EntriesApiResponse = Entry[] | { items?: Entry[] } | null;
 
-export async function listEntries(params: ListEntriesParams = {}): Promise<Entry[]> {
+export async function listEntries(
+  params: ListEntriesParams = {},
+  options: ListEntriesOptions = {},
+): Promise<Entry[]> {
   const search = new URLSearchParams();
 
   if (params.from) search.append("from", params.from);
@@ -31,6 +38,9 @@ export async function listEntries(params: ListEntriesParams = {}): Promise<Entry
   const data = await apiRequest<EntriesApiResponse>({
     url: path,
     method: "GET",
+    dashboardDebug: options.dashboardDebugLabel
+      ? { label: options.dashboardDebugLabel }
+      : undefined,
   });
 
   if (Array.isArray(data)) {

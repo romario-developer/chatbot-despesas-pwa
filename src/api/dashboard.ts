@@ -70,6 +70,7 @@ export const getDashboardSummary = async (month: string): Promise<DashboardSumma
   const data = await apiRequest<RawDashboardSummary>({
     url: `/api/dashboard/summary?${search.toString()}`,
     method: "GET",
+    dashboardDebug: { label: "dashboard-summary" },
   });
 
   return {

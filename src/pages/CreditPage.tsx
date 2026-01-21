@@ -4,8 +4,8 @@ import { formatBRL, formatDate } from "../utils/format";
 import { formatMonthLabel, getCurrentMonthInTimeZone } from "../utils/months";
 import {
   getCardInvoices,
-  getCardsSummary,
   getCreditExpensesByCardAndRange,
+  listCards,
 } from "../api/cards";
 import type { CardInvoice, CreditCard, Entry } from "../types";
 import { ENTRIES_CHANGED } from "../utils/entriesEvents";
@@ -35,6 +35,17 @@ const buildMonthRange = (value?: string) => {
   return { from, to };
 };
 
+const isCreditDebugEnabled = () => {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem("DEBUG_CREDIT") === "1";
+};
+
+const logCreditDebug = (...args: unknown[]) => {
+  if (!isCreditDebugEnabled()) return;
+  // eslint-disable-next-line no-console
+  console.debug("[credit-debug]", ...args);
+};
+
 const CreditPage = () => {
   const currentMonth = useMemo(
     () => getCurrentMonthInTimeZone("America/Bahia"),
@@ -60,13 +71,21 @@ const CreditPage = () => {
     setCardsLoading(true);
     setCardsError(null);
     try {
-      const data = await getCardsSummary();
-      setCards(data);
+      const result = await listCards();
+      logCreditDebug(
+        "GET /api/cards",
+        "status",
+        result.status,
+        "cardsCount",
+        result.cards.length,
+      );
+      setCards(result.cards);
     } catch (error) {
+      const status = (error as Error & { status?: number }).status ?? "unknown";
+      logCreditDebug("GET /api/cards", "status", status, "error", error);
       const message =
         error instanceof Error ? error.message : "Erro ao carregar cartoes.";
       setCardsError(message);
-      setCards([]);
     } finally {
       setCardsLoading(false);
     }
