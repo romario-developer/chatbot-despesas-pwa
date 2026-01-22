@@ -8,7 +8,7 @@ type AssistantMessage = {
   createdAt: string;
 };
 
-const GREETING_KEY = "assistant_greeting_last_date";
+const GREETING_KEY = "assistant_last_greeting_date";
 const DEBUG_KEY = "DEBUG_ASSISTANT";
 
 const formatToday = () => new Date().toISOString().slice(0, 10);
@@ -29,12 +29,19 @@ const createMessage = (role: AssistantMessage["role"], text: string): AssistantM
   createdAt: new Date().toISOString(),
 });
 
-const AssistantFAB = () => {
+type AssistantFABProps = {
+  avatarUrl?: string;
+  iconVariant?: "circle" | "rounded";
+};
+
+const AssistantFAB = ({ avatarUrl, iconVariant = "circle" }: AssistantFABProps = {}) => {
   const [chatOpen, setChatOpen] = useState(false);
   const [greetingVisible, setGreetingVisible] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const greetingText = "Olá! Precisa registrar alguma despesa?";
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -95,6 +102,30 @@ const AssistantFAB = () => {
   );
 
   const assistButtonLabel = useMemo(() => "Assistente", []);
+  const avatarClasses = useMemo(
+    () => (iconVariant === "circle" ? "rounded-full" : "rounded-2xl"),
+    [iconVariant],
+  );
+  const renderAvatar = useCallback(
+    (size: string, textSize?: string) => {
+      const baseClasses = `${size} ${avatarClasses} flex items-center justify-center overflow-hidden`;
+      if (avatarUrl) {
+        return (
+          <img
+            src={avatarUrl}
+            alt="Avatar do assistente"
+            className={`${baseClasses} object-cover`}
+          />
+        );
+      }
+      return (
+        <span className={`${baseClasses} bg-primary text-white ${textSize ?? "text-2xl"}`}>
+          🙂
+        </span>
+      );
+    },
+    [avatarClasses, avatarUrl],
+  );
 
   return (
     <>
@@ -103,12 +134,11 @@ const AssistantFAB = () => {
           <div className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white shadow-2xl sm:w-[360px]">
             <div className="flex items-center justify-between rounded-t-3xl border-b border-slate-100 px-4 py-3">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-white">
-                  🙂
-                </span>
+                {renderAvatar("h-10 w-10")}
                 <div>
                   <p className="text-xs uppercase tracking-wide text-slate-500">Assistente</p>
                   <p className="text-sm font-semibold text-slate-900">Como posso ajudar?</p>
+                  <span className="text-[11px] text-emerald-600">online</span>
                 </div>
               </div>
               <button
@@ -178,7 +208,7 @@ const AssistantFAB = () => {
       >
         {greetingVisible && !chatOpen && (
           <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/80 px-4 py-2 text-sm text-slate-700 shadow-lg shadow-slate-200 transition">
-            <p>Olá! Posso te ajudar a registrar uma despesa?</p>
+            <p>{greetingText}</p>
             <button
               type="button"
               onClick={handleHideGreeting}
@@ -193,11 +223,9 @@ const AssistantFAB = () => {
           type="button"
           onClick={handleOpen}
           aria-label={assistButtonLabel}
-          className="relative flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-2xl shadow-lg shadow-primary/30 transition hover:-translate-y-0.5 hover:border-primary hover:shadow-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+          className="relative flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white shadow-lg shadow-primary/30 transition hover:-translate-y-0.5 hover:border-primary hover:shadow-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white"
         >
-          <span role="img" aria-hidden="true">
-            🙂
-          </span>
+          {renderAvatar("h-10 w-10", "text-xl")}
           <span className="sr-only">{assistButtonLabel}</span>
         </button>
       </div>
