@@ -644,6 +644,12 @@ export const getCreditExpensesByCardAndRange = async ({
   from,
   to,
 }: GetCardExpensesParams): Promise<Entry[]> => {
+  const formatDateParam = (value?: string) => {
+    if (!value) return undefined;
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return undefined;
+    return parsed.toISOString().slice(0, 10);
+  };
   const params: {
     cardId?: string;
     from?: string;
@@ -651,8 +657,8 @@ export const getCreditExpensesByCardAndRange = async ({
     paymentMethod?: PaymentMethod;
   } = {
     cardId,
-    from,
-    to,
+    from: formatDateParam(from),
+    to: formatDateParam(to),
     paymentMethod: "CREDIT",
   };
   const requestPath = buildEntriesRequestPath(params);
