@@ -8,9 +8,9 @@ import {
   updateCard,
   type CardPayload,
 } from "../../api/cards";
-import { formatBRL, parseCurrencyInput } from "../../utils/format";
-import { formatDate } from "../../utils/format";
+import { formatBRL, formatDate, parseCurrencyInput } from "../../utils/format";
 import { getReadableTextColor } from "../../utils/colors";
+import { getCurrentMonthInTimeZone } from "../../utils/months";
 import { cardBase, cardHover, subtleText } from "../../styles/dashboardTokens";
 import Toast from "../Toast";
 import ConfirmDialog from "../ConfirmDialog";
@@ -155,7 +155,22 @@ const CreditCardsSection = () => {
     setInvoicesLoading(true);
     setInvoicesError(null);
     try {
-      const data = await listCardInvoices();
+      let data: CardInvoice[] = [];
+      try {
+        data = await listCardInvoices({ scope: "open" });
+      } catch (fetchError) {
+        const fallbackMonth = getCurrentMonthInTimeZone("America/Bahia");
+        if (fallbackMonth) {
+          // eslint-disable-next-line no-console
+          console.warn(
+            "[cards] falha ao carregar faturas abertas, tentando mes atual",
+            fetchError,
+          );
+          data = await listCardInvoices({ month: fallbackMonth });
+        } else {
+          throw fetchError;
+        }
+      }
       setInvoices(data);
     } catch (err) {
       const message =

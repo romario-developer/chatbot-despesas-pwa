@@ -140,10 +140,10 @@ const InvoiceDetailsPage = () => {
           )}
         </div>
         <Link
-          to="/credit"
+          to="/cards"
           className="text-sm font-semibold text-primary underline-offset-4 transition hover:text-primary/70"
         >
-          Voltar para crédito e faturas
+          Voltar para cartões e faturas
         </Link>
       </div>
 

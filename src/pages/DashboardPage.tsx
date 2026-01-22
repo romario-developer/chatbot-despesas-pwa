@@ -223,6 +223,10 @@ const DashboardPage = () => {
     setIsMonthPanelOpen((prev) => !prev);
   };
 
+  const handleGoToCards = useCallback(() => {
+    navigate("/cards");
+  }, [navigate]);
+
   useEffect(() => {
     if (!summary) return;
     logDashboardDebug("totals", {
@@ -323,9 +327,20 @@ const DashboardPage = () => {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3 rounded-3xl border border-dashed border-slate-200 bg-white/80 px-4 py-3 shadow-sm">
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={handleGoToCards}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                handleGoToCards();
+              }
+            }}
+            className="flex items-center gap-3 rounded-3xl border border-dashed border-slate-200 bg-white/80 px-4 py-3 shadow-sm cursor-pointer"
+          >
             <div>
-              <p className="text-xs font-semibold uppercase text-slate-500">Crédito e faturas</p>
+              <p className="text-xs font-semibold uppercase text-slate-500">Cartões e faturas</p>
               <p className="text-sm text-slate-600">
                 Acesse os cartões e acompanhe faturas recentes.
               </p>

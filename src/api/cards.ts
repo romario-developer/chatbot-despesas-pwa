@@ -450,12 +450,14 @@ const resolveInvoiceList = (payload: ListCardInvoicesResponse): RawInvoice[] => 
 export type GetCardInvoicesParams = {
   asOf?: string;
   month?: string;
+  scope?: string;
 };
 
 export const buildInvoicesPath = (params?: GetCardInvoicesParams) => {
   const search = new URLSearchParams();
   if (params?.asOf) search.append("asOf", params.asOf);
   if (params?.month) search.append("month", params.month);
+  if (params?.scope) search.append("scope", params.scope);
   const query = search.toString();
   return query ? `/api/cards/invoices?${query}` : "/api/cards/invoices";
 };
@@ -580,8 +582,10 @@ const normalizeInvoice = (value: RawInvoice): CardInvoice | null => {
   };
 };
 
-export const listCardInvoices = async (): Promise<CardInvoice[]> => {
-  return getCardInvoices();
+export const listCardInvoices = async (
+  params?: GetCardInvoicesParams,
+): Promise<CardInvoice[]> => {
+  return getCardInvoices(params);
 };
 
 export const createCard = async (payload: CardPayload): Promise<CreditCard | null> => {
