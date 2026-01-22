@@ -138,6 +138,27 @@ export type CardInvoice = {
   card?: CreditCard;
 };
 
+export type InvoicePurchase = {
+  id: string;
+  description: string;
+  amount: number;
+  date?: string;
+  category?: string;
+};
+
+export type InvoiceDetails = {
+  cardId: string;
+  cardName?: string;
+  card?: CreditCard;
+  cycleStart?: string;
+  cycleEnd?: string;
+  dueDate?: string;
+  invoiceTotal?: number;
+  remaining?: number;
+  status?: string;
+  purchases: InvoicePurchase[];
+};
+
 export type PlanningExtra = {
   id: string;
   label?: string;

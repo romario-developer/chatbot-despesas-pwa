@@ -135,6 +135,14 @@ const CreditPage = () => {
     [navigate],
   );
 
+  const handleViewInvoiceDetail = useCallback(
+    (cardId: string, cycleEnd?: string) => {
+      if (!cycleEnd) return;
+      navigate(`/credit/cards/${cardId}/invoices/${encodeURIComponent(cycleEnd)}`);
+    },
+    [navigate],
+  );
+
   const handleDeleteCard = useCallback(
     async (cardId: string) => {
       if (typeof window === "undefined") return;
@@ -487,6 +495,18 @@ const CreditPage = () => {
 
                   <p className="text-xs text-current/70">Fatura atual</p>
                   <p className="text-2xl font-semibold text-current">{invoiceAmountLabel}</p>
+                  {invoice?.cycleEnd && (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleViewInvoiceDetail(card.id, invoice.cycleEnd);
+                      }}
+                      className="text-xs font-semibold uppercase tracking-wide text-primary transition hover:text-primary/70"
+                    >
+                      Ver fatura
+                    </button>
+                  )}
                   {cycleEndLabel && (
                     <p className="text-xs text-current/70">Fecha em {cycleEndLabel}</p>
                   )}

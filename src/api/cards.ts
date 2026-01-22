@@ -1,7 +1,13 @@
 import { apiRequest, getStoredToken } from "./client";
 import { api, shouldLogApi } from "../services/api";
 import { listEntries } from "./entries";
-import type { CardInvoice, CreditCard, Entry } from "../types";
+import type {
+  CardInvoice,
+  CreditCard,
+  Entry,
+  InvoiceDetails,
+  InvoicePurchase,
+} from "../types";
 
 const CARD_DEBUG_KEY = "DEBUG_CARDS";
 const isCardDebugEnabled = () =>
@@ -117,6 +123,17 @@ const normalizePayload = (payload: CardPayload): CardPayload => {
 const normalizeNumber = (value: unknown) => {
   const num = Number(value);
   return Number.isFinite(num) ? num : undefined;
+};
+
+const normalizeStringValue = (value: unknown): string | undefined => {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed || undefined;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return undefined;
 };
 
 const normalizeDay = (value: unknown) => {
@@ -263,6 +280,148 @@ type ListCardInvoicesResponse =
     }
   | null;
 
+type RawInvoiceDetails = {
+  card?: unknown;
+  cardId?: unknown;
+  cardName?: unknown;
+  name?: unknown;
+  label?: unknown;
+  cycleStart?: unknown;
+  cycleEnd?: unknown;
+  dueDate?: unknown;
+  invoiceTotal?: unknown;
+  remaining?: unknown;
+  status?: unknown;
+  items?: unknown;
+  purchases?: unknown;
+  transactions?: unknown;
+  entries?: unknown;
+  data?: unknown;
+  list?: unknown;
+  balance?: unknown;
+  toPay?: unknown;
+} | null;
+
+type RawInvoicePurchase = {
+  id?: unknown;
+  transactionId?: unknown;
+  lineId?: unknown;
+  description?: unknown;
+  title?: unknown;
+  name?: unknown;
+  amount?: unknown;
+  value?: unknown;
+  total?: unknown;
+  invoiceAmount?: unknown;
+  cost?: unknown;
+  date?: unknown;
+  transactionDate?: unknown;
+  createdAt?: unknown;
+  category?: unknown;
+  categoryName?: unknown;
+  categoryLabel?: unknown;
+} | null;
+
+const resolveInvoicePurchases = (payload: unknown): RawInvoicePurchase[] => {
+  if (Array.isArray(payload)) return payload;
+  if (!payload || typeof payload !== "object") return [];
+  const data = payload as Record<string, unknown>;
+  if (Array.isArray(data.purchases)) return data.purchases;
+  if (Array.isArray(data.items)) return data.items;
+  if (Array.isArray(data.transactions)) return data.transactions;
+  if (Array.isArray(data.entries)) return data.entries;
+  if (Array.isArray(data.data)) return data.data;
+  if (Array.isArray(data.list)) return data.list;
+  return [];
+};
+
+const normalizeInvoicePurchase = (
+  value: RawInvoicePurchase,
+  index: number,
+): InvoicePurchase | null => {
+  if (!value || typeof value !== "object") return null;
+  const data = value as Record<string, unknown>;
+  const description =
+    normalizeStringValue(data.description ?? data.title ?? data.name) ??
+    `Lancamento ${index + 1}`;
+  const amount =
+    normalizeNumber(
+      data.amount ??
+        data.value ??
+        data.total ??
+        data.invoiceAmount ??
+        data.cost,
+    ) ?? undefined;
+  if (amount === undefined) return null;
+  const id =
+    normalizeStringValue(data.id ?? data.transactionId ?? data.lineId) ??
+    `${description}-${index}`;
+  const date = normalizeStringValue(
+    data.date ?? data.transactionDate ?? data.createdAt,
+  );
+  const category = normalizeStringValue(
+    data.category ?? data.categoryName ?? data.categoryLabel,
+  );
+  return {
+    id,
+    description,
+    amount,
+    date,
+    category,
+  };
+};
+
+const normalizeInvoiceDetails = (
+  value: RawInvoiceDetails,
+  requestedCardId: string,
+): InvoiceDetails => {
+  const data =
+    value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const invoiceCardRaw =
+    data.card && typeof data.card === "object" ? (data.card as RawCard) : null;
+  const card = invoiceCardRaw ? normalizeCard(invoiceCardRaw) : undefined;
+  const cardName =
+    normalizeStringValue(data.cardName) ??
+    normalizeStringValue(data.name) ??
+    normalizeStringValue(data.label) ??
+    card?.name;
+  const cycleStart = normalizeStringValue(data.cycleStart);
+  const cycleEnd = normalizeStringValue(data.cycleEnd);
+  const dueDate = normalizeStringValue(data.dueDate ?? data.due_day ?? data.dueDay);
+  const invoiceTotal = normalizeNumber(
+    data.invoiceTotal ?? data.total ?? data.amount ?? data.value,
+  );
+  const remaining = normalizeNumber(
+    data.remaining ?? data.balance ?? data.balanceDue ?? data.toPay,
+  );
+  const status = normalizeStringValue(
+    data.status ?? data.situation ?? data.state,
+  );
+  const purchasesPayload =
+    data.purchases ??
+    data.items ??
+    data.transactions ??
+    data.entries ??
+    data.data ??
+    data.list;
+  const purchases = resolveInvoicePurchases(purchasesPayload)
+    .map((item, index) => normalizeInvoicePurchase(item, index))
+    .filter((entry): entry is InvoicePurchase => Boolean(entry));
+
+  return {
+    cardId: requestedCardId,
+    cardName: cardName ?? undefined,
+    card: card ?? undefined,
+    cycleStart,
+    cycleEnd,
+    dueDate,
+    invoiceTotal,
+    remaining,
+    status,
+    purchases,
+  };
+};
+
 const resolveInvoiceList = (payload: ListCardInvoicesResponse): RawInvoice[] => {
   if (Array.isArray(payload)) {
     return payload;
@@ -305,6 +464,18 @@ export const getCardInvoices = async (
   logCreditInvoiceResponse(invoicePath, response.data);
   const list = resolveInvoiceList(response.data);
   return list.map((item) => normalizeInvoice(item)).filter(Boolean) as CardInvoice[];
+};
+
+export const getCardInvoiceDetails = async (
+  cardId: string,
+  cycleEnd: string,
+): Promise<InvoiceDetails> => {
+  const encodedCycleEnd = encodeURIComponent(cycleEnd);
+  const data = await apiRequest<RawInvoiceDetails>({
+    url: `/api/cards/${cardId}/invoices/${encodedCycleEnd}`,
+    method: "GET",
+  });
+  return normalizeInvoiceDetails(data, cardId);
 };
 
 const normalizeInvoice = (value: RawInvoice): CardInvoice | null => {

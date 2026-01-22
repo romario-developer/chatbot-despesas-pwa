@@ -14,6 +14,7 @@ const PlanningPage = lazy(() => import("../pages/PlanningPage"));
 const ChangePasswordPage = lazy(() => import("../pages/ChangePasswordPage"));
 const CategoriesPage = lazy(() => import("../pages/CategoriesPage"));
 const CreditPage = lazy(() => import("../pages/CreditPage"));
+const InvoiceDetailsPage = lazy(() => import("../pages/InvoiceDetailsPage"));
 const CardsPage = lazy(() => import("../pages/CardsPage"));
 
 const AppRouter = () => (
@@ -45,6 +46,10 @@ const AppRouter = () => (
             <Route path="/planning" element={<PlanningPage />} />
             <Route path="/categories" element={<CategoriesPage />} />
             <Route path="/credit" element={<CreditPage />} />
+            <Route
+              path="/credit/cards/:cardId/invoices/:cycleEnd"
+              element={<InvoiceDetailsPage />}
+            />
             <Route path="/cards" element={<CardsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
