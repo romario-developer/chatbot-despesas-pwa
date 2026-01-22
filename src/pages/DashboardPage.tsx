@@ -3,7 +3,6 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { useNavigate } from "react-router-dom";
 import Toast from "../components/Toast";
 import DashboardSection from "../components/ui/DashboardSection";
-import QuickEntryCard from "../components/dashboard/QuickEntryCard";
 import MonthChipsBar from "../components/MonthChipsBar";
 import { listEntries } from "../api/entries";
 import { getDashboardSummary } from "../api/dashboard";
@@ -410,8 +409,6 @@ const DashboardPage = () => {
               </div>
             </div>
           </div>
-
-          <QuickEntryCard onCreated={notifyEntriesChanged} />
 
           <DashboardSection
             title={`Ultimos lancamentos${entriesCount ? ` (${entriesCount})` : ""}`}
