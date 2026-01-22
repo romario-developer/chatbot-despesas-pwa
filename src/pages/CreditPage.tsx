@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { formatBRL, formatDate } from "../utils/format";
 import { formatMonthLabel, getCurrentMonthInTimeZone } from "../utils/months";
 import {
+  buildInvoicesPath,
   getCardInvoices,
   getCreditExpensesByCardAndRange,
   deleteCard,
@@ -35,6 +36,33 @@ const buildMonthRange = (value?: string) => {
   const day = String(lastDay.getDate()).padStart(2, "0");
   const to = `${year}-${normalizedMonth}-${day}`;
   return { from, to };
+};
+
+const getDueDateFromCycle = (cycleEnd: string, dueDay: number) => {
+  const parsedCycle = new Date(cycleEnd);
+  if (Number.isNaN(parsedCycle.getTime()) || !Number.isFinite(dueDay)) {
+    return undefined;
+  }
+  const year = parsedCycle.getFullYear();
+  const month = parsedCycle.getMonth();
+  const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+  const safeDay = Math.min(Math.max(1, dueDay), lastDayOfMonth);
+  const monthString = String(month + 1).padStart(2, "0");
+  const dayString = String(safeDay).padStart(2, "0");
+  return `${year}-${monthString}-${dayString}`;
+};
+
+const getInvoiceDueLabel = (invoice: CardInvoice, card?: CreditCard) => {
+  if (invoice?.dueDate) {
+    return formatDate(invoice.dueDate);
+  }
+  const dueDay = invoice?.dueDay ?? card?.dueDay;
+  if (!invoice?.cycleEnd || dueDay === undefined || dueDay === null) {
+    return undefined;
+  }
+  const computed = getDueDateFromCycle(invoice.cycleEnd, dueDay);
+  if (!computed) return undefined;
+  return formatDate(computed);
 };
 
 const isCreditDebugEnabled = () => {
@@ -140,11 +168,16 @@ const CreditPage = () => {
       if (month) {
         params.month = month;
       }
+      const invoicePath = buildInvoicesPath(params);
+      logCreditDebug("selected month", month ?? "n/a");
+      logCreditDebug("invoice url", invoicePath);
       const data = await getCardInvoices(params);
       if (isCreditDebugEnabled()) {
         // eslint-disable-next-line no-console
         console.log("[credit-debug] invoiceResponse", data);
       }
+      logCreditDebug("invoice payload size", data.length);
+      logCreditDebug("invoice payload first", data[0] ?? null);
       logCreditDebug("invoices payload", data);
       setInvoices(data);
     } catch (error) {
@@ -265,6 +298,15 @@ const CreditPage = () => {
     selectedInvoice?.cycleStart,
     selectedInvoice?.cycleEnd,
   );
+  const selectedInvoiceCycleEndLabel = selectedInvoice?.cycleEnd
+    ? formatDate(selectedInvoice.cycleEnd)
+    : undefined;
+  const selectedInvoiceDueLabel = selectedInvoice
+    ? getInvoiceDueLabel(selectedInvoice, selectedCard ?? undefined)
+    : undefined;
+  const showNoInvoicesMessage =
+    !invoiceLoading && !invoiceError && cards.length > 0 && invoices.length === 0;
+
 
   return (
     <div className="space-y-6">
@@ -299,10 +341,16 @@ const CreditPage = () => {
             {cardsError}
           </div>
         )}
-        {cardsLoading && !cards.length ? (
-          <p className="text-sm text-slate-500">Carregando cartoes...</p>
-        ) : cards.length ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {cardsLoading && !cards.length ? (
+
+          <p className="text-sm text-slate-500">Carregando cartoes...</p>
+
+        ) : cards.length ? (
+
+          <>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+
             {cards.map((card) => {
               const invoice = invoicesByCardId[card.id];
               const isActive = card.id === selectedCardId;
@@ -317,27 +365,51 @@ const CreditPage = () => {
               if (!invoice?.card) {
                 logCreditDebug("invoice missing card payload", card.id);
               }
+              const invoiceAmount =
+                invoice && invoice.remaining !== undefined && invoice.remaining !== null
+                  ? invoice.remaining
+                  : invoice?.invoiceTotal;
+              const invoiceAmountLabel =
+                invoiceAmount !== undefined && invoiceAmount !== null ? formatBRL(invoiceAmount) : "—";
+              const cycleEndLabel = invoice?.cycleEnd ? formatDate(invoice.cycleEnd) : undefined;
+              const dueLabel = invoice ? getInvoiceDueLabel(invoice, displayCard) : undefined;
               const cardBackground = displayCard.color ?? "#ffffff";
               const cardTextColor = displayCard.textColor ?? getReadableTextColor(cardBackground);
               return (
                 <div
                   key={card.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setSelectedCardId(card.id)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      setSelectedCardId(card.id);
-                    }
-                  }}
-                  className={`group flex flex-col gap-3 rounded-3xl border p-4 text-left transition ${
-                    isActive
-                      ? "border-primary bg-primary/5 shadow-lg"
-                      : "border-slate-200 bg-white hover:border-slate-300"
-                  }`}
-                  style={{ backgroundColor: cardBackground, color: cardTextColor }}
-                >
+                  role="button"
+
+                  tabIndex={0}
+
+                  onClick={() => setSelectedCardId(card.id)}
+
+                  onKeyDown={(event) => {
+
+                    if (event.key === "Enter" || event.key === " ") {
+
+                      event.preventDefault();
+
+                      setSelectedCardId(card.id);
+
+                    }
+
+                  }}
+
+                  className={`group flex flex-col gap-3 rounded-3xl border p-4 text-left transition ${
+
+                    isActive
+
+                      ? "border-primary bg-primary/5 shadow-lg"
+
+                      : "border-slate-200 bg-white hover:border-slate-300"
+
+                  }`}
+
+                  style={{ backgroundColor: cardBackground, color: cardTextColor }}
+
+                >
+
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm font-semibold text-current">{displayCard.name}</p>
@@ -353,76 +425,152 @@ const CreditPage = () => {
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      {invoice?.status && (
-                        <span className="rounded-full border border-current/30 px-3 py-1 text-[11px] font-semibold uppercase">
-                          {invoice.status}
-                        </span>
-                      )}
-                      <div className="flex gap-1">
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleEditCard(card.id);
-                          }}
-                          className="rounded-full border border-current/40 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide transition hover:border-current"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleDeleteCard(card.id);
-                          }}
-                          disabled={deletingCardId === card.id}
-                          className="rounded-full border border-current/40 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide transition hover:border-current disabled:opacity-50"
-                        >
-                          {deletingCardId === card.id ? "Excluindo" : "Excluir"}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-xs text-current/70">Fatura atual</p>
-                  <p className="text-2xl font-semibold text-current">
-                    {formatBRL(invoice?.invoiceTotal ?? 0)}
-                  </p>
+                      {invoice?.status && (
+
+                        <span className="rounded-full border border-current/30 px-3 py-1 text-[11px] font-semibold uppercase">
+
+                          {invoice.status}
+
+                        </span>
+
+                      )}
+
+                      <div className="flex gap-1">
+
+                        <button
+
+                          type="button"
+
+                          onClick={(event) => {
+
+                            event.stopPropagation();
+
+                            handleEditCard(card.id);
+
+                          }}
+
+                          className="rounded-full border border-current/40 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide transition hover:border-current"
+
+                        >
+
+                          Editar
+
+                        </button>
+
+                        <button
+
+                          type="button"
+
+                          onClick={(event) => {
+
+                            event.stopPropagation();
+
+                            handleDeleteCard(card.id);
+
+                          }}
+
+                          disabled={deletingCardId === card.id}
+
+                          className="rounded-full border border-current/40 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide transition hover:border-current disabled:opacity-50"
+
+                        >
+
+                          {deletingCardId === card.id ? "Excluindo" : "Excluir"}
+
+                        </button>
+
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                  <p className="text-xs text-current/70">Fatura atual</p>
+                  <p className="text-2xl font-semibold text-current">{invoiceAmountLabel}</p>
+                  {cycleEndLabel && (
+                    <p className="text-xs text-current/70">Fecha em {cycleEndLabel}</p>
+                  )}
+                  {dueLabel && (
+                    <p className="text-xs text-current/70">Vence em {dueLabel}</p>
+                  )}
                   <p className="text-xs text-current/70">
                     Fechamento dia {displayCard.closingDay ?? "-"} · Vencimento dia {displayCard.dueDay ?? "-"}
                   </p>
-                  <p className="text-xs text-current/70">Lancamentos: {entriesCount}</p>
-                  {cardCycleLabel && (
-                    <p className="text-xs text-current/70">Ciclo: {cardCycleLabel}</p>
-                  )}
-                  {(invoice?.paidTotal || invoice?.remaining) && (
-                    <div className="flex flex-wrap gap-2 text-[11px] font-semibold uppercase text-current/80">
-                      {invoice?.paidTotal !== undefined && (
-                        <span className="rounded-full border border-current/30 px-3 py-1">
-                          Pago {formatBRL(invoice.paidTotal)}
-                        </span>
-                      )}
-                      {invoice?.remaining !== undefined && (
-                        <span className="rounded-full border border-current/30 px-3 py-1">
-                          Restante {formatBRL(invoice.remaining)}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ) : cardsError ? null : (
-          <div className="rounded-3xl border border-dashed bg-white/80 p-6 text-center">
-            <p className="text-sm text-slate-500">Nenhum cartao cadastrado ainda.</p>
-            <Link
-              to="/cards"
-              className="mt-3 inline-flex items-center justify-center rounded-full border border-primary px-4 py-2 text-xs font-semibold uppercase text-primary transition hover:bg-primary/10"
-            >
-              Cadastrar cartão
-            </Link>
-          </div>
-        )}
+                  <p className="text-xs text-current/70">Lancamentos: {entriesCount}</p>
+
+                  {cardCycleLabel && (
+
+                    <p className="text-xs text-current/70">Ciclo: {cardCycleLabel}</p>
+
+                  )}
+
+                  {(invoice?.paidTotal || invoice?.remaining) && (
+
+                    <div className="flex flex-wrap gap-2 text-[11px] font-semibold uppercase text-current/80">
+
+                      {invoice?.paidTotal !== undefined && (
+
+                        <span className="rounded-full border border-current/30 px-3 py-1">
+
+                          Pago {formatBRL(invoice.paidTotal)}
+
+                        </span>
+
+                      )}
+
+                      {invoice?.remaining !== undefined && (
+
+                        <span className="rounded-full border border-current/30 px-3 py-1">
+
+                          Restante {formatBRL(invoice.remaining)}
+
+                        </span>
+
+                      )}
+
+                    </div>
+
+                  )}
+
+                </div>
+
+              );
+
+            })}
+
+          </div>
+
+
+            {showNoInvoicesMessage && (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-500">
+                Sem faturas neste mes.
+              </div>
+            )}
+
+          </>
+
+        ) : cardsError ? null : (
+
+          <div className="rounded-3xl border border-dashed bg-white/80 p-6 text-center">
+
+            <p className="text-sm text-slate-500">Nenhum cartao cadastrado ainda.</p>
+
+            <Link
+
+              to="/cards"
+
+              className="mt-3 inline-flex items-center justify-center rounded-full border border-primary px-4 py-2 text-xs font-semibold uppercase text-primary transition hover:bg-primary/10"
+
+            >
+
+              Cadastrar cartão
+
+            </Link>
+
+          </div>
+
+        )}
+
       </section>
 
       <section className="space-y-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -444,6 +592,8 @@ const CreditPage = () => {
         )}
         {cards.length === 0 ? (
           <p className="text-sm text-slate-500">Cadastre um cartao para acompanhar faturas.</p>
+        ) : showNoInvoicesMessage ? (
+          <p className="text-sm text-slate-500">Sem faturas neste mes.</p>
         ) : invoiceLoading ? (
           <p className="text-sm text-slate-500">Carregando fatura...</p>
         ) : !selectedInvoice ? (
@@ -484,6 +634,12 @@ const CreditPage = () => {
             </div>
             {cycleLabel && (
               <p className="text-xs text-slate-500">Ciclo: {cycleLabel}</p>
+            )}
+            {selectedInvoiceCycleEndLabel && (
+              <p className="text-xs text-slate-500">Fecha em {selectedInvoiceCycleEndLabel}</p>
+            )}
+            {selectedInvoiceDueLabel && (
+              <p className="text-xs text-slate-500">Vence em {selectedInvoiceDueLabel}</p>
             )}
             <div className="space-y-3">
               {expensesLoading ? (

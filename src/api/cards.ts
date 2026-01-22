@@ -286,7 +286,7 @@ export type GetCardInvoicesParams = {
   month?: string;
 };
 
-const buildInvoicesPath = (params?: GetCardInvoicesParams) => {
+export const buildInvoicesPath = (params?: GetCardInvoicesParams) => {
   const search = new URLSearchParams();
   if (params?.asOf) search.append("asOf", params.asOf);
   if (params?.month) search.append("month", params.month);
@@ -345,6 +345,7 @@ const normalizeInvoice = (value: RawInvoice): CardInvoice | null => {
   const dueDay = normalizeDay(data.dueDay);
   const cycleStart = typeof data.cycleStart === "string" ? data.cycleStart : undefined;
   const cycleEnd = typeof data.cycleEnd === "string" ? data.cycleEnd : undefined;
+  const dueDate = typeof data.dueDate === "string" ? data.dueDate : undefined;
   const entriesCount =
     normalizeNumber(
       data.entriesCount ??
@@ -392,6 +393,7 @@ const normalizeInvoice = (value: RawInvoice): CardInvoice | null => {
     dueDay,
     cycleStart,
     cycleEnd,
+    dueDate,
     entriesCount,
     paidTotal,
     remaining,

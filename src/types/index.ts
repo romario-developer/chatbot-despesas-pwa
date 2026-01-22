@@ -128,6 +128,7 @@ export type CardInvoice = {
   nextInvoiceTotal?: number;
   closingDay?: number;
   dueDay?: number;
+  dueDate?: string;
   cycleStart?: string;
   cycleEnd?: string;
   entriesCount?: number;
