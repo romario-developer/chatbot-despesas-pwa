@@ -330,6 +330,7 @@ const DashboardPage = () => {
           <div
             role="button"
             tabIndex={0}
+            aria-label="Ir para cartões e faturas"
             onClick={handleGoToCards}
             onKeyDown={(event) => {
               if (event.key === "Enter" || event.key === " ") {
@@ -337,7 +338,7 @@ const DashboardPage = () => {
                 handleGoToCards();
               }
             }}
-            className="flex items-center gap-3 rounded-3xl border border-dashed border-slate-200 bg-white/80 px-4 py-3 shadow-sm cursor-pointer"
+            className="group flex items-center gap-3 rounded-3xl border border-dashed border-slate-200 bg-white/80 px-4 py-3 shadow-sm transition duration-150 hover:border-primary/70 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white cursor-pointer active:translate-y-[1px]"
           >
             <div>
               <p className="text-xs font-semibold uppercase text-slate-500">Cartões e faturas</p>
