@@ -27,6 +27,12 @@ const logCreditInvoiceResponse = (path: string, payload: unknown) => {
   console.log("[credit-debug] GET", path, payload);
 };
 
+const logCreditDebug = (...args: unknown[]) => {
+  if (!isCreditDebugEnabled()) return;
+  // eslint-disable-next-line no-console
+  console.log("[credit-debug]", ...args);
+};
+
 export type CardPayload = {
   name: string;
   brand?: string;
@@ -617,17 +623,42 @@ export type GetCardExpensesParams = {
   to?: string;
 };
 
+const buildEntriesRequestPath = (params: {
+  cardId?: string;
+  from?: string;
+  to?: string;
+  paymentMethod?: string;
+}) => {
+  const search = new URLSearchParams();
+  if (params.from) search.append("from", params.from);
+  if (params.to) search.append("to", params.to);
+  if (params.cardId) search.append("cardId", params.cardId);
+  if (params.paymentMethod) search.append("paymentMethod", params.paymentMethod);
+  const query = search.toString();
+  return query ? `/api/entries?${query}` : "/api/entries";
+};
+
 export const getCreditExpensesByCardAndRange = async ({
   cardId,
   from,
   to,
 }: GetCardExpensesParams): Promise<Entry[]> => {
-  const entries = await listEntries({
+  const params = {
     cardId,
     from,
     to,
     paymentMethod: "CREDIT",
+  };
+  const requestPath = buildEntriesRequestPath(params);
+  if (isCreditDebugEnabled()) {
+    logCreditDebug("GET", requestPath);
+  }
+  const entries = await listEntries({
+    ...params,
   });
+  if (isCreditDebugEnabled()) {
+    logCreditDebug("RESPONSE", requestPath, entries);
+  }
 
   return entries.filter(
     (entry) =>

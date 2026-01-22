@@ -135,21 +135,9 @@ const CreditPage = () => {
     [navigate],
   );
 
-  const handleViewInvoiceDetail = useCallback(
-    (cardId: string, cycleEnd?: string) => {
-      if (!cycleEnd) return;
-      navigate(`/credit/cards/${cardId}/invoices/${encodeURIComponent(cycleEnd)}`);
-    },
-    [navigate],
-  );
-
-  const handleCardClick = useCallback(
-    (cardId: string, cycleEnd?: string) => {
-      setSelectedCardId(cardId);
-      handleViewInvoiceDetail(cardId, cycleEnd);
-    },
-    [handleViewInvoiceDetail],
-  );
+  const handleCardClick = useCallback((cardId: string) => {
+    setSelectedCardId(cardId);
+  }, []);
 
   const handleDeleteCard = useCallback(
     async (cardId: string) => {
@@ -396,9 +384,9 @@ const CreditPage = () => {
                   key={card.id}
                   role="button"
 
-                  tabIndex={0}
+                tabIndex={0}
 
-                onClick={() => handleCardClick(card.id, invoice?.cycleEnd)}
+                onClick={() => handleCardClick(card.id)}
 
                 onKeyDown={(event) => {
 
@@ -406,7 +394,7 @@ const CreditPage = () => {
 
                     event.preventDefault();
 
-                    handleCardClick(card.id, invoice?.cycleEnd);
+                    handleCardClick(card.id);
 
                   }
 
