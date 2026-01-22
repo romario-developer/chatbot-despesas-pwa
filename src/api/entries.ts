@@ -1,6 +1,16 @@
 import { apiRequest } from "./client";
 import type { Entry, EntryPayload, PaymentMethod } from "../types";
 
+const CREDIT_DEBUG_KEY = "DEBUG_CREDIT";
+const isCreditDebugEnabled = () =>
+  typeof window !== "undefined" && window.localStorage.getItem(CREDIT_DEBUG_KEY) === "1";
+
+const logCreditEntries = (message: string, path: string, payload?: unknown) => {
+  if (!isCreditDebugEnabled()) return;
+  // eslint-disable-next-line no-console
+  console.debug("[credit-debug]", message, path, payload ?? null);
+};
+
 export type ListEntriesParams = {
   from?: string;
   to?: string;
@@ -29,12 +39,12 @@ export async function listEntries(
   if (params.cardId) search.append("cardId", params.cardId);
   if (params.paymentMethod) {
     search.append("paymentMethod", params.paymentMethod);
-    search.append("payment", params.paymentMethod);
   }
 
   const query = search.toString();
   const path = query ? `/api/entries?${query}` : "/api/entries";
 
+  logCreditEntries("request", path);
   const data = await apiRequest<EntriesApiResponse>({
     url: path,
     method: "GET",
@@ -43,6 +53,7 @@ export async function listEntries(
       : undefined,
   });
 
+  logCreditEntries("response", path, data);
   if (Array.isArray(data)) {
     return data;
   }

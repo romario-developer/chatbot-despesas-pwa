@@ -143,6 +143,14 @@ const CreditPage = () => {
     [navigate],
   );
 
+  const handleCardClick = useCallback(
+    (cardId: string, cycleEnd?: string) => {
+      setSelectedCardId(cardId);
+      handleViewInvoiceDetail(cardId, cycleEnd);
+    },
+    [handleViewInvoiceDetail],
+  );
+
   const handleDeleteCard = useCallback(
     async (cardId: string) => {
       if (typeof window === "undefined") return;
@@ -390,19 +398,19 @@ const CreditPage = () => {
 
                   tabIndex={0}
 
-                  onClick={() => setSelectedCardId(card.id)}
+                onClick={() => handleCardClick(card.id, invoice?.cycleEnd)}
 
-                  onKeyDown={(event) => {
+                onKeyDown={(event) => {
 
-                    if (event.key === "Enter" || event.key === " ") {
+                  if (event.key === "Enter" || event.key === " ") {
 
-                      event.preventDefault();
+                    event.preventDefault();
 
-                      setSelectedCardId(card.id);
+                    handleCardClick(card.id, invoice?.cycleEnd);
 
-                    }
+                  }
 
-                  }}
+                }}
 
                   className={`group flex flex-col gap-3 rounded-3xl border p-4 text-left transition ${
 
@@ -495,18 +503,6 @@ const CreditPage = () => {
 
                   <p className="text-xs text-current/70">Fatura atual</p>
                   <p className="text-2xl font-semibold text-current">{invoiceAmountLabel}</p>
-                  {invoice?.cycleEnd && (
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        handleViewInvoiceDetail(card.id, invoice.cycleEnd);
-                      }}
-                      className="text-xs font-semibold uppercase tracking-wide text-primary transition hover:text-primary/70"
-                    >
-                      Ver fatura
-                    </button>
-                  )}
                   {cycleEndLabel && (
                     <p className="text-xs text-current/70">Fecha em {cycleEndLabel}</p>
                   )}
