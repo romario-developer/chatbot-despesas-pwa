@@ -7,6 +7,7 @@ import type {
   Entry,
   InvoiceDetails,
   InvoicePurchase,
+  PaymentMethod,
 } from "../types";
 
 const CARD_DEBUG_KEY = "DEBUG_CARDS";
@@ -627,7 +628,7 @@ const buildEntriesRequestPath = (params: {
   cardId?: string;
   from?: string;
   to?: string;
-  paymentMethod?: string;
+  paymentMethod?: PaymentMethod;
 }) => {
   const search = new URLSearchParams();
   if (params.from) search.append("from", params.from);
@@ -643,7 +644,12 @@ export const getCreditExpensesByCardAndRange = async ({
   from,
   to,
 }: GetCardExpensesParams): Promise<Entry[]> => {
-  const params = {
+  const params: {
+    cardId?: string;
+    from?: string;
+    to?: string;
+    paymentMethod?: PaymentMethod;
+  } = {
     cardId,
     from,
     to,
