@@ -8,7 +8,7 @@ import { listEntries } from "../api/entries";
 import { getDashboardSummary } from "../api/dashboard";
 import { monthToRange } from "../utils/dateRange";
 import { formatBRL, formatDate } from "../utils/format";
-import { ENTRIES_CHANGED, notifyEntriesChanged } from "../utils/entriesEvents";
+import { ENTRIES_CHANGED } from "../utils/entriesEvents";
 import {
   buildMonthList,
   formatMonthLabel,

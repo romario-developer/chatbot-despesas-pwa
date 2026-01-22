@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { applyUpdate } from "../main";
-import ChatWidget from "./assistant/ChatWidget";
+import AssistantFAB from "./AssistantFAB";
 
 const linkClasses = ({ isActive }: { isActive: boolean }) =>
   [
@@ -184,7 +184,7 @@ const AppLayout = () => {
           </div>
         </div>
       )}
-      <ChatWidget />
+      <AssistantFAB />
 
       {showUpdate && (
         <div className="fixed bottom-4 left-4 right-4 z-50">
