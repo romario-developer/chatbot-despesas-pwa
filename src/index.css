@@ -55,8 +55,9 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 11rem;
+  max-width: 100%;
   border: 1px solid transparent;
+  min-width: 0;
 }
 
 .dashboard-cta-badge--highlight {
@@ -75,6 +76,12 @@ body {
   background-color: rgba(241, 245, 249, 0.9);
   border-color: rgba(148, 163, 184, 0.4);
   color: #475569;
+}
+
+@media (min-width: 640px) {
+  .dashboard-cta-badge {
+    max-width: 11rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

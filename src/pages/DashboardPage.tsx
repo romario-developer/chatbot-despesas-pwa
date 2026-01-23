@@ -388,29 +388,39 @@ const DashboardPage = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div
-              className={`${cardBase} ${cardHover} flex min-h-[140px] flex-col justify-between gap-3 px-5 py-4`}
+              className={`${cardBase} ${cardHover} flex min-h-[104px] flex-col justify-between gap-2 px-4 py-3 sm:px-5 sm:py-4 sm:min-h-[140px]`}
             >
               <div>
-                <p className="text-xs font-semibold uppercase text-slate-500">Saldo em conta</p>
-                <p className="text-2xl font-semibold text-slate-900">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 sm:text-xs">
+                  Saldo em conta
+                </p>
+                <p className="text-lg font-semibold text-slate-900 sm:text-2xl">
                   {renderSummaryValue(balance)}
                 </p>
               </div>
             </div>
-            <div className={`${cardBase} ${cardHover} flex min-h-[140px] flex-col justify-between gap-3 px-5 py-4`}>
+            <div
+              className={`${cardBase} ${cardHover} flex min-h-[104px] flex-col justify-between gap-2 px-4 py-3 sm:px-5 sm:py-4 sm:min-h-[140px]`}
+            >
               <div>
-                <p className="text-xs font-semibold uppercase text-slate-500">Receitas</p>
-                <p className="text-2xl font-semibold text-emerald-700">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 sm:text-xs">
+                  Receitas
+                </p>
+                <p className="text-lg font-semibold text-emerald-700 sm:text-2xl">
                   {renderSummaryValue(incomeTotal)}
                 </p>
               </div>
             </div>
-            <div className={`${cardBase} ${cardHover} flex min-h-[140px] flex-col justify-between gap-3 px-5 py-4`}>
+            <div
+              className={`${cardBase} ${cardHover} col-span-2 flex min-h-[104px] flex-col justify-between gap-2 px-4 py-3 sm:col-span-1 sm:px-5 sm:py-4 sm:min-h-[140px]`}
+            >
               <div>
-                <p className="text-xs font-semibold uppercase text-slate-500">Gastos (Caixa)</p>
-                <p className="text-2xl font-semibold text-rose-600">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 sm:text-xs">
+                  Gastos (Caixa)
+                </p>
+                <p className="text-lg font-semibold text-rose-600 sm:text-2xl">
                   {renderSummaryValue(cashExpenses)}
                 </p>
               </div>
@@ -440,7 +450,7 @@ const DashboardPage = () => {
               </svg>
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
                 <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
                   Cartões e faturas
                 </p>
@@ -453,7 +463,7 @@ const DashboardPage = () => {
                   </span>
                 )}
               </div>
-              <p className="text-sm font-semibold text-slate-900">
+              <p className="text-sm font-semibold text-slate-900 leading-snug">
                 Acesse os cartões e acompanhe faturas recentes.
               </p>
             </div>

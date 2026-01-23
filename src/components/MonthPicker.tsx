@@ -236,10 +236,10 @@ const MonthPicker = (props: MonthPickerProps) => {
                       type="button"
                       onClick={() => handleSelect(monthValue)}
                       ref={isSelected ? selectedRef : null}
-                      className={`w-full rounded-lg px-3 py-2 text-left text-sm transition ${
+                      className={`w-full rounded-lg border border-slate-100 px-3 py-2 text-left text-sm font-semibold transition ${
                         isSelected
-                          ? "bg-teal-50 font-semibold text-teal-700"
-                          : "text-slate-700 hover:bg-slate-50"
+                          ? "bg-teal-50 text-teal-700"
+                          : "bg-white text-slate-900 hover:bg-slate-100"
                       }`}
                       aria-pressed={isSelected}
                     >
