@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   createCard,
   deleteCard,
+  getCreditExpensesByCardAndRange,
   listCardInvoices,
   listCards,
   postCardPayment,
@@ -16,7 +17,7 @@ import Toast from "../Toast";
 import ConfirmDialog from "../ConfirmDialog";
 import DayPickerSheet from "../DayPickerSheet";
 import { notifyEntriesChanged } from "../../utils/entriesEvents";
-import type { CreditCard, CardInvoice } from "../../types";
+import type { CreditCard, CardInvoice, Entry } from "../../types";
 
 type CardFormState = {
   name: string;
@@ -56,6 +57,14 @@ const emptyForm: CardFormState = {
 };
 
 const BRAND_OPTIONS = ["Visa", "MasterCard", "Elo", "Amex", "Other"];
+
+const isCardsDebugEnabled = () =>
+  typeof window !== "undefined" && window.localStorage.getItem("DEBUG_CARDS") === "1";
+const logCardsDebug = (...args: unknown[]) => {
+  if (!isCardsDebugEnabled()) return;
+  // eslint-disable-next-line no-console
+  console.debug("[cards-debug]", ...args);
+};
 
 const normalizeDay = (value: string) => {
   const num = Number(value);
@@ -110,6 +119,10 @@ const CreditCardsSection = () => {
   const [paymentDate, setPaymentDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [isPaying, setIsPaying] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
+  const [purchasesByCardId, setPurchasesByCardId] = useState<Record<string, Entry[]>>({});
+  const [loadingPurchases, setLoadingPurchases] = useState<Record<string, boolean>>({});
+  const [purchasesError, setPurchasesError] = useState<Record<string, string | null>>({});
 
   const loadCards = useCallback(async () => {
     setIsLoading(true);
@@ -189,6 +202,50 @@ const CreditCardsSection = () => {
   useEffect(() => {
     loadInvoices();
   }, [loadInvoices]);
+
+  const loadPurchases = useCallback(
+    async (cardId: string, from?: string, to?: string) => {
+      if (!from || !to) return;
+      setLoadingPurchases((prev) => ({ ...prev, [cardId]: true }));
+      setPurchasesError((prev) => ({ ...prev, [cardId]: null }));
+      logCardsDebug("loading purchases", { cardId, from, to });
+      try {
+        const data = await getCreditExpensesByCardAndRange({
+          cardId,
+          from,
+          to,
+        });
+        const sorted = [...data].sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+        );
+        setPurchasesByCardId((prev) => ({ ...prev, [cardId]: sorted }));
+        logCardsDebug("purchases payload", { cardId, count: sorted.length });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Erro ao carregar compras.";
+        setPurchasesError((prev) => ({ ...prev, [cardId]: message }));
+        logCardsDebug("purchases error", cardId, message);
+      } finally {
+        setLoadingPurchases((prev) => ({ ...prev, [cardId]: false }));
+      }
+    },
+    [],
+  );
+
+  const handleCardToggle = useCallback(
+    (cardId: string, cycleStart?: string, cycleEnd?: string) => {
+      setExpandedCardId((prev) => (prev === cardId ? null : cardId));
+      if (
+        cycleStart &&
+        cycleEnd &&
+        !loadingPurchases[cardId] &&
+        !purchasesByCardId[cardId]
+      ) {
+        loadPurchases(cardId, cycleStart, cycleEnd);
+      }
+    },
+    [loadPurchases, loadingPurchases, purchasesByCardId],
+  );
 
   const openCreate = () => {
     setEditingCard(null);
@@ -477,10 +534,27 @@ const CreditCardsSection = () => {
                 ? String(card.closingDay).padStart(2, "0")
                 : null;
 
+            const expanded = expandedCardId === card.id;
+            const cardPurchases = purchasesByCardId[card.id];
+            const cardLoading = loadingPurchases[card.id];
+            const cardError = purchasesError[card.id];
+            const cycleStart = invoice?.cycleStart;
+            const cycleEnd = invoice?.cycleEnd;
+
             return (
               <div
                 key={card.id}
-                className={`${cardBase} ${cardHover} space-y-3`}
+                role="button"
+                tabIndex={0}
+                aria-expanded={expanded}
+                onClick={() => handleCardToggle(card.id, cycleStart, cycleEnd)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    handleCardToggle(card.id, cycleStart, cycleEnd);
+                  }
+                }}
+                className={`${cardBase} ${cardHover} space-y-3 cursor-pointer`}
                 style={{ backgroundColor: cardBackground, color: cardTextColor }}
               >
                 <div className="flex items-start justify-between">
@@ -499,14 +573,20 @@ const CreditCardsSection = () => {
                   <div className="flex gap-2 text-xs font-semibold">
                     <button
                       type="button"
-                      onClick={() => openEdit(card)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openEdit(card);
+                      }}
                       className="text-current opacity-80 transition hover:opacity-100"
                     >
                       Editar
                     </button>
                     <button
                       type="button"
-                      onClick={() => setCardToDelete(card)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setCardToDelete(card);
+                      }}
                       className="text-current opacity-70 transition hover:opacity-100"
                     >
                       Excluir
@@ -545,13 +625,58 @@ const CreditCardsSection = () => {
                   )}
                   <button
                     type="button"
-                    onClick={() => invoice && openPaymentDialog(invoice)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      if (invoice) {
+                        openPaymentDialog(invoice);
+                      }
+                    }}
                     disabled={invoiceTotal <= 0}
                     className="w-full rounded-full border border-white/40 bg-white/20 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-white/30 disabled:border-white/20 disabled:text-white/40"
                   >
                     Registrar pagamento
                   </button>
                 </div>
+
+                {expanded && (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-700">
+                    {cardLoading ? (
+                      <p className="text-xs text-slate-500">Carregando compras...</p>
+                    ) : cardError ? (
+                      <p className="text-xs text-rose-600">{cardError}</p>
+                    ) : cardPurchases && cardPurchases.length ? (
+                      <ul className="space-y-3">
+                        {cardPurchases.map((entry) => {
+                          const installmentLabel =
+                            entry.installmentNumber && entry.installmentTotal
+                              ? `${entry.installmentNumber}/${entry.installmentTotal}`
+                              : undefined;
+                          return (
+                            <li
+                              key={entry.id}
+                              className="flex items-start justify-between gap-3"
+                            >
+                              <div>
+                                <p className="text-sm font-semibold text-slate-900">
+                                  {entry.description}
+                                </p>
+                                <p className="text-[11px] text-slate-500">
+                                  {formatDate(entry.date)}
+                                  {installmentLabel && ` • ${installmentLabel}`}
+                                </p>
+                              </div>
+                              <span className="font-semibold text-slate-900">
+                                {formatBRL(entry.amount)}
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    ) : (
+                      <p className="text-xs text-slate-500">Nenhuma compra neste ciclo.</p>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
