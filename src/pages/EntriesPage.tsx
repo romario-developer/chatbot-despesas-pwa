@@ -2,15 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { listCategories } from "../api/categories";
 import { deleteEntry, listEntries } from "../api/entries";
-import MonthPicker, {
-  MonthPickerFieldTrigger,
-  monthPickerFieldButtonClassName,
-} from "../components/MonthPicker";
+import MonthChipsBar from "../components/MonthChipsBar";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Toast from "../components/Toast";
 import { ENTRIES_CHANGED, notifyEntriesChanged } from "../utils/entriesEvents";
 import { formatCurrency, formatDate } from "../utils/format";
 import {
+  buildMonthList,
   formatMonthLabel,
   getCurrentMonthInTimeZone,
   getDefaultMonthRange,
@@ -56,8 +54,21 @@ const EntriesPage = () => {
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(
     null,
   );
+  const [isMonthPanelOpen, setIsMonthPanelOpen] = useState(false);
 
   const selectedMonthRange = useMemo(() => monthToRange(month), [month]);
+  const monthLabel = useMemo(() => formatMonthLabel(month), [month]);
+  const monthOptions = useMemo(
+    () =>
+      buildMonthList({
+        start: monthRange.start,
+        end: monthRange.end,
+      }),
+    [monthRange.end, monthRange.start],
+  );
+  const toggleMonthPanel = useCallback(() => {
+    setIsMonthPanelOpen((prev) => !prev);
+  }, []);
 
   useEffect(() => {
     const state = location.state as { toast?: { message: string; type: "success" | "error" } };
@@ -299,17 +310,42 @@ const EntriesPage = () => {
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-          Mes
-          <MonthPicker
-            valueMonth={month}
-            onChangeMonth={setMonth}
-            minMonth={monthRange.start}
-            maxMonth={monthRange.end}
-            buttonClassName={monthPickerFieldButtonClassName}
-            trigger={<MonthPickerFieldTrigger label={formatMonthLabel(month)} />}
-          />
-        </label>
+        <div className="relative flex flex-col gap-2 text-sm font-medium text-slate-700">
+          <span className="text-xs font-semibold uppercase text-slate-500">Mes</span>
+          <div>
+            <button
+              type="button"
+              aria-expanded={isMonthPanelOpen}
+              aria-controls="entries-month-panel"
+              onClick={toggleMonthPanel}
+              className="group mt-1 inline-flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-base font-semibold text-slate-900 shadow-sm transition hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+            >
+              <span>{monthLabel}</span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition group-hover:border-purple-300 group-hover:text-purple-600">
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className={`h-4 w-4 transition ${isMonthPanelOpen ? "rotate-180" : "rotate-0"}`}
+                  aria-hidden="true"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.25a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </span>
+            </button>
+            <MonthChipsBar
+              id="entries-month-panel"
+              open={isMonthPanelOpen}
+              valueMonth={month}
+              months={monthOptions}
+              onSelect={setMonth}
+              onClose={() => setIsMonthPanelOpen(false)}
+            />
+          </div>
+        </div>
 
         <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
           Categoria
