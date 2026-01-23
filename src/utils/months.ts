@@ -95,13 +95,16 @@ export const getCurrentMonthInTimeZone = (timeZone = "America/Bahia") => {
 export const getDefaultMonthRange = ({
   endMonth,
   monthsBack = 24,
+  monthsAhead = 0,
   timeZone = "America/Bahia",
 }: {
   endMonth?: string;
   monthsBack?: number;
+  monthsAhead?: number;
   timeZone?: string;
 } = {}) => {
-  const end = endMonth ?? getCurrentMonthInTimeZone(timeZone);
-  const start = shiftMonth(end, -monthsBack);
+  const baseEnd = endMonth ?? getCurrentMonthInTimeZone(timeZone);
+  const end = monthsAhead ? shiftMonth(baseEnd, monthsAhead) : baseEnd;
+  const start = shiftMonth(baseEnd, -monthsBack);
   return { start, end };
 };

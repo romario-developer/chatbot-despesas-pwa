@@ -31,7 +31,12 @@ const EntriesPage = () => {
   const location = useLocation();
   const currentMonthValue = useMemo(() => currentMonth(), []);
   const monthRange = useMemo(
-    () => getDefaultMonthRange({ endMonth: currentMonthValue, monthsBack: 24 }),
+    () =>
+      getDefaultMonthRange({
+        endMonth: currentMonthValue,
+        monthsBack: 24,
+        monthsAhead: 12,
+      }),
     [currentMonthValue],
   );
   const [month, setMonth] = useState(currentMonthValue);

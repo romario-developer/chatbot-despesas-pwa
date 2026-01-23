@@ -1,9 +1,11 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
   type ChangeEventHandler,
+  type MouseEvent,
   type ReactNode,
 } from "react";
 import {
@@ -82,6 +84,7 @@ const MonthPicker = (props: MonthPickerProps) => {
   } = props;
   const [open, setOpen] = useState(false);
   const selectedRef = useRef<HTMLButtonElement | null>(null);
+  const handleClose = useCallback(() => setOpen(false), []);
 
   const range = useMemo(() => {
     const fallbackRange = getDefaultMonthRange({ endMonth: maxMonth });
@@ -100,12 +103,12 @@ const MonthPicker = (props: MonthPickerProps) => {
     if (!open) return;
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setOpen(false);
+        handleClose();
       }
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [open]);
+  }, [open, handleClose]);
 
   useEffect(() => {
     if (!open) return;
@@ -126,8 +129,17 @@ const MonthPicker = (props: MonthPickerProps) => {
 
   const handleSelect = (monthValue: string) => {
     onChangeMonth(monthValue);
-    setOpen(false);
+    handleClose();
   };
+
+  const handleBackdropClick = useCallback(
+    (event: MouseEvent<HTMLDivElement>) => {
+      if (event.target === event.currentTarget) {
+        handleClose();
+      }
+    },
+    [handleClose],
+  );
 
   const triggerButtonClassName =
     buttonClassName ?? "group inline-flex flex-col items-start gap-1 text-left";
@@ -168,7 +180,7 @@ const MonthPicker = (props: MonthPickerProps) => {
       {open && (
         <div
           className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 px-4 py-6"
-          onClick={() => setOpen(false)}
+          onClick={handleBackdropClick}
         >
           <div
             className="w-full max-w-md rounded-2xl bg-white shadow-xl"
@@ -185,7 +197,7 @@ const MonthPicker = (props: MonthPickerProps) => {
                 </h3>
                 <button
                   type="button"
-                  onClick={() => setOpen(false)}
+                  onClick={handleClose}
                   className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100"
                   aria-label="Fechar"
                 >
