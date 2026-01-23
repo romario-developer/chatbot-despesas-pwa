@@ -204,7 +204,11 @@ const MonthPicker = (props: MonthPickerProps) => {
                 </h3>
                 <button
                   type="button"
-                  onClick={handleClose}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    handleClose();
+                  }}
                   className="flex h-11 w-11 items-center justify-center rounded-full p-2 text-slate-500 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white min-h-[44px] min-w-[44px]"
                   aria-label="Fechar"
                 >
