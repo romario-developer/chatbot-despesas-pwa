@@ -18,6 +18,7 @@ import {
 } from "../utils/months";
 import { cardBase, cardHover, subtleText } from "../styles/dashboardTokens";
 import { buildTag } from "../constants/build";
+import { listCardInvoices } from "../api/cards";
 import { listCardsCached } from "../services/cardsService";
 import type { DashboardSummary, Entry } from "../types";
 
@@ -83,6 +84,7 @@ const DashboardPage = () => {
   );
   const [isMonthPanelOpen, setIsMonthPanelOpen] = useState(false);
   const [cardsCount, setCardsCount] = useState<number | null>(null);
+  const [invoiceSummary, setInvoiceSummary] = useState<{ totalRemaining: number } | null>(null);
   const buildVersion = import.meta.env.VITE_APP_VERSION || buildTag;
   const showBuildTag = !import.meta.env.VITE_APP_VERSION;
 
@@ -166,6 +168,8 @@ const DashboardPage = () => {
     if (typeof window === "undefined") return undefined;
     let active = true;
 
+    setInvoiceSummary(null);
+
     listCardsCached()
       .then((cards) => {
         if (active) {
@@ -175,6 +179,26 @@ const DashboardPage = () => {
       .catch(() => {
         if (active) {
           setCardsCount(null);
+        }
+      });
+
+    listCardInvoices({ scope: "open" })
+      .then((invoices) => {
+        if (!active) return;
+        const totalRemaining = invoices.reduce((sum, invoice) => {
+          const remaining =
+            typeof invoice.remaining === "number" && Number.isFinite(invoice.remaining)
+              ? invoice.remaining
+              : 0;
+          return sum + Math.max(0, remaining);
+        }, 0);
+        if (active) {
+          setInvoiceSummary({ totalRemaining });
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setInvoiceSummary(null);
         }
       });
 
@@ -191,6 +215,25 @@ const DashboardPage = () => {
   useEffect(() => {
     logDashboardDebug("month selected", month);
   }, [month]);
+
+  const badgeInfo = useMemo(() => {
+    if (invoiceSummary) {
+      if (invoiceSummary.totalRemaining > 0) {
+        return {
+          label: `Em aberto: ${formatBRL(invoiceSummary.totalRemaining)}`,
+          variant: "highlight",
+        };
+      }
+      return { label: "Tudo pago", variant: "positive" };
+    }
+    if (cardsCount !== null) {
+      return {
+        label: cardsCount === 1 ? "1 cartão" : `${cardsCount} cartões`,
+        variant: "neutral",
+      };
+    }
+    return null;
+  }, [cardsCount, invoiceSummary]);
 
   const refreshDashboard = useCallback(() => {
     if (!entriesPollingEnabled) return;
@@ -401,9 +444,12 @@ const DashboardPage = () => {
                 <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
                   Cartões e faturas
                 </p>
-                {cardsCount !== null && (
-                  <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold tracking-[0.2em] text-slate-600">
-                    {cardsCount === 1 ? "1 cartão" : `${cardsCount} cartões`}
+                {badgeInfo && (
+                  <span
+                    className={`dashboard-cta-badge dashboard-cta-badge--${badgeInfo.variant}`}
+                    title={badgeInfo.label}
+                  >
+                    {badgeInfo.label}
                   </span>
                 )}
               </div>
