@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { applyUpdate } from "../main";
 import AssistantFAB from "./AssistantFAB";
 
 const linkClasses = ({ isActive }: { isActive: boolean }) =>
@@ -18,15 +17,7 @@ const mobileLinkClasses = ({ isActive }: { isActive: boolean }) =>
 
 const AppLayout = () => {
   const { user, logout } = useAuth();
-  const [showUpdate, setShowUpdate] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  useEffect(() => {
-    const handler = () => setShowUpdate(true);
-    window.addEventListener("pwa:need-refresh", handler);
-    return () => window.removeEventListener("pwa:need-refresh", handler);
-  }, []);
 
   const userLabel = () => {
     const name = user?.name?.trim();
@@ -39,16 +30,6 @@ const AppLayout = () => {
   const handleLogout = () => {
     setMobileMenuOpen(false);
     logout();
-  };
-
-  const handleUpdate = async () => {
-    setIsUpdating(true);
-    setShowUpdate(false);
-    try {
-      await applyUpdate();
-    } finally {
-      setIsUpdating(false);
-    }
   };
 
   const label = userLabel();
@@ -186,22 +167,6 @@ const AppLayout = () => {
       )}
       <AssistantFAB />
 
-      {showUpdate && (
-        <div className="fixed bottom-4 left-4 right-4 z-50">
-          <div className="flex flex-col items-start justify-between gap-3 rounded-lg bg-blue-600 p-4 text-white shadow-lg sm:flex-row sm:items-center">
-            <span className="text-sm font-semibold">Nova versao disponivel</span>
-            <button
-              type="button"
-              onClick={handleUpdate}
-              className="rounded bg-white px-3 py-1 text-sm font-semibold text-blue-600 transition hover:bg-blue-50 disabled:opacity-70"
-              disabled={isUpdating}
-              aria-label="Atualizar agora"
-            >
-              {isUpdating ? "Atualizando..." : "Atualizar"}
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

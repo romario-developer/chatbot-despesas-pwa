@@ -9,7 +9,7 @@ export default defineConfig({
       strategies: "injectManifest",
       srcDir: "src",
       filename: "service-worker.ts",
-      registerType: "prompt",
+      registerType: "autoUpdate",
       injectRegister: "auto",
       includeAssets: ["icons/icon-192x192.png", "icons/icon-512x512.png"],
       manifest: {
@@ -31,6 +31,14 @@ export default defineConfig({
             type: "image/png",
           },
         ],
+      },
+      workbox: {
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
+      },
+      devOptions: {
+        enabled: false,
       },
     }),
   ],
