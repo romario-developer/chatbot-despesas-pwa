@@ -32,9 +32,10 @@ export async function listEntries(
   options: ListEntriesOptions = {},
 ): Promise<Entry[]> {
   const search = new URLSearchParams();
-  const formattedFrom = toYMD(params.from);
-  const formattedTo = toYMD(params.to);
+  const formattedFrom = params.from ? toYMD(params.from) : undefined;
+  const formattedTo = params.to ? toYMD(params.to) : undefined;
 
+  // /api/entries exige YYYY-MM-DD; nunca enviar ISO completo.
   if (formattedFrom) search.append("from", formattedFrom);
   if (formattedTo) search.append("to", formattedTo);
   if (params.category) search.append("category", params.category);

@@ -3,8 +3,7 @@ const BAHIA_TIMEZONE = "America/Bahia";
 const formatDateToBahia = (date: Date) =>
   date.toLocaleDateString("en-CA", { timeZone: BAHIA_TIMEZONE });
 
-export const toYMD = (input?: string | Date) => {
-  if (!input) return undefined;
+export const toYMD = (input: string | Date): string => {
   if (input instanceof Date) {
     return formatDateToBahia(input);
   }
@@ -16,6 +15,8 @@ export const toYMD = (input?: string | Date) => {
     return input;
   }
   const parsed = new Date(input);
-  if (Number.isNaN(parsed.getTime())) return undefined;
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error(`toYMD: invalid date input "${input}"`);
+  }
   return formatDateToBahia(parsed);
 };
