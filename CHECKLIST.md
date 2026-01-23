@@ -27,9 +27,6 @@
 - [x] Contas fixas (CRUD) com dia de vencimento (`src/pages/PlanningPage.tsx`)
 - [x] Totais de extras e fixas calculados no front (`src/pages/PlanningPage.tsx`)
 
-## Integracoes
-- [x] Gerar codigo para vinculo Telegram e copiar codigo (`src/pages/PlanningPage.tsx`, `src/api/telegram.ts`)
-
 ## Infra e UX
 - [x] PWA com service worker, prompt de update e gatilho `pwa:need-refresh` (`src/main.tsx`, `src/components/AppLayout.tsx`, `vite.config.ts`)
 - [x] Cache da API em NetworkOnly (`vite.config.ts`)

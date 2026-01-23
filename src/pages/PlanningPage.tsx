@@ -1,9 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  createTelegramLinkCode,
-  getTelegramStatus,
-  type TelegramLinkCodeResponse,
-} from "../api/telegram";
+import { useEffect, useMemo, useState } from "react";
 import MonthPicker, {
   MonthPickerFieldTrigger,
   monthPickerFieldButtonClassName,
@@ -75,31 +70,8 @@ const PlanningPage = () => {
   });
   const [errors, setErrors] = useState<{ salary?: string; extra?: string; bill?: string }>({});
   const [toast, setToast] = useState<ToastState>(null);
-  const [telegramLink, setTelegramLink] = useState<TelegramLinkCodeResponse | null>(null);
-  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
-  const [loadingStatus, setLoadingStatus] = useState(true);
-  const [connected, setConnected] = useState(false);
-  const [lastChatId, setLastChatId] = useState<string | null>(null);
-  const [statusError, setStatusError] = useState<string | null>(null);
 
   const monthKey = useMemo(() => getMonthKey(month), [month]);
-  const isTelegramConnected = connected;
-  const telegramStatusLabel =
-    loadingStatus
-      ? "Verificando..."
-      : statusError
-        ? "Falha ao verificar"
-        : isTelegramConnected
-          ? "Status: Conectado"
-          : "Status: Nao conectado";
-  const telegramStatusClass =
-    loadingStatus
-      ? "bg-slate-100 text-slate-600"
-      : statusError
-        ? "bg-red-100 text-red-700"
-        : isTelegramConnected
-          ? "bg-emerald-100 text-emerald-800"
-          : "bg-amber-100 text-amber-800";
 
   useEffect(() => {
     const load = async () => {
@@ -117,26 +89,6 @@ const PlanningPage = () => {
     };
     load();
   }, []);
-
-  const fetchTelegramStatus = useCallback(async () => {
-    setLoadingStatus(true);
-    setStatusError(null);
-    try {
-      const data = await getTelegramStatus();
-      setConnected(data.connected);
-      setLastChatId(data.telegramChatId ?? null);
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Erro ao verificar status do Telegram";
-      setStatusError(message);
-    } finally {
-      setLoadingStatus(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchTelegramStatus();
-  }, [fetchTelegramStatus]);
 
   useEffect(() => {
     const value = planning.salaryByMonth?.[monthKey] ?? 0;
@@ -390,44 +342,6 @@ const PlanningPage = () => {
     if (billForm.id === bill.id) {
       resetBillForm();
     }
-  };
-
-  const handleGenerateTelegramCode = async () => {
-    setIsGeneratingLink(true);
-    try {
-      const data = await createTelegramLinkCode();
-      setTelegramLink(data);
-      setToast({ message: "Codigo gerado", type: "success" });
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Erro ao gerar o codigo.";
-      setToast({ message, type: "error" });
-    } finally {
-      setIsGeneratingLink(false);
-    }
-  };
-
-  const handleCopyTelegramCode = async () => {
-    if (!telegramLink?.code) return;
-    if (!navigator.clipboard?.writeText) {
-      setToast({
-        message: "Copie manualmente: recurso de copia indisponivel.",
-        type: "error",
-      });
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(telegramLink.code);
-      setToast({ message: "Codigo copiado", type: "success" });
-    } catch {
-      setToast({ message: "Nao foi possivel copiar o codigo.", type: "error" });
-    }
-  };
-
-  const handleRefreshStatus = async () => {
-    if (loadingStatus) return;
-    await fetchTelegramStatus();
   };
 
   if (isLoading) {
@@ -693,102 +607,6 @@ const PlanningPage = () => {
             <p className="py-2 text-sm text-slate-500">Nenhuma conta fixa cadastrada.</p>
           )}
         </div>
-      </div>
-
-      <div className="card space-y-3 p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-slate-900">Conectar Telegram</h3>
-            <p className="text-sm text-slate-600">
-              Vincule sua conta para enviar comandos pelo bot.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <span
-              className={`rounded-full px-3 py-1 text-xs font-semibold ${telegramStatusClass}`}
-            >
-              {telegramStatusLabel}
-            </span>
-            <button
-              type="button"
-              onClick={handleRefreshStatus}
-              disabled={loadingStatus}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {loadingStatus ? "Recarregando..." : "Recarregar status"}
-            </button>
-            <button
-              type="button"
-              onClick={handleGenerateTelegramCode}
-              disabled={isGeneratingLink}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-80"
-            >
-              {isGeneratingLink
-                ? "Gerando..."
-                : isTelegramConnected
-                  ? "Gerar novo codigo"
-                  : "Conectar Telegram"}
-            </button>
-          </div>
-        </div>
-
-        {isTelegramConnected ? (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
-            Telegram conectado com sucesso.
-            {lastChatId && (
-              <span className="mt-1 block text-xs text-emerald-700">
-                Chat vinculado: {lastChatId}
-              </span>
-            )}
-            <span className="mt-1 block text-xs text-emerald-700">
-              Se quiser trocar a conta, gere um novo codigo e envie ao bot.
-            </span>
-          </div>
-        ) : (
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <p className="text-sm font-semibold text-slate-900">Como conectar</p>
-            <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-600">
-              <li>Gerar o codigo no botao acima.</li>
-              <li>Enviar o codigo para o bot no Telegram.</li>
-            </ol>
-          </div>
-        )}
-
-        {telegramLink ? (
-          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-              Seu codigo
-            </p>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-              <span className="text-2xl font-mono font-semibold text-slate-900">
-                {telegramLink.code}
-              </span>
-              <button
-                type="button"
-                onClick={handleCopyTelegramCode}
-                className="w-fit rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-primary hover:text-primary"
-              >
-                Copiar
-              </button>
-            </div>
-            <div className="text-sm text-slate-700">
-              No Telegram, envie:{" "}
-              <code className="rounded bg-white px-2 py-1 font-mono text-primary">
-                /link {telegramLink.code}
-              </code>
-            </div>
-            {telegramLink.expiresAt && (
-              <p className="text-xs text-slate-500">
-                Valido ate: {telegramLink.expiresAt}
-              </p>
-            )}
-          </div>
-        ) : !isTelegramConnected ? (
-          <p className="text-sm text-slate-600">
-            Clique em "Conectar Telegram" para gerar um codigo e, no aplicativo do Telegram,
-            envie: <span className="font-mono font-semibold text-primary">/link CODIGO</span>.
-          </p>
-        ) : null}
       </div>
 
       {toast && (

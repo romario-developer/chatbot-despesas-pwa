@@ -15,8 +15,6 @@ export interface AuthResponse {
 export type UserMe = {
   name?: string;
   email?: string;
-  telegramChatId?: string | number;
-  telegramId?: string | number;
 };
 
 export interface Entry {
