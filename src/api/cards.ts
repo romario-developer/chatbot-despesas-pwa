@@ -652,7 +652,7 @@ export const getCreditExpensesByCardAndRange = async ({
     if (!value) return undefined;
     const parsed = new Date(value);
     if (Number.isNaN(parsed.getTime())) return undefined;
-    return parsed.toISOString().slice(0, 10);
+    return parsed.toISOString();
   };
   const params: {
     cardId?: string;

@@ -20,6 +20,7 @@ import {
   formatPaymentMethodLabel,
   isPaymentMethodCredit,
 } from "../utils/paymentMethods";
+import { formatEntryInstallmentLabel } from "../utils/installments";
 import { listCardsCached } from "../services/cardsService";
 import type { Category, CreditCard, Entry } from "../types";
 
@@ -218,12 +219,8 @@ const EntriesPage = () => {
   };
 
   const formatInstallmentLabel = (entry: Entry) => {
-    const number = entry.installmentNumber;
-    const total = entry.installmentTotal;
-    if (typeof number === "number" && typeof total === "number" && total > 1) {
-      return ` (${number}/${total})`;
-    }
-    return "";
+    const label = formatEntryInstallmentLabel(entry);
+    return label ? ` (${label})` : "";
   };
 
   const renderEntryBadges = (entry: Entry) => {

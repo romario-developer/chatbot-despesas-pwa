@@ -34,6 +34,7 @@ export interface Entry {
   updatedAt: string;
   installmentGroupId?: string;
   installmentNumber?: number;
+  installmentCurrent?: number;
   installmentTotal?: number;
 }
 

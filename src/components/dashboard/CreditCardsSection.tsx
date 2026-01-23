@@ -12,6 +12,7 @@ import {
 import { formatBRL, formatDate, parseCurrencyInput } from "../../utils/format";
 import { getReadableTextColor } from "../../utils/colors";
 import { getCurrentMonthInTimeZone } from "../../utils/months";
+import { formatEntryInstallmentLabel } from "../../utils/installments";
 import { cardBase, cardHover, subtleText } from "../../styles/dashboardTokens";
 import Toast from "../Toast";
 import ConfirmDialog from "../ConfirmDialog";
@@ -678,10 +679,7 @@ const loadInvoices = useCallback(async (): Promise<CardInvoice[]> => {
                     ) : cardPurchases && cardPurchases.length ? (
                       <ul className="space-y-3">
                         {cardPurchases.map((entry) => {
-                          const installmentLabel =
-                            entry.installmentNumber && entry.installmentTotal
-                              ? `${entry.installmentNumber}/${entry.installmentTotal}`
-                              : undefined;
+                        const installmentLabel = formatEntryInstallmentLabel(entry);
                           return (
                             <li
                               key={entry.id}
