@@ -540,7 +540,7 @@ const loadInvoices = useCallback(async (): Promise<CardInvoice[]> => {
       {isLoading ? (
         <div className={`${cardBase} ${subtleText}`}>Carregando cartoes...</div>
       ) : cardsList.length ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {cardsList.map((card) => {
             const cardBackground = card.color ?? "#ffffff";
             const cardTextColor =
@@ -573,22 +573,22 @@ const loadInvoices = useCallback(async (): Promise<CardInvoice[]> => {
             const cycleStart = invoice?.cycleStart;
             const cycleEnd = invoice?.cycleEnd;
 
-            return (
-              <div
-                key={card.id}
-                role="button"
-                tabIndex={0}
-                aria-expanded={expanded}
-                onClick={() => handleCardToggle(card.id, cycleStart, cycleEnd)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    handleCardToggle(card.id, cycleStart, cycleEnd);
-                  }
-                }}
-                className={`${cardBase} ${cardHover} space-y-3 cursor-pointer`}
-                style={{ backgroundColor: cardBackground, color: cardTextColor }}
-              >
+              return (
+                <div
+                  key={card.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={expanded}
+                  onClick={() => handleCardToggle(card.id, cycleStart, cycleEnd)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      handleCardToggle(card.id, cycleStart, cycleEnd);
+                    }
+                  }}
+                  className={`${cardBase} ${cardHover} space-y-2 cursor-pointer px-4 py-3 sm:px-5 sm:py-4 sm:space-y-3`}
+                  style={{ backgroundColor: cardBackground, color: cardTextColor }}
+                >
                 <div className="flex items-start justify-between">
                   <div>
                     <h4 className="text-base font-semibold text-current">
@@ -630,10 +630,10 @@ const loadInvoices = useCallback(async (): Promise<CardInvoice[]> => {
                   <p className="text-[10px] uppercase tracking-[0.3em] text-current/70">
                     FATURA ATUAL
                   </p>
-                  <p className="text-3xl font-semibold text-current">
+                  <p className="text-2xl font-semibold text-current sm:text-3xl">
                     {formatBRL(invoiceTotal)}
                   </p>
-                  <div className="text-xs text-current/70">
+                  <div className="text-[11px] text-current/70 sm:text-xs">
                     Limite: {formatBRL(card.limit)} · Fechamento: dia{" "}
                     {card.closingDay ?? "-"} · Vencimento: dia {card.dueDay ?? "-"}
                   </div>
@@ -664,14 +664,14 @@ const loadInvoices = useCallback(async (): Promise<CardInvoice[]> => {
                       }
                     }}
                     disabled={invoiceTotal <= 0}
-                    className="w-full rounded-full border border-white/40 bg-white/20 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-white/30 disabled:border-white/20 disabled:text-white/40"
+                    className="w-full rounded-full border border-white/40 bg-white/20 px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-white/30 disabled:border-white/20 disabled:text-white/40"
                   >
                     Registrar pagamento
                   </button>
                 </div>
 
                 {expanded && (
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-700">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-sm text-slate-700">
                     {cardLoading ? (
                       <p className="text-xs text-slate-500">Carregando compras...</p>
                     ) : cardError ? (
@@ -701,9 +701,23 @@ const loadInvoices = useCallback(async (): Promise<CardInvoice[]> => {
                           );
                         })}
                       </ul>
-                    ) : (
-                      <p className="text-xs text-slate-500">Nenhuma compra neste ciclo.</p>
-                    )}
+                      ) : (
+                        <div className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-semibold text-slate-600">
+                          <svg
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            className="h-4 w-4 text-slate-500"
+                            aria-hidden="true"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M9.25 4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H8.5v1.5a.75.75 0 0 1-1.5 0V10H5.75a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h4.5zm-2 3.5h-1.5V8h1.5V7.5z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                          <span>Nenhuma compra neste ciclo</span>
+                        </div>
+                      )}
                   </div>
                 )}
               </div>
