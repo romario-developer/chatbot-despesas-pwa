@@ -322,30 +322,32 @@ const DashboardPage = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div className={`${cardBase} ${cardHover} space-y-1 md:col-span-2 lg:col-span-2`}>
-              <p className="text-xs font-semibold uppercase text-slate-500">Saldo em conta</p>
-              <p className="text-3xl font-semibold text-slate-900">
-                {renderSummaryValue(balance)}
-              </p>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div
+              className={`${cardBase} ${cardHover} flex min-h-[140px] flex-col justify-between gap-3 px-5 py-4`}
+            >
+              <div>
+                <p className="text-xs font-semibold uppercase text-slate-500">Saldo em conta</p>
+                <p className="text-2xl font-semibold text-slate-900">
+                  {renderSummaryValue(balance)}
+                </p>
+              </div>
             </div>
-            <div className={`${cardBase} ${cardHover} space-y-1`}>
-              <p className="text-xs font-semibold uppercase text-slate-500">Receitas</p>
-              <p className="text-2xl font-semibold text-emerald-700">
-                {renderSummaryValue(incomeTotal)}
-              </p>
+            <div className={`${cardBase} ${cardHover} flex min-h-[140px] flex-col justify-between gap-3 px-5 py-4`}>
+              <div>
+                <p className="text-xs font-semibold uppercase text-slate-500">Receitas</p>
+                <p className="text-2xl font-semibold text-emerald-700">
+                  {renderSummaryValue(incomeTotal)}
+                </p>
+              </div>
             </div>
-            <div className={`${cardBase} ${cardHover} space-y-1`}>
-              <p className="text-xs font-semibold uppercase text-slate-500">Gastos (Caixa)</p>
-              <p className="text-2xl font-semibold text-rose-600">
-                {renderSummaryValue(cashExpenses)}
-              </p>
-            </div>
-            <div className={`${cardBase} ${cardHover} space-y-1`}>
-              <p className="text-xs font-semibold uppercase text-slate-500">Gastos (Crédito)</p>
-              <p className="text-2xl font-semibold text-rose-600">
-                {renderSummaryValue(creditExpenses)}
-              </p>
+            <div className={`${cardBase} ${cardHover} flex min-h-[140px] flex-col justify-between gap-3 px-5 py-4`}>
+              <div>
+                <p className="text-xs font-semibold uppercase text-slate-500">Gastos (Caixa)</p>
+                <p className="text-2xl font-semibold text-rose-600">
+                  {renderSummaryValue(cashExpenses)}
+                </p>
+              </div>
             </div>
           </div>
           <div
@@ -359,7 +361,7 @@ const DashboardPage = () => {
                 handleGoToCards();
               }
             }}
-            className="group flex items-center gap-3 rounded-3xl border border-dashed border-slate-200 bg-white/80 px-4 py-3 shadow-sm transition duration-150 hover:border-primary/70 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white cursor-pointer active:translate-y-[1px]"
+            className="group flex flex-col gap-1 rounded-3xl border border-slate-200 bg-white px-5 py-4 shadow-sm transition duration-150 hover:border-primary hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white cursor-pointer sm:flex-row sm:items-center sm:justify-between"
           >
             <div>
               <p className="text-xs font-semibold uppercase text-slate-500">Cartões e faturas</p>
@@ -367,6 +369,16 @@ const DashboardPage = () => {
                 Acesse os cartões e acompanhe faturas recentes.
               </p>
             </div>
+            <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 transition group-hover:border-primary group-hover:text-primary">
+              Ver cartões
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                <path
+                  fillRule="evenodd"
+                  d="M7.47 4.72a.75.75 0 0 1 1.06 0L13.44 9.7a.75.75 0 0 1 0 1.06l-4.91 4.98a.75.75 0 0 1-1.06-1.06L11.84 10 7.47 5.63a.75.75 0 0 1 0-1.06z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </span>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-3">
