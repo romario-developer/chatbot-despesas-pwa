@@ -2,15 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { createQuickEntry } from "../services/quickEntryService";
 
-type AssistantMessage = {
-  id: string;
-  role: "user" | "assistant";
-  text: string;
-  createdAt: string;
-};
-
 const GREETING_KEY = "assistant_last_greeting_date";
 const DEBUG_KEY = "DEBUG_ASSISTANT";
+const AUTO_CLOSE_DELAY = 800;
 
 const formatToday = () => new Date().toISOString().slice(0, 10);
 
@@ -23,13 +17,6 @@ const logAssistant = (...args: unknown[]) => {
   console.debug("[assistant-debug]", ...args);
 };
 
-const createMessage = (role: AssistantMessage["role"], text: string): AssistantMessage => ({
-  id: `${role}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-  role,
-  text,
-  createdAt: new Date().toISOString(),
-});
-
 type AssistantFABProps = {
   avatarUrl?: string;
   iconVariant?: "circle" | "rounded";
@@ -41,8 +28,10 @@ const AssistantFAB = ({ avatarUrl, iconVariant = "circle" }: AssistantFABProps =
   const [chatOpen, setChatOpen] = useState(false);
   const [greetingVisible, setGreetingVisible] = useState(false);
   const [inputValue, setInputValue] = useState("");
-  const [messages, setMessages] = useState<AssistantMessage[]>([]);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isSending, setIsSending] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const autoCloseTimeoutRef = useRef<number | null>(null);
 
   const greetingText = "Olá! Precisa registrar alguma despesa?";
 
@@ -58,26 +47,34 @@ const AssistantFAB = ({ avatarUrl, iconVariant = "circle" }: AssistantFABProps =
   }, []);
 
   useEffect(() => {
-    if (!chatOpen) return;
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatOpen, messages]);
-
-  useEffect(() => {
     if (chatOpen) {
       setGreetingVisible(false);
     }
   }, [chatOpen]);
 
+  const resetAssistantState = useCallback(() => {
+    setInputValue("");
+    setSuccessMessage(null);
+    setErrorMessage(null);
+    setIsSending(false);
+    if (autoCloseTimeoutRef.current) {
+      window.clearTimeout(autoCloseTimeoutRef.current);
+      autoCloseTimeoutRef.current = null;
+    }
+  }, []);
+
   const handleOpen = useCallback(() => {
+    resetAssistantState();
     setChatOpen(true);
     setGreetingVisible(false);
     logAssistant("assistant open");
-  }, []);
+  }, [resetAssistantState]);
 
   const handleClose = useCallback(() => {
     setChatOpen(false);
+    resetAssistantState();
     logAssistant("assistant close");
-  }, []);
+  }, [resetAssistantState]);
 
   const handleHideGreeting = useCallback(() => {
     setGreetingVisible(false);
@@ -89,38 +86,34 @@ const AssistantFAB = ({ avatarUrl, iconVariant = "circle" }: AssistantFABProps =
       event.preventDefault();
       const trimmed = inputValue.trim();
       if (!trimmed) return;
-      const userMessage = createMessage("user", trimmed);
-      setMessages((prev) => [...prev, userMessage]);
-      setInputValue("");
+      setIsSending(true);
+      setErrorMessage(null);
+      setSuccessMessage(null);
 
       try {
         if (isAIEnabled) {
-          const assistantMessage = createMessage(
-            "assistant",
-            "Entendi. Em breve terei IA para ajudar melhor.",
-          );
-          setMessages((prev) => [...prev, assistantMessage]);
-          logAssistant("message sent", userMessage, assistantMessage);
+          const assistantReply = "Entendi. Em breve terei IA para ajudar melhor.";
+          setSuccessMessage(assistantReply);
+          logAssistant("message sent", trimmed, assistantReply);
         } else {
           await createQuickEntry(trimmed);
-          const successMessage = createMessage("assistant", "Pronto! Registrei sua despesa.");
-          setMessages((prev) => [...prev, successMessage]);
-          logAssistant("expense logged", userMessage, successMessage);
+          const successReply = "Pronto! Registrei sua despesa.";
+          setSuccessMessage(successReply);
+          setInputValue("");
+          autoCloseTimeoutRef.current = window.setTimeout(() => {
+            handleClose();
+          }, AUTO_CLOSE_DELAY);
+          logAssistant("expense logged", trimmed, successReply);
         }
       } catch (error) {
-        const errorMessage = createMessage(
-          "assistant",
-          "Não consegui registrar, pode tentar de novo?",
-        );
-        setMessages((prev) => [...prev, errorMessage]);
-        logAssistant("expense error", userMessage, errorMessage);
+        const assistantError = "Não consegui registrar, pode tentar de novo?";
+        setErrorMessage(assistantError);
+        logAssistant("expense error", trimmed, assistantError, error);
       } finally {
-        setTimeout(() => {
-          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-        }, 100);
+        setIsSending(false);
       }
     },
-    [inputValue],
+    [handleClose, inputValue],
   );
 
   const assistButtonLabel = useMemo(() => "Assistente", []);
@@ -173,47 +166,35 @@ const AssistantFAB = ({ avatarUrl, iconVariant = "circle" }: AssistantFABProps =
               </button>
             </div>
             <div className="flex h-[320px] flex-col gap-3 px-4 py-3">
-              <div className="flex-1 space-y-3 overflow-y-auto pr-1 text-sm" aria-live="polite">
-                {messages.length === 0 ? (
+              <div className="flex-1 pr-1 text-sm" aria-live="polite">
+                {errorMessage ? (
+                  <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-rose-700">
+                    {errorMessage}
+                  </p>
+                ) : successMessage ? (
+                  <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                    {successMessage}
+                  </p>
+                ) : (
                   <p className="text-xs uppercase tracking-wide text-slate-500">
                     Como posso ajudar?
                   </p>
-                ) : (
-                  messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${
-                        message.role === "user" ? "justify-end" : "justify-start"
-                      }`}
-                    >
-                      <div
-                        className={`max-w-[80%] rounded-2xl px-4 py-2 text-xs leading-relaxed ${
-                          message.role === "user"
-                            ? "bg-primary text-white"
-                            : "bg-slate-100 text-slate-900"
-                        }`}
-                      >
-                        {message.text}
-                      </div>
-                    </div>
-                  ))
                 )}
-                <div ref={messagesEndRef} />
               </div>
               <form onSubmit={handleSend} className="space-y-2">
                 <input
                   type="text"
                   value={inputValue}
                   onChange={(event) => setInputValue(event.target.value)}
-                  placeholder="Escreva algo como: 'paguei 50 no mercado'"
+                  placeholder="Digite algo como: mercado 50"
                   className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30"
                 />
                 <button
                   type="submit"
                   className="w-full rounded-2xl bg-primary px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-primary/90 disabled:opacity-60"
-                  disabled={!inputValue.trim()}
+                  disabled={isSending || !inputValue.trim()}
                 >
-                  Enviar
+                  {isSending ? "Enviando..." : "Enviar"}
                 </button>
               </form>
             </div>
