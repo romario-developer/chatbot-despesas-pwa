@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
+import { createQuickEntry } from "../services/quickEntryService";
 
 type AssistantMessage = {
   id: string;
@@ -33,6 +34,8 @@ type AssistantFABProps = {
   avatarUrl?: string;
   iconVariant?: "circle" | "rounded";
 };
+
+const isAIEnabled = false; // Set to true when the IA layer is ready in the future.
 
 const AssistantFAB = ({ avatarUrl, iconVariant = "circle" }: AssistantFABProps = {}) => {
   const [chatOpen, setChatOpen] = useState(false);
@@ -82,21 +85,40 @@ const AssistantFAB = ({ avatarUrl, iconVariant = "circle" }: AssistantFABProps =
   }, []);
 
   const handleSend = useCallback(
-    (event: FormEvent<HTMLFormElement>) => {
+    async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       const trimmed = inputValue.trim();
       if (!trimmed) return;
       const userMessage = createMessage("user", trimmed);
-      const assistantMessage = createMessage(
-        "assistant",
-        "Entendi. Em breve terei IA para ajudar melhor.",
-      );
-      setMessages((prev) => [...prev, userMessage, assistantMessage]);
+      setMessages((prev) => [...prev, userMessage]);
       setInputValue("");
-      logAssistant("message sent", userMessage, assistantMessage);
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 100);
+
+      try {
+        if (isAIEnabled) {
+          const assistantMessage = createMessage(
+            "assistant",
+            "Entendi. Em breve terei IA para ajudar melhor.",
+          );
+          setMessages((prev) => [...prev, assistantMessage]);
+          logAssistant("message sent", userMessage, assistantMessage);
+        } else {
+          await createQuickEntry(trimmed);
+          const successMessage = createMessage("assistant", "Pronto! Registrei sua despesa.");
+          setMessages((prev) => [...prev, successMessage]);
+          logAssistant("expense logged", userMessage, successMessage);
+        }
+      } catch (error) {
+        const errorMessage = createMessage(
+          "assistant",
+          "Não consegui registrar, pode tentar de novo?",
+        );
+        setMessages((prev) => [...prev, errorMessage]);
+        logAssistant("expense error", userMessage, errorMessage);
+      } finally {
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        }, 100);
+      }
     },
     [inputValue],
   );
