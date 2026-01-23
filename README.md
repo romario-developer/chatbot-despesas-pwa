@@ -39,3 +39,5 @@ As respostas esperadas sao HTTP 200 para `/api/health` (ou 401 se protegido) e H
 - Lancamentos: filtros por mes/categoria/busca, cards mobile e tabela desktop, total em BRL, criar/editar/excluir lancamentos (rotas `/entries/new`, `/entries/:id/edit`)
 - Planejamento (B3): rota `/planning` para salario por mes, entradas extras do mes e contas fixas globais (persistencia em `localStorage`), valores integrados ao resumo do Dashboard
 - Tailwind configurado + PWA (manifest e icones placeholder)
+
+> Esta linha foi adicionada para registrar a atualização local antes do push.
