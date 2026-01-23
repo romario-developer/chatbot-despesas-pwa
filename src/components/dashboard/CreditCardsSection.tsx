@@ -16,7 +16,7 @@ import { cardBase, cardHover, subtleText } from "../../styles/dashboardTokens";
 import Toast from "../Toast";
 import ConfirmDialog from "../ConfirmDialog";
 import DayPickerSheet from "../DayPickerSheet";
-import { notifyEntriesChanged } from "../../utils/entriesEvents";
+import { ENTRY_CREATED, notifyEntriesChanged } from "../../utils/entriesEvents";
 import type { CreditCard, CardInvoice, Entry } from "../../types";
 
 type CardFormState = {
@@ -64,6 +64,15 @@ const logCardsDebug = (...args: unknown[]) => {
   if (!isCardsDebugEnabled()) return;
   // eslint-disable-next-line no-console
   console.debug("[cards-debug]", ...args);
+};
+
+const SYNC_DEBUG_KEY = "DEBUG_SYNC";
+const isSyncDebugEnabled = () =>
+  typeof window !== "undefined" && window.localStorage.getItem(SYNC_DEBUG_KEY) === "1";
+const logCardsSync = (...args: unknown[]) => {
+  if (!isSyncDebugEnabled()) return;
+  // eslint-disable-next-line no-console
+  console.debug("[cards-sync]", ...args);
 };
 
 const normalizeDay = (value: string) => {
@@ -164,36 +173,38 @@ const CreditCardsSection = () => {
     }
   }, []);
 
-  const loadInvoices = useCallback(async () => {
-    setInvoicesLoading(true);
-    setInvoicesError(null);
+const loadInvoices = useCallback(async (): Promise<CardInvoice[]> => {
+  setInvoicesLoading(true);
+  setInvoicesError(null);
+  try {
+    let data: CardInvoice[] = [];
     try {
-      let data: CardInvoice[] = [];
-      try {
-        data = await listCardInvoices({ scope: "open" });
-      } catch (fetchError) {
-        const fallbackMonth = getCurrentMonthInTimeZone("America/Bahia");
-        if (fallbackMonth) {
-          // eslint-disable-next-line no-console
-          console.warn(
-            "[cards] falha ao carregar faturas abertas, tentando mes atual",
-            fetchError,
-          );
-          data = await listCardInvoices({ month: fallbackMonth });
-        } else {
-          throw fetchError;
-        }
+      data = await listCardInvoices({ scope: "open" });
+    } catch (fetchError) {
+      const fallbackMonth = getCurrentMonthInTimeZone("America/Bahia");
+      if (fallbackMonth) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          "[cards] falha ao carregar faturas abertas, tentando mes atual",
+          fetchError,
+        );
+        data = await listCardInvoices({ month: fallbackMonth });
+      } else {
+        throw fetchError;
       }
-      setInvoices(data);
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Erro ao carregar faturas.";
-      setInvoicesError(message);
-      setInvoices([]);
-    } finally {
-      setInvoicesLoading(false);
     }
-  }, []);
+    setInvoices(data);
+    return data;
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Erro ao carregar faturas.";
+    setInvoicesError(message);
+    setInvoices([]);
+    return [];
+  } finally {
+    setInvoicesLoading(false);
+  }
+}, []);
 
   useEffect(() => {
     loadCards();
@@ -246,6 +257,26 @@ const CreditCardsSection = () => {
     },
     [loadPurchases, loadingPurchases, purchasesByCardId],
   );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleEntryCreated = () => {
+      logCardsSync("entry:created captured");
+      void (async () => {
+        const updatedInvoices = await loadInvoices();
+        if (!expandedCardId) return;
+        const invoice = updatedInvoices.find((item) => item.cardId === expandedCardId);
+        if (invoice?.cycleStart && invoice?.cycleEnd) {
+          await loadPurchases(expandedCardId, invoice.cycleStart, invoice.cycleEnd);
+        }
+      })();
+    };
+
+    window.addEventListener(ENTRY_CREATED, handleEntryCreated);
+    return () => {
+      window.removeEventListener(ENTRY_CREATED, handleEntryCreated);
+    };
+  }, [expandedCardId, loadInvoices, loadPurchases]);
 
   const openCreate = () => {
     setEditingCard(null);

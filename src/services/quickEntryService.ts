@@ -1,6 +1,16 @@
 import { apiRequest } from "../api/client";
 import type { PaymentMethod } from "../types";
 import { mapToPaymentMethod } from "../utils/paymentMethods";
+import { notifyEntryCreated } from "../utils/entriesEvents";
+
+const SYNC_DEBUG_KEY = "DEBUG_SYNC";
+const isSyncDebugEnabled = () =>
+  typeof window !== "undefined" && window.localStorage.getItem(SYNC_DEBUG_KEY) === "1";
+const logSyncDebug = (...args: unknown[]) => {
+  if (!isSyncDebugEnabled()) return;
+  // eslint-disable-next-line no-console
+  console.debug("[sync]", ...args);
+};
 
 type QuickEntryApiResponse =
   | {
@@ -140,5 +150,8 @@ export const createQuickEntry = async (text: string): Promise<QuickEntryResponse
     data: { text },
   });
 
-  return normalizeQuickEntryResult(data);
+  const result = normalizeQuickEntryResult(data);
+  notifyEntryCreated();
+  logSyncDebug("entry created", { text, result });
+  return result;
 };

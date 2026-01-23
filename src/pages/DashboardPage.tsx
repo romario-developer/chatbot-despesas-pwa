@@ -8,7 +8,7 @@ import { listEntries } from "../api/entries";
 import { getDashboardSummary } from "../api/dashboard";
 import { monthToRange } from "../utils/dateRange";
 import { formatBRL, formatDate } from "../utils/format";
-import { ENTRIES_CHANGED } from "../utils/entriesEvents";
+import { ENTRIES_CHANGED, ENTRY_CREATED } from "../utils/entriesEvents";
 import {
   buildMonthList,
   formatMonthLabel,
@@ -40,6 +40,15 @@ const logDashboardDebug = (...args: unknown[]) => {
   if (!isDashboardDebugEnabled()) return;
   // eslint-disable-next-line no-console
   console.debug("[dashboard-debug]", ...args);
+};
+
+const SYNC_DEBUG_KEY = "DEBUG_SYNC";
+const isSyncDebugEnabled = () =>
+  typeof window !== "undefined" && window.localStorage.getItem(SYNC_DEBUG_KEY) === "1";
+const logSyncDebug = (...args: unknown[]) => {
+  if (!isSyncDebugEnabled()) return;
+  // eslint-disable-next-line no-console
+  console.debug("[sync]", ...args);
 };
 
 const DashboardPage = () => {
@@ -180,10 +189,23 @@ const DashboardPage = () => {
     return () => {
       window.removeEventListener("focus", refreshDashboard);
       window.removeEventListener("online", refreshDashboard);
-      window.removeEventListener(ENTRIES_CHANGED, refreshDashboard);
-      document.removeEventListener("visibilitychange", handleVisibility);
+    window.removeEventListener(ENTRIES_CHANGED, refreshDashboard);
+    document.removeEventListener("visibilitychange", handleVisibility);
+  };
+}, [refreshDashboard]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleEntryCreated = () => {
+      logSyncDebug("entry:created received - refreshing dashboard");
+      loadDashboard({ silent: true });
     };
-  }, [refreshDashboard]);
+
+    window.addEventListener(ENTRY_CREATED, handleEntryCreated);
+    return () => {
+      window.removeEventListener(ENTRY_CREATED, handleEntryCreated);
+    };
+  }, [loadDashboard]);
 
   useEffect(() => {
     const isLocalHost =
