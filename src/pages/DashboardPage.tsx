@@ -18,6 +18,7 @@ import {
 } from "../utils/months";
 import { cardBase, cardHover, subtleText } from "../styles/dashboardTokens";
 import { buildTag } from "../constants/build";
+import { listCardsCached } from "../services/cardsService";
 import type { DashboardSummary, Entry } from "../types";
 
 const CATEGORY_FALLBACK_COLORS = [
@@ -81,6 +82,7 @@ const DashboardPage = () => {
     null,
   );
   const [isMonthPanelOpen, setIsMonthPanelOpen] = useState(false);
+  const [cardsCount, setCardsCount] = useState<number | null>(null);
   const buildVersion = import.meta.env.VITE_APP_VERSION || buildTag;
   const showBuildTag = !import.meta.env.VITE_APP_VERSION;
 
@@ -159,6 +161,27 @@ const DashboardPage = () => {
   useEffect(() => {
     loadDashboard();
   }, [loadDashboard]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    let active = true;
+
+    listCardsCached()
+      .then((cards) => {
+        if (active) {
+          setCardsCount(cards.length);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setCardsCount(null);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -361,7 +384,7 @@ const DashboardPage = () => {
                 handleGoToCards();
               }
             }}
-            className="group flex items-center gap-4 rounded-3xl border border-slate-200 bg-white px-5 py-4 shadow-sm transition duration-150 hover:border-primary hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white cursor-pointer active:translate-y-[1px]"
+            className="dashboard-cta group flex items-center gap-4 rounded-3xl border border-slate-200 bg-white px-5 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white cursor-pointer"
           >
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-emerald-50 text-emerald-600 shadow-inner transition group-hover:border-emerald-300">
               <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
@@ -374,9 +397,16 @@ const DashboardPage = () => {
               </svg>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
-                Cartões e faturas
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
+                  Cartões e faturas
+                </p>
+                {cardsCount !== null && (
+                  <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold tracking-[0.2em] text-slate-600">
+                    {cardsCount === 1 ? "1 cartão" : `${cardsCount} cartões`}
+                  </span>
+                )}
+              </div>
               <p className="text-sm font-semibold text-slate-900">
                 Acesse os cartões e acompanhe faturas recentes.
               </p>
