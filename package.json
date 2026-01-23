@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
+    "build": "tsc && vite build && npm run copy-redirects",
+    "preview": "vite preview",
+    "copy-redirects": "node scripts/copy-redirects.js"
   },
   "devDependencies": {
     "@types/react": "^19.2.7",

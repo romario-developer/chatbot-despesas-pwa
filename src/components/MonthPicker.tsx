@@ -180,6 +180,10 @@ const MonthPicker = (props: MonthPickerProps) => {
       {open && (
         <div
           className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 px-4 py-6"
+          style={{
+            paddingTop: "env(safe-area-inset-top, 1rem)",
+            paddingBottom: "env(safe-area-inset-bottom, 1rem)",
+          }}
           onClick={handleBackdropClick}
         >
           <div
@@ -189,7 +193,10 @@ const MonthPicker = (props: MonthPickerProps) => {
             aria-label="Selecionar mes"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex flex-col gap-3 border-b border-slate-100 px-4 pb-3 pt-3">
+            <div
+              className="flex flex-col gap-3 border-b border-slate-100 px-4 pb-3"
+              style={{ paddingTop: "calc(env(safe-area-inset-top, 1rem) + 0.75rem)" }}
+            >
               <div className="mx-auto h-1 w-10 rounded-full bg-slate-200" />
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-semibold text-slate-900">
@@ -198,7 +205,7 @@ const MonthPicker = (props: MonthPickerProps) => {
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100"
+                  className="flex h-11 w-11 items-center justify-center rounded-full p-2 text-slate-500 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white min-h-[44px] min-w-[44px]"
                   aria-label="Fechar"
                 >
                   <svg

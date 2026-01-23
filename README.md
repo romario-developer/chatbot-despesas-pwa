@@ -30,6 +30,8 @@ As respostas esperadas sao HTTP 200 para `/api/health` (ou 401 se protegido) e H
 - Build command: `npm ci && npm run build`
 - Publish directory: `dist`
 - Environment: defina `VITE_API_URL` (sem `/api`) nas variaveis do Render ou do host escolhido, garantindo que o valor exista tambem no ambiente de build.
+- Render redirect: no painel do Render, configure um Redirect/Rewrite de `/*` para `/index.html` (Action `Rewrite` ou `200`) para que o SPA carregue em qualquer rota.
+- Mantemos `public/_redirects` com `/* /index.html 200` e um script copia ele para `dist/_redirects` após o build para garantir fallback fora do Render.
 
 ## Funcionalidades
 - Autenticacao por senha unica, token em `localStorage`, rotas protegidas, logout
