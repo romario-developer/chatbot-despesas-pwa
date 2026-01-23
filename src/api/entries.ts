@@ -1,5 +1,6 @@
 import { apiRequest } from "./client";
 import type { Entry, EntryPayload, PaymentMethod } from "../types";
+import { toYMD } from "../utils/date";
 
 const CREDIT_DEBUG_KEY = "DEBUG_CREDIT";
 const isCreditDebugEnabled = () =>
@@ -31,9 +32,11 @@ export async function listEntries(
   options: ListEntriesOptions = {},
 ): Promise<Entry[]> {
   const search = new URLSearchParams();
+  const formattedFrom = toYMD(params.from);
+  const formattedTo = toYMD(params.to);
 
-  if (params.from) search.append("from", params.from);
-  if (params.to) search.append("to", params.to);
+  if (formattedFrom) search.append("from", formattedFrom);
+  if (formattedTo) search.append("to", formattedTo);
   if (params.category) search.append("category", params.category);
   if (params.q) search.append("q", params.q);
   if (params.cardId) search.append("cardId", params.cardId);
