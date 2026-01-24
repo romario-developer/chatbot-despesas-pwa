@@ -1,34 +1,48 @@
 import { apiRequest } from "./client";
 
-export type AssistantActionSummaryPayload = {
-  description?: string;
-  amount?: number | string;
-  [key: string]: unknown;
-};
+export type AssistantCard =
+  | {
+      type: "metric";
+      title: string;
+      value: string;
+      subtitle?: string;
+    }
+  | {
+      type: "list";
+      title: string;
+      items: string[];
+      subtitle?: string;
+    }
+  | {
+      type: "summary";
+      title: string;
+      fields: Array<{ label: string; value: string }>;
+      subtitle?: string;
+    };
 
 export type AssistantAction = {
-  type: string;
-  entity: string;
-  entityId?: string;
-  summary?: string | AssistantActionSummaryPayload;
+  label: string;
+  prompt?: string;
 };
 
 export type AssistantResponse = {
-  conversationId: string;
   assistantMessage: string;
-  actions: AssistantAction[];
-  suggestions?: string[];
+  conversationId?: string;
+  cards?: AssistantCard[];
+  suggestedActions?: AssistantAction[];
 };
 
 export type AssistantRequest = {
   message: string;
-  conversationId?: string;
   month?: string;
+  conversationId?: string;
 };
 
-export const chatWithAssistant = (payload: AssistantRequest) => {
+export const postAssistantMessage = async (
+  payload: AssistantRequest,
+): Promise<AssistantResponse> => {
   return apiRequest<AssistantResponse>({
-    url: "/api/assistant/chat",
+    url: "/api/ai/chat",
     method: "POST",
     data: payload,
   });

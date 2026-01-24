@@ -15,6 +15,7 @@ const ChangePasswordPage = lazy(() => import("../pages/ChangePasswordPage"));
 const CategoriesPage = lazy(() => import("../pages/CategoriesPage"));
 const InvoiceDetailsPage = lazy(() => import("../pages/InvoiceDetailsPage"));
 const CardsPage = lazy(() => import("../pages/CardsPage"));
+const AssistantPage = lazy(() => import("../pages/AssistantPage"));
 
 const AppRouter = () => (
   <BrowserRouter>
@@ -43,6 +44,7 @@ const AppRouter = () => (
             <Route path="/entries/new" element={<EntryCreatePage />} />
             <Route path="/entries/:id/edit" element={<EntryEditPage />} />
             <Route path="/planning" element={<PlanningPage />} />
+            <Route path="/assistant" element={<AssistantPage />} />
             <Route path="/categories" element={<CategoriesPage />} />
             <Route path="/credit" element={<Navigate replace to="/cards" />} />
             <Route
