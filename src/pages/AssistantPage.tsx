@@ -4,7 +4,6 @@ import MonthPicker, {
   MonthPickerFieldTrigger,
   monthPickerFieldButtonClassName,
 } from "../components/MonthPicker";
-import Toast from "../components/Toast";
 import { postAssistantMessage, type AssistantAction, type AssistantCard } from "../api/assistant";
 import { formatMonthLabel, getCurrentMonthInTimeZone, getDefaultMonthRange } from "../utils/months";
 
@@ -30,7 +29,6 @@ const AssistantPage = () => {
   const [isSending, setIsSending] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [suggestedActions, setSuggestedActions] = useState<AssistantAction[]>([]);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -83,7 +81,13 @@ const AssistantPage = () => {
       setSuggestedActions(response.suggestedActions ?? []);
     } catch (err) {
       console.error("[assistant-error]", err);
-      setToast({ message: "Não consegui responder agora.", type: "error" });
+      const assistantErrorMessage: AssistantMessage = {
+        id: `assistant-error-${Date.now()}`,
+        from: "assistant",
+        text: "Não consegui responder agora.",
+      };
+      setMessages((prev) => [...prev, assistantErrorMessage]);
+      setSuggestedActions([]);
     } finally {
       setIsTyping(false);
       setIsSending(false);
@@ -247,10 +251,6 @@ const AssistantPage = () => {
             </button>
           ))}
         </div>
-      )}
-
-      {toast && (
-        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
       )}
     </div>
   );
