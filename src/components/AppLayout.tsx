@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import AssistantFAB from "./AssistantFAB";
+import AssistantWidget from "./AssistantWidget";
 
 const linkClasses = ({ isActive }: { isActive: boolean }) =>
   [
@@ -165,7 +165,7 @@ const AppLayout = () => {
           </div>
         </div>
       )}
-      <AssistantFAB />
+      <AssistantWidget />
 
     </div>
   );
