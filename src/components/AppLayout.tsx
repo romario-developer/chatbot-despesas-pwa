@@ -59,9 +59,6 @@ const AppLayout = () => {
             <NavLink to="/planning" className={linkClasses}>
               Planejamento
             </NavLink>
-            <NavLink to="/assistant" className={linkClasses}>
-              Assistente
-            </NavLink>
             <button
               type="button"
               onClick={handleLogout}
@@ -153,13 +150,6 @@ const AppLayout = () => {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Planejamento
-              </NavLink>
-              <NavLink
-                to="/assistant"
-                className={mobileLinkClasses}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Assistente
               </NavLink>
               <button
                 type="button"
