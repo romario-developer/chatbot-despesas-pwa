@@ -82,9 +82,8 @@ const AssistantPage = () => {
       setMessages((prev) => [...prev, assistantMessage]);
       setSuggestedActions(response.suggestedActions ?? []);
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Nao foi possivel contactar o assistente.";
-      setToast({ message, type: "error" });
+      console.error("[assistant-error]", err);
+      setToast({ message: "Não consegui responder agora.", type: "error" });
     } finally {
       setIsTyping(false);
       setIsSending(false);

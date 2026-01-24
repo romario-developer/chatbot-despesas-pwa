@@ -42,7 +42,7 @@ export const postAssistantMessage = async (
   payload: AssistantRequest,
 ): Promise<AssistantResponse> => {
   return apiRequest<AssistantResponse>({
-    url: "/api/ai/chat",
+    url: "/api/assistant/chat",
     method: "POST",
     data: payload,
   });
