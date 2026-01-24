@@ -142,12 +142,13 @@ const AssistantWidget = () => {
       );
     }
     if (card.type === "list") {
+      const listItems = Array.isArray(card.items) ? card.items : [];
       return (
         <div key={`${card.type}-${index}`} className={baseClass}>
           <p className="text-xs font-semibold text-slate-900">{card.title}</p>
           {card.subtitle && <p className="text-xs text-slate-500">{card.subtitle}</p>}
           <ul className="mt-2 space-y-1 text-sm text-slate-700">
-            {card.items.map((item, itemIndex) => (
+            {listItems.map((item, itemIndex) => (
               <li key={`${item}-${itemIndex}`}>• {item}</li>
             ))}
           </ul>
@@ -158,14 +159,14 @@ const AssistantWidget = () => {
       <div key={`${card.type}-${index}`} className={baseClass}>
         <p className="text-xs font-semibold text-slate-900">{card.title}</p>
         {card.subtitle && <p className="text-xs text-slate-500">{card.subtitle}</p>}
-        <div className="mt-2 space-y-1">
-          {card.fields.map((field) => (
-            <div key={field.label} className="flex items-center justify-between text-sm">
-              <span className="text-slate-500">{field.label}</span>
-              <span className="font-semibold text-slate-900">{field.value}</span>
-            </div>
-          ))}
-        </div>
+          <div className="mt-2 space-y-1">
+            {(Array.isArray(card.fields) ? card.fields : []).map((field) => (
+              <div key={field.label} className="flex items-center justify-between text-sm">
+                <span className="text-slate-500">{field.label}</span>
+                <span className="font-semibold text-slate-900">{field.value}</span>
+              </div>
+            ))}
+          </div>
       </div>
     );
   };
@@ -203,20 +204,24 @@ const AssistantWidget = () => {
       if (response.conversationId) {
         setConversationId(response.conversationId);
       }
+      const safeCards = Array.isArray(response.cards) ? response.cards : [];
+      const safeSuggestedActions = Array.isArray(response.suggestedActions)
+        ? response.suggestedActions
+        : [];
       const assistantMessage: AssistantMessage = {
         id: `assistant-${Date.now()}`,
         from: "assistant",
         text: response.assistantMessage,
-        cards: response.cards,
+        cards: safeCards,
       };
       setMessages((prev) => [...prev, assistantMessage]);
-      setSuggestedActions(response.suggestedActions ?? []);
+      setSuggestedActions(safeSuggestedActions);
     } catch (error) {
       logAssistant("assistant error", error);
       const assistantErrorMessage: AssistantMessage = {
         id: `assistant-error-${Date.now()}`,
         from: "assistant",
-        text: "Não consegui responder agora.",
+        text: "Não consegui responder agora. Tente novamente.",
       };
       setMessages((prev) => [...prev, assistantErrorMessage]);
       setSuggestedActions([]);
@@ -243,6 +248,9 @@ const AssistantWidget = () => {
   const panelStateClasses = isExpanded
     ? "translate-y-0 opacity-100"
     : "translate-y-6 opacity-0 pointer-events-none";
+
+  const safeMessages = messages ?? [];
+  const safeSuggestedActions = suggestedActions ?? [];
 
   return (
     <>
@@ -299,40 +307,47 @@ const AssistantWidget = () => {
               aria-live="polite"
               className="flex-1 space-y-3 overflow-y-auto px-4 py-3 text-sm leading-relaxed"
             >
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex flex-col gap-2 ${message.from === "user" ? "items-end" : ""}`}
-                >
+              {safeMessages.map((message) => {
+                const messageCards = Array.isArray(message.cards) ? message.cards : [];
+                return (
                   <div
-                    className={`max-w-full rounded-2xl border px-4 py-3 text-sm ${
-                      message.from === "user"
-                        ? "bg-primary text-white border-primary/60"
-                        : "bg-slate-50 border border-slate-200 text-slate-900"
-                    }`}
+                    key={message.id}
+                    className={`flex flex-col gap-2 ${message.from === "user" ? "items-end" : ""}`}
                   >
-                    {message.text.split("\n").map((segment, index) => (
-                      <p key={`${message.id}-${index}`} className={index ? "mt-1" : ""}>
-                        {segment}
-                      </p>
-                    ))}
+                    <div
+                      className={`max-w-full rounded-2xl border px-4 py-3 text-sm ${
+                        message.from === "user"
+                          ? "bg-primary text-white border-primary/60"
+                          : "bg-slate-50 border border-slate-200 text-slate-900"
+                      }`}
+                    >
+                      {(message.text ?? "")
+                        .split("\n")
+                        .map((segment, index) => (
+                          <p key={`${message.id}-${index}`} className={index ? "mt-1" : ""}>
+                            {segment}
+                          </p>
+                        ))}
+                    </div>
+                    {messageCards.length > 0 && (
+                      <div className="grid gap-3 md:grid-cols-2">
+                        {messageCards.map(renderCard)}
+                      </div>
+                    )}
                   </div>
-                  {message.cards && message.cards.length > 0 && (
-                    <div className="grid gap-3 md:grid-cols-2">{message.cards.map(renderCard)}</div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
               {isTyping && (
                 <div className="max-w-[70%] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                   Digitando...
                 </div>
               )}
             </div>
-            {suggestedActions.length > 0 && (
+            {safeSuggestedActions.length > 0 && (
               <div className="border-t border-slate-100 px-4 py-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Sugestões</p>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {suggestedActions.map((action) => (
+                  {safeSuggestedActions.map((action) => (
                     <button
                       key={action.label}
                       type="button"
