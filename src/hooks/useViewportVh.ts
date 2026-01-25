@@ -6,9 +6,9 @@ const setVh = () => {
   document.documentElement.style.setProperty("--vh", `${vh}px`);
 };
 
-const useViewportVh = () => {
+const useViewportVh = (enabled = true) => {
   useEffect(() => {
-    if (typeof window === "undefined") return undefined;
+    if (!enabled || typeof window === "undefined") return undefined;
     // Mobile UIs change chrome height, so we mirror innerHeight into --vh instead of trusting 100vh.
     setVh();
     window.addEventListener("resize", setVh);
@@ -17,7 +17,7 @@ const useViewportVh = () => {
       window.removeEventListener("resize", setVh);
       window.removeEventListener("orientationchange", setVh);
     };
-  }, []);
+  }, [enabled]);
 };
 
 export default useViewportVh;

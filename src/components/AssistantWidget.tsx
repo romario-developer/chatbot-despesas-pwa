@@ -129,9 +129,14 @@ const AssistantWidget = () => {
   const [lastUiHint, setLastUiHint] = useState<AssistantUiHint | null>(null);
   const [suggestedActions, setSuggestedActions] = useState<AssistantAction[]>([]);
   const [enteringMessageId, setEnteringMessageId] = useState<string | null>(null);
+  const [isMobileView, setIsMobileView] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.innerWidth < 768;
+  });
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const chatRootRef = useRef<HTMLDivElement | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const toggleButtonRef = useRef<HTMLButtonElement | null>(null);
   const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -143,18 +148,35 @@ const AssistantWidget = () => {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }, []);
 
-  useViewportVh();
+  useViewportVh(isMobileView);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const mediaQuery = window.matchMedia("(max-width: 767px)");
+    const handleChange = () => setIsMobileView(mediaQuery.matches);
+    handleChange();
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", handleChange);
+      return () => mediaQuery.removeEventListener("change", handleChange);
+    }
+    mediaQuery.addListener(handleChange);
+    return () => mediaQuery.removeListener(handleChange);
+  }, []);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
+    if (!isMobileView || !isExpanded) {
+      document.body.classList.remove("chat-lock-scroll");
+      return;
+    }
     document.body.classList.add("chat-lock-scroll");
     return () => {
       document.body.classList.remove("chat-lock-scroll");
     };
-  }, []);
+  }, [isMobileView, isExpanded]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return undefined;
+    if (typeof window === "undefined" || !isMobileView) return undefined;
     const vv = window.visualViewport;
     if (!vv) return undefined;
     // VisualViewport keeps the iOS PWA height in sync when the keyboard opens.
@@ -169,8 +191,11 @@ const AssistantWidget = () => {
     return () => {
       vv.removeEventListener("resize", onVvResize);
       vv.removeEventListener("scroll", onVvResize);
+      if (chatRootRef.current) {
+        chatRootRef.current.style.height = "";
+      }
     };
-  }, []);
+  }, [isMobileView]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -450,7 +475,9 @@ const AssistantWidget = () => {
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    handleSendMessage(inputValue);
+    const trimmed = inputValue.trim();
+    if (!trimmed) return;
+    handleSendMessage(trimmed);
   };
 
   const handleSuggestedAction = (action: AssistantAction) => {
@@ -496,7 +523,7 @@ const AssistantWidget = () => {
           aria-modal="true"
           id="assistant-widget-panel"
           ref={chatRootRef}
-          className={`mx-3 my-3 flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl ${panelTransitionClass} ${panelStateClasses} ${prefersReducedMotion ? "transition-none" : ""} md:mx-0 md:w-[380px] md:max-h-[58vh]`}
+          className={`fixed inset-0 z-[52] flex h-full flex-col overflow-hidden bg-white ${panelTransitionClass} ${panelStateClasses} ${prefersReducedMotion ? "transition-none" : ""} md:inset-auto md:right-4 md:bottom-4 md:left-auto md:w-[380px] md:max-h-[70vh] md:h-auto md:rounded-3xl md:border md:border-slate-200 md:shadow-2xl`}
           style={{ minHeight: "320px" }}
           onClick={(event) => event.stopPropagation()}
         >
@@ -652,7 +679,7 @@ const AssistantWidget = () => {
                   </div>
                 </div>
               )}
-              <form onSubmit={handleSubmit} className="mt-4">
+              <form ref={formRef} onSubmit={handleSubmit} className="mt-4">
                 <div className="flex items-center gap-3">
                   <textarea
                     ref={inputRef}
@@ -663,7 +690,7 @@ const AssistantWidget = () => {
                     onKeyDown={(event) => {
                       if (event.key === "Enter" && !event.shiftKey) {
                         event.preventDefault();
-                        handleSendMessage(inputValue);
+                        formRef.current?.requestSubmit();
                       }
                     }}
                     placeholder="Digite uma despesa… (ex: mercado 50)"
