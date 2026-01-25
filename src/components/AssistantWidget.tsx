@@ -7,7 +7,6 @@ import { ASSISTANT_OPEN_EVENT } from "../constants/assistantEvents";
 
 const WIDGET_STATE_KEY = "assistantWidgetState";
 const TABBAR_BOTTOM_OFFSET = "calc(var(--tabbar-height, 64px) + env(safe-area-inset-bottom, 0px))";
-const LAUNCHER_BOTTOM_OFFSET = "calc(var(--tabbar-height, 64px) + env(safe-area-inset-bottom, 0px) + 12px)";
 
 const logAssistant = (...args: unknown[]) => {
   if (typeof window === "undefined") return;
@@ -583,50 +582,42 @@ const AssistantWidget = () => {
         </div>
       </div>
 
-      <div
-        className="fixed z-[96] flex md:inset-auto md:bottom-4 md:right-4 md:justify-end"
-        style={
-          isMobileView
-            ? {
-                left: "16px",
-                bottom: LAUNCHER_BOTTOM_OFFSET,
-              }
-            : undefined
-        }
-      >
-        <button
-          ref={toggleButtonRef}
-          type="button"
-          aria-expanded={isExpanded}
-          aria-controls="assistant-widget-panel"
-          aria-label="Abrir assistente"
-          onClick={handleExpand}
-          className="group flex h-14 w-14 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-lg shadow-slate-200 transition hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white md:h-auto md:w-full md:max-w-sm md:gap-3 md:px-4 md:py-3 md:rounded-[32px]"
-        >
-          <span className="h-9 w-9 rounded-full bg-primary text-white flex items-center justify-center text-2xl md:hidden">
-            🙂
-          </span>
-          <div className="hidden w-full items-center justify-between gap-3 md:flex">
-            <div className="flex items-center gap-3">
-              <span className="h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center text-2xl">
-                🙂
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Assistente</p>
-                <p className="text-xs text-slate-500 dark:text-slate-300">Registrar despesas</p>
-              </div>
-            </div>
-            <span
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 transition group-hover:border-primary dark:border-slate-700"
-              aria-hidden="true"
-            >
-              <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 stroke-slate-600 dark:stroke-slate-100" strokeWidth="1.5">
-                <path d="M5 8l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+      {!isMobileView && (
+        <div className="fixed z-[96] flex md:inset-auto md:bottom-4 md:right-4 md:justify-end">
+          <button
+            ref={toggleButtonRef}
+            type="button"
+            aria-expanded={isExpanded}
+            aria-controls="assistant-widget-panel"
+            aria-label="Abrir assistente"
+            onClick={handleExpand}
+            className="group flex h-14 w-14 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-lg shadow-slate-200 transition hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white md:h-auto md:w-full md:max-w-sm md:gap-3 md:px-4 md:py-3 md:rounded-[32px]"
+          >
+            <span className="h-9 w-9 rounded-full bg-primary text-white flex items-center justify-center text-2xl md:hidden">
+              🙂
             </span>
-          </div>
-        </button>
-      </div>
+            <div className="hidden w-full items-center justify-between gap-3 md:flex">
+              <div className="flex items-center gap-3">
+                <span className="h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center text-2xl">
+                  🙂
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Assistente</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-300">Registrar despesas</p>
+                </div>
+              </div>
+              <span
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 transition group-hover:border-primary dark:border-slate-700"
+                aria-hidden="true"
+              >
+                <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 stroke-slate-600 dark:stroke-slate-100" strokeWidth="1.5">
+                  <path d="M5 8l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+            </div>
+          </button>
+        </div>
+      )}
     </>
   );
 };
