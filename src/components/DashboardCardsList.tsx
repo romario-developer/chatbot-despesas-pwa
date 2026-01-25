@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { listCardInvoices, listCards } from "../api/cards";
+import { getCurrentMonthInTimeZone } from "../utils/months";
 import { formatBRL } from "../utils/format";
 import type { CardInvoice, CreditCard } from "../types";
 
@@ -8,7 +9,11 @@ const MAX_VISIBLE_CARDS = 3;
 
 const formatIndicatorLabel = (isOpen: boolean) => (isOpen ? "Em aberto" : "Tudo pago");
 
-const DashboardCardsList = () => {
+type DashboardCardsListProps = {
+  month?: string;
+};
+
+const DashboardCardsList = ({ month }: DashboardCardsListProps) => {
   const navigate = useNavigate();
   const [cards, setCards] = useState<CreditCard[]>([]);
   const [invoices, setInvoices] = useState<CardInvoice[]>([]);
@@ -67,9 +72,11 @@ const DashboardCardsList = () => {
 
   const visibleRows = rows.slice(0, MAX_VISIBLE_CARDS);
   const hasMore = cards.length > MAX_VISIBLE_CARDS;
+  const targetMonth = month ?? getCurrentMonthInTimeZone("America/Bahia");
 
-  const handleCardClick = () => {
-    navigate("/cards");
+  const handleCardClick = (cardId: string) => {
+    const encodedId = encodeURIComponent(cardId);
+    navigate(`/cards/${encodedId}/invoice?month=${targetMonth}`);
   };
 
   const handleAddCard = () => {
@@ -135,7 +142,7 @@ const DashboardCardsList = () => {
               <button
                 key={card.id}
                 type="button"
-                onClick={handleCardClick}
+                onClick={() => handleCardClick(card.id)}
                 aria-label={`Abrir cartão ${card.name}`}
                 className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-white px-3 py-3 text-left transition-shadow hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 motion-safe:duration-200 motion-safe:ease-out"
               >

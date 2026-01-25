@@ -13,7 +13,7 @@ const EntryEditPage = lazy(() => import("../pages/EntryEditPage"));
 const PlanningPage = lazy(() => import("../pages/PlanningPage"));
 const ChangePasswordPage = lazy(() => import("../pages/ChangePasswordPage"));
 const CategoriesPage = lazy(() => import("../pages/CategoriesPage"));
-const InvoiceDetailsPage = lazy(() => import("../pages/InvoiceDetailsPage"));
+const CardInvoicePage = lazy(() => import("../pages/CardInvoicePage"));
 const CardsPage = lazy(() => import("../pages/CardsPage"));
 
 const AppRouter = () => (
@@ -44,14 +44,7 @@ const AppRouter = () => (
             <Route path="/entries/:id/edit" element={<EntryEditPage />} />
             <Route path="/planning" element={<PlanningPage />} />
             <Route path="/categories" element={<CategoriesPage />} />
-            <Route
-              path="/credit/cards/:cardId/invoices/:cycleEnd"
-              element={<InvoiceDetailsPage />}
-            />
-            <Route
-              path="/cards/:cardId/invoices/:cycleEnd"
-              element={<InvoiceDetailsPage />}
-            />
+            <Route path="/cards/:cardId/invoice" element={<CardInvoicePage />} />
             <Route path="/cards" element={<CardsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

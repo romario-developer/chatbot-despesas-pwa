@@ -487,6 +487,24 @@ export const getCardInvoiceDetails = async (
   return normalizeInvoiceDetails(data, cardId);
 };
 
+export const getCardInvoiceByMonth = async (
+  cardId: string,
+  month?: string,
+): Promise<InvoiceDetails> => {
+  const encodedCardId = encodeURIComponent(cardId);
+  const params = new URLSearchParams();
+  if (month) {
+    params.append("month", month);
+  }
+  const query = params.toString();
+  const url = `/api/cards/${encodedCardId}/invoice${query ? `?${query}` : ""}`;
+  const data = await apiRequest<RawInvoiceDetails>({
+    url,
+    method: "GET",
+  });
+  return normalizeInvoiceDetails(data, cardId);
+};
+
 const normalizeInvoice = (value: RawInvoice): CardInvoice | null => {
   if (!value || typeof value !== "object") return null;
   const data = value as Record<string, unknown>;
