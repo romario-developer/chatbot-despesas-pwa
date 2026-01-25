@@ -176,26 +176,49 @@ const AssistantWidget = () => {
   }, [isMobileView, isExpanded]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !isMobileView) return undefined;
-    const vv = window.visualViewport;
-    if (!vv) return undefined;
-    // VisualViewport keeps the iOS PWA height in sync when the keyboard opens.
-    const onVvResize = () => {
-      if (!chatRootRef.current) return;
-      chatRootRef.current.style.height = `${vv.height}px`;
-      document.documentElement.style.setProperty("--vh", `${vv.height * 0.01}px`);
-    };
-    onVvResize();
-    vv.addEventListener("resize", onVvResize);
-    vv.addEventListener("scroll", onVvResize);
-    return () => {
-      vv.removeEventListener("resize", onVvResize);
-      vv.removeEventListener("scroll", onVvResize);
+    if (typeof window === "undefined" || !isMobileView || !isExpanded) {
       if (chatRootRef.current) {
         chatRootRef.current.style.height = "";
+        chatRootRef.current.style.top = "";
+        chatRootRef.current.style.removeProperty("--chat-vh");
+        chatRootRef.current.style.removeProperty("--chat-top");
+        chatRootRef.current.style.removeProperty("--composer-safe");
+      }
+      return undefined;
+    }
+    const vv = window.visualViewport;
+    if (!vv) return undefined;
+    // VisualViewport keeps the iOS PWA height + offset synced so the panel sits above the keyboard.
+    const applyVisualViewport = () => {
+      if (!chatRootRef.current) return;
+      const height = vv.height;
+      const top = vv.offsetTop ?? 0;
+      const keyboardOpen = height < window.innerHeight - 50;
+      chatRootRef.current.style.height = `${height}px`;
+      chatRootRef.current.style.top = `${top}px`;
+      chatRootRef.current.style.setProperty("--chat-vh", `${height}px`);
+      chatRootRef.current.style.setProperty("--chat-top", `${top}px`);
+      chatRootRef.current.style.setProperty(
+        "--composer-safe",
+        keyboardOpen ? "0px" : "env(safe-area-inset-bottom)",
+      );
+      document.documentElement.style.setProperty("--vh", `${height * 0.01}px`);
+    };
+    applyVisualViewport();
+    vv.addEventListener("resize", applyVisualViewport);
+    vv.addEventListener("scroll", applyVisualViewport);
+    return () => {
+      vv.removeEventListener("resize", applyVisualViewport);
+      vv.removeEventListener("scroll", applyVisualViewport);
+      if (chatRootRef.current) {
+        chatRootRef.current.style.height = "";
+        chatRootRef.current.style.top = "";
+        chatRootRef.current.style.removeProperty("--chat-vh");
+        chatRootRef.current.style.removeProperty("--chat-top");
+        chatRootRef.current.style.removeProperty("--composer-safe");
       }
     };
-  }, [isMobileView]);
+  }, [isMobileView, isExpanded]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -493,6 +516,16 @@ const AssistantWidget = () => {
     ? "opacity-100 pointer-events-auto"
     : "opacity-0 pointer-events-none";
 
+  const panelLayoutStyle = {
+    minHeight: "320px",
+    ...(isMobileView
+      ? {
+          top: "var(--chat-top, 0px)",
+          height: "var(--chat-vh, calc(var(--vh, 1vh) * 100))",
+        }
+      : {}),
+  };
+
   const actionGroups = useMemo(() => categorizeSuggestedActions(suggestedActions), [suggestedActions]);
   const { paymentActions, cardActions, categoryActions, adjustmentActions } = actionGroups;
   const hasQuickActionGroups =
@@ -523,8 +556,8 @@ const AssistantWidget = () => {
           aria-modal="true"
           id="assistant-widget-panel"
           ref={chatRootRef}
-          className={`fixed inset-0 z-[52] flex h-full flex-col overflow-hidden bg-white ${panelTransitionClass} ${panelStateClasses} ${prefersReducedMotion ? "transition-none" : ""} md:inset-auto md:right-4 md:bottom-4 md:left-auto md:w-[380px] md:max-h-[70vh] md:h-auto md:rounded-3xl md:border md:border-slate-200 md:shadow-2xl`}
-          style={{ minHeight: "320px" }}
+          className={`fixed left-0 right-0 z-[52] flex h-full flex-col overflow-hidden bg-white ${panelTransitionClass} ${panelStateClasses} ${prefersReducedMotion ? "transition-none" : ""} md:inset-auto md:right-4 md:bottom-4 md:left-auto md:w-[380px] md:max-h-[70vh] md:h-auto md:rounded-3xl md:border md:border-slate-200 md:shadow-2xl`}
+          style={panelLayoutStyle}
           onClick={(event) => event.stopPropagation()}
         >
           <div className="flex items-center justify-between gap-3 rounded-t-3xl border-b border-slate-100 px-4 py-3">
@@ -621,7 +654,10 @@ const AssistantWidget = () => {
                 )}
                 <div ref={messagesEndRef} aria-hidden="true" className="h-px w-full" />
               </div>
-            <div className="flex-shrink-0 border-t border-slate-200 bg-white px-4 py-3 pb-[env(safe-area-inset-bottom,1rem)]">
+            <div
+              className="flex-shrink-0 border-t border-slate-200 bg-white px-4 py-3"
+              style={{ paddingBottom: "var(--composer-safe, env(safe-area-inset-bottom,1rem))" }}
+            >
               {shouldShowQuickActions && (
                 <div className="mt-3 max-h-[170px] overflow-y-auto pr-1">
                   <div className="space-y-3">
