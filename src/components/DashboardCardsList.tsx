@@ -130,29 +130,47 @@ const DashboardCardsList = () => {
             const isOpen = remaining > 0;
             const datesLine = renderDatesLine(invoice);
             const indicatorStyle = isOpen
-              ? "border-rose-100 bg-rose-50 text-rose-700"
-              : "border-emerald-100 bg-emerald-50 text-emerald-700";
+              ? "bg-rose-50 text-rose-700 border-rose-100"
+              : "bg-emerald-50 text-emerald-700 border-emerald-100";
             return (
               <button
                 key={card.id}
                 type="button"
                 onClick={() => handleCardClick(card.id)}
                 aria-label={`Abrir cartão ${card.name}`}
-                className="flex w-full items-start justify-between gap-3 rounded-2xl border border-slate-100 px-3 py-3 text-left transition hover:border-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-white px-3 py-3 text-left transition-shadow hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 motion-safe:duration-200 motion-safe:ease-out"
               >
-                <div className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-xs font-semibold uppercase tracking-[0.25em] text-slate-600">
-                    {(card.brand ?? card.name).slice(0, 2)}
+                <div className="flex items-center gap-3">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-100 to-white text-xs font-bold uppercase tracking-[0.3em] text-slate-600 shadow-inner transition group-hover:shadow-sm">
+                    <span className="relative h-5 w-5">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        className="absolute inset-0 h-5 w-5 text-slate-500"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M4 7h16v10H4z"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path d="M4 11h16" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
                   </span>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-900 truncate">{card.name}</p>
+                    <p className="text-sm font-semibold text-slate-900 leading-tight truncate">
+                      {card.name}
+                    </p>
                     {datesLine && (
-                      <p className="text-[10px] text-slate-500">{datesLine}</p>
+                      <p className="text-[11px] text-slate-500 leading-snug">{datesLine}</p>
                     )}
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-1">
-                  <p className="text-sm font-semibold text-slate-900">
+                  <p className="text-sm font-bold text-slate-900">
                     {isOpen ? `Em aberto: ${formatBRL(remaining)}` : "Tudo pago"}
                   </p>
                   <span
@@ -167,7 +185,6 @@ const DashboardCardsList = () => {
                   stroke="currentColor"
                   strokeWidth="1.5"
                   className="h-4 w-4 text-slate-400"
-                  aria-hidden="true"
                 >
                   <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
