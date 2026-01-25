@@ -20,44 +20,31 @@ const AppLayout = () => {
   const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const userLabel = () => {
-    const name = user?.name?.trim();
-    const email = user?.email?.trim();
-    if (name) return `Ola, ${name}`;
-    if (email) return email;
-    return "";
-  };
-
   const handleLogout = () => {
     setMobileMenuOpen(false);
     logout();
   };
 
-  const label = userLabel();
-
   return (
     <div className="min-h-screen bg-slate-50">
-            <header class="sticky top-0 z-10 border-b border-slate-200 bg-white pt-[env(safe-area-inset-top)]">
-        <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <div class="flex items-center gap-3">
-            <button
-              type="button"
-              class="md:hidden rounded-full border border-slate-200 p-2 text-slate-700 transition hover:border-primary hover:text-primary"
-              aria-label="Abrir menu"
-            >
-              <svg viewBox="0 0 20 20" class="h-5 w-5" fill="currentColor" aria-hidden="true">
-                <path d="M3 6h14M3 10h14M3 14h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            </button>
-            <span class="hidden text-lg font-semibold text-primary md:block">Despesas</span>
-          </div>
-          <div class="flex items-center justify-center">
-            <div class="h-10 w-10 rounded-full border border-slate-200 bg-primary text-white shadow-sm flex items-center justify-center text-lg font-semibold">
+      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white pt-[env(safe-area-inset-top)]">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+          <button
+            type="button"
+            className="md:hidden rounded-full border border-slate-200 p-2 text-slate-700 transition hover:border-primary hover:text-primary"
+            aria-label="Abrir menu"
+          >
+            <svg viewBox="0 0 20 20" className="h-5 w-5" fill="currentColor" aria-hidden="true">
+              <path d="M3 6h14M3 10h14M3 14h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </button>
+          <div className="flex items-center justify-center">
+            <div className="h-10 w-10 rounded-full border border-slate-200 bg-primary text-white shadow-sm flex items-center justify-center text-lg font-semibold">
               D
             </div>
           </div>
-          <div class="flex items-center gap-3">
-            <nav class="hidden items-center gap-4 md:flex">
+          <div className="flex items-center gap-3">
+            <nav className="hidden items-center gap-4 md:flex">
               <NavLink to="/" end className={linkClasses}>
                 Dashboard
               </NavLink>
@@ -73,7 +60,7 @@ const AppLayout = () => {
               <button
                 type="button"
                 onClick={handleLogout}
-                class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:border-primary hover:text-primary"
+                className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:border-primary hover:text-primary"
               >
                 Logout
               </button>
@@ -81,13 +68,13 @@ const AppLayout = () => {
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
-              class="md:hidden rounded-full border border-slate-200 p-2 text-slate-700 transition hover:border-primary hover:text-primary"
+              className="md:hidden rounded-full border border-slate-200 p-2 text-slate-700 transition hover:border-primary hover:text-primary"
               aria-label="Abrir menu"
             >
               <svg
                 viewBox="0 0 20 20"
                 fill="currentColor"
-                class="h-5 w-5"
+                className="h-5 w-5"
                 aria-hidden="true"
               >
                 <path d="M10 6.25a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5zM10 11.25a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5zM10 16.25a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5z" />
