@@ -30,7 +30,7 @@ const formatDayLabel = (value: string) => {
   return `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)}, ${day}`;
 };
 
-const buildStatusLabel = (invoice?: InvoiceDetails) => {
+const buildStatusLabel = (invoice?: InvoiceDetails | null) => {
   if (!invoice) return "—";
   if (invoice.status) {
     const raw = invoice.status.trim();
