@@ -170,9 +170,7 @@ const DashboardCardsList = () => {
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-1">
-                  <p className="text-sm font-bold text-slate-900">
-                    {isOpen ? `Em aberto: ${formatBRL(remaining)}` : "Tudo pago"}
-                  </p>
+                  <p className="text-sm font-bold text-slate-900">{formatBRL(Math.max(remaining, 0))}</p>
                   <span
                     className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.3em] ${indicatorStyle}`}
                   >
