@@ -366,6 +366,20 @@ const AssistantWidget = () => {
                   {confirmationNote}
                 </div>
               )}
+              {adjustmentActions.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {adjustmentActions.map((action) => (
+                    <button
+                      key={`adjust-${action.label}`}
+                      type="button"
+                      onClick={() => handleSuggestedAction(action)}
+                      className={adjustmentChipClassName}
+                    >
+                      {action.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="flex flex-1 flex-col overflow-hidden">
               <div
@@ -403,24 +417,6 @@ const AssistantWidget = () => {
                 )}
               </div>
               <div className="border-t border-slate-200 px-4 py-3 pb-[env(safe-area-inset-bottom,1rem)]">
-                {adjustmentActions.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Confirmação</p>
-                    <p className="text-sm font-semibold text-slate-900">Despesa registrada!</p>
-                    <div className="flex flex-wrap gap-2">
-                      {adjustmentActions.map((action) => (
-                        <button
-                          key={`adjust-${action.label}`}
-                          type="button"
-                          onClick={() => handleSuggestedAction(action)}
-                          className={adjustmentChipClassName}
-                        >
-                          {action.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
                 {hasQuickActionGroups && (
                   <div className="mt-3 space-y-3">
                     {paymentActions.length > 0 && (
