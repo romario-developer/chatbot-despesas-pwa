@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import type { AssistantCard } from "../api/assistant";
 import { useAssistantChat } from "../hooks/useAssistantChat";
 
+const TABBAR_HEIGHT_VAR = "var(--tabbar-height, 64px)";
+
 const AssistantPage = () => {
   const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(() => {
@@ -218,7 +220,10 @@ const AssistantPage = () => {
         <div
           ref={scrollRef}
           className="flex h-full flex-col overflow-y-auto px-4 py-3 pb-4"
-          style={{ WebkitOverflowScrolling: "touch" }}
+          style={{
+            WebkitOverflowScrolling: "touch",
+            paddingBottom: `calc(${TABBAR_HEIGHT_VAR} + env(safe-area-inset-bottom, 16px) + 32px)`,
+          }}
         >
           {toastMessage && (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-900 shadow-sm text-left text-slate-950">
@@ -350,7 +355,7 @@ const AssistantPage = () => {
       <div
         className="border-t border-slate-800 bg-slate-950 px-4 py-3"
         style={{
-          paddingBottom: `calc(env(safe-area-inset-bottom, 16px) + ${keyboardInset}px)`,
+          paddingBottom: `calc(${TABBAR_HEIGHT_VAR} + env(safe-area-inset-bottom, 16px) + ${keyboardInset}px)`,
         }}
       >
         <form ref={formRef} onSubmit={handleSubmit} className="flex items-center gap-3">
