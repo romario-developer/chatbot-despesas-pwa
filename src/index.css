@@ -9,6 +9,10 @@
 }
 
 :root {
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
   color-scheme: light;
 }
 
@@ -18,7 +22,11 @@ body {
 }
 
 body {
-  @apply min-h-screen bg-slate-50 text-slate-900 overflow-x-hidden;
+  @apply min-h-screen bg-slate-950 text-slate-50 overflow-x-hidden;
+}
+
+[data-theme="light"] body {
+  @apply bg-slate-50 text-slate-900;
 }
 
 #root {
@@ -59,7 +67,11 @@ body.chat-lock-scroll {
 }
 
 .card {
-  @apply bg-white shadow-md rounded-xl;
+  @apply bg-white shadow-md rounded-xl border border-slate-200;
+}
+
+[data-theme="dark"] .card {
+  @apply border-slate-700 bg-slate-900 shadow-slate-900/40;
 }
 
 .no-scrollbar {

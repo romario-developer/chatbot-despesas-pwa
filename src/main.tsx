@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import AppRouter from "./routes/AppRouter";
 import { registerSW } from "virtual:pwa-register";
+import { ThemeProvider } from "./contexts/ThemeContext";
 
 const rootElement = document.getElementById("root");
 
@@ -19,6 +20,8 @@ registerSW({
 
 createRoot(rootElement).render(
   <StrictMode>
-    <AppRouter />
+    <ThemeProvider>
+      <AppRouter />
+    </ThemeProvider>
   </StrictMode>,
 );

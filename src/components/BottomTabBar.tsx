@@ -83,7 +83,9 @@ const BottomTabBar = () => {
       className={({ isActive }: { isActive: boolean }) =>
         [
           "flex-1 flex flex-col items-center justify-center rounded-2xl px-2 py-2 text-xs font-semibold transition",
-          isActive ? "text-primary" : "text-slate-500 hover:text-primary",
+          isActive
+            ? "text-primary"
+            : "text-slate-500 dark:text-slate-300 hover:text-primary",
         ].join(" ")
       }
     >
@@ -103,7 +105,7 @@ const BottomTabBar = () => {
   return (
     <nav
       aria-label="Navegação principal"
-      className="fixed bottom-0 left-0 right-0 z-[70] overflow-visible border-t border-slate-200 bg-white shadow-[0_-2px_12px_rgba(15,23,42,0.04)] md:hidden"
+      className="fixed bottom-0 left-0 right-0 z-[70] overflow-visible border-t border-slate-200 bg-white shadow-[0_-2px_12px_rgba(15,23,42,0.04)] dark:border-slate-800 dark:bg-slate-900 md:hidden"
       style={tabBarStyle}
     >
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-2">

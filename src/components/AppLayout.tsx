@@ -1,24 +1,26 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useTheme } from "../contexts/ThemeContext";
 import AssistantWidget from "./AssistantWidget";
 import BottomTabBar from "./BottomTabBar";
 
 const linkClasses = ({ isActive }: { isActive: boolean }) =>
   [
     "text-sm font-medium transition-colors",
-    isActive ? "text-primary" : "text-slate-700 hover:text-primary",
+    isActive ? "text-primary" : "text-slate-700 dark:text-slate-200 hover:text-primary",
   ].join(" ");
 
 const AppLayout = () => {
   const { logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const handleLogout = () => {
     logout();
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white pt-[env(safe-area-inset-top)]">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white pt-[env(safe-area-inset-top)] dark:border-slate-800 dark:bg-slate-950">
         <div className="mx-auto flex max-w-5xl items-center px-4 py-3">
           <div className="flex-1 md:hidden" />
           <div className="flex flex-1 items-center justify-center">
@@ -43,9 +45,17 @@ const AppLayout = () => {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:border-primary hover:text-primary"
+                className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-100"
               >
                 Logout
+              </button>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="rounded-full border border-slate-200 px-3 py-1.5 text-sm text-slate-700 transition hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-100"
+                aria-label="Alternar tema"
+              >
+                {theme === "dark" ? "🌙" : "☀️"}
               </button>
             </nav>
           </div>

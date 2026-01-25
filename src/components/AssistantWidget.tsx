@@ -548,9 +548,9 @@ const AssistantWidget = () => {
     currentStage === "saved" || lastUiHint?.kind === "saved";
   const shouldShowQuickActions = !isSavedStageRendered && hasQuickActionGroups;
   const quickActionChipClassName =
-    "rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary/70";
+    "rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary/70 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-primary/70";
   const adjustmentChipClassName =
-    "rounded-full border border-slate-200 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm shadow-slate-900/40 transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900";
+    "rounded-full border border-slate-200 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm shadow-slate-900/40 transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 dark:border-slate-600";
 
   return (
     <>
@@ -570,11 +570,11 @@ const AssistantWidget = () => {
           aria-modal="true"
           id="assistant-widget-panel"
           ref={chatRootRef}
-          className={`fixed left-0 right-0 bottom-0 z-[94] flex h-full flex-col overflow-hidden rounded-t-[24px] bg-white ${panelTransitionClass} ${panelStateClasses} ${prefersReducedMotion ? "transition-none" : ""} md:inset-auto md:right-4 md:bottom-4 md:left-auto md:w-[380px] md:max-h-[70vh] md:h-auto md:rounded-3xl md:border md:border-slate-200 md:shadow-2xl md:z-[52]`}
+          className={`fixed left-0 right-0 bottom-0 z-[94] flex h-full flex-col overflow-hidden rounded-t-[24px] bg-white ${panelTransitionClass} ${panelStateClasses} ${prefersReducedMotion ? "transition-none" : ""} md:inset-auto md:right-4 md:bottom-4 md:left-auto md:w-[380px] md:max-h-[70vh] md:h-auto md:rounded-3xl md:border md:border-slate-200 md:shadow-2xl md:z-[52] dark:bg-slate-950 dark:border-slate-800`}
           style={panelLayoutStyle}
           onClick={(event) => event.stopPropagation()}
         >
-          <div className="relative flex items-center justify-between gap-3 rounded-t-3xl border-b border-slate-100 px-4 py-3">
+          <div className="relative flex items-center justify-between gap-3 rounded-t-3xl border-b border-slate-100 px-4 py-3 dark:border-slate-800">
             <div className="absolute inset-x-0 top-2 flex justify-center md:hidden">
               <span className="h-1.5 w-12 rounded-full bg-slate-300" />
             </div>
@@ -588,7 +588,7 @@ const AssistantWidget = () => {
               type="button"
               onClick={handleCollapse}
               aria-label="Fechar assistente"
-              className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+              className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-500 transition hover:border-slate-300 hover:text-slate-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-slate-500 dark:hover:text-slate-50"
             >
               ×
             </button>
@@ -644,7 +644,7 @@ const AssistantWidget = () => {
                         className={`max-w-full rounded-2xl border px-4 py-3 text-sm ${
                           isUser
                             ? "border-primary/60 bg-primary text-white"
-                            : "border-slate-200 bg-slate-50 text-slate-900"
+                            : "border-slate-200 bg-slate-50 text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                           }`}
                         >
                         {(message.text ?? "")
@@ -672,7 +672,7 @@ const AssistantWidget = () => {
                 <div ref={messagesEndRef} aria-hidden="true" className="h-px w-full" />
               </div>
             <div
-              className="flex-shrink-0 border-t border-slate-200 bg-white px-4 py-3"
+              className="flex-shrink-0 border-t border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-950"
               style={{ paddingBottom: "var(--composer-safe, env(safe-area-inset-bottom,1rem))" }}
             >
               {shouldShowQuickActions && (
@@ -747,7 +747,7 @@ const AssistantWidget = () => {
                       }
                     }}
                     placeholder="Digite uma despesa… (ex: mercado 50)"
-                    className="flex-1 min-h-[44px] max-h-[96px] resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
+                    className="flex-1 min-h-[44px] max-h-[96px] resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                     style={{ maxHeight: "min(96px, calc(var(--vh, 1vh) * 25))" }}
                   />
                   <button
