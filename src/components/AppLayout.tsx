@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
@@ -13,8 +14,18 @@ const linkClasses = ({ isActive }: { isActive: boolean }) =>
 const AppLayout = () => {
   const { logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const handleLogout = () => {
+    logout();
+  };
+
+  const openSettings = () => setSettingsOpen(true);
+
+  const closeSettings = () => setSettingsOpen(false);
+
+  const handleLogoutFromSheet = () => {
+    closeSettings();
     logout();
   };
 
@@ -28,7 +39,7 @@ const AppLayout = () => {
               D
             </div>
           </div>
-          <div className="flex flex-1 justify-end">
+          <div className="flex flex-1 justify-end items-center md:gap-4">
             <nav className="hidden items-center gap-4 md:flex">
               <NavLink to="/" end className={linkClasses}>
                 Dashboard
@@ -58,12 +69,72 @@ const AppLayout = () => {
                 {theme === "dark" ? "🌙" : "☀️"}
               </button>
             </nav>
+            <button
+              type="button"
+              onClick={openSettings}
+              className="hidden rounded-full border border-slate-200 p-2 text-slate-700 transition hover:border-primary hover:text-primary md:hidden"
+              aria-label="Abrir configurações"
+            >
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zm9-3.5a2.5 2.5 0 0 1-2.438 2.496l-.196.013-.133-.02-1.615-.414-.402 1.46.643.643c.193.193.193.506 0 .7l-1.414 1.414a.5.5 0 0 1-.707 0l-.643-.643-1.46.402.414 1.615c.021.084.023.17.013.255A2.5 2.5 0 0 1 12 21.5a2.5 2.5 0 0 1-2.496-2.438l-.013-.196.02-.133.414-1.615-1.46-.402-.643.643a.5.5 0 0 1-.707 0L5.5 16.334a.5.5 0 0 1 0-.707l.643-.643-1.46-.402-.414 1.615a2.5 2.5 0 0 1-4.985-.266l-.013-.196A2.5 2.5 0 0 1 2.5 12c0-1.246.9-2.28 2.094-2.458l.196-.033.133.02 1.615.414.402-1.46-.643-.643a.5.5 0 0 1 0-.707L5.5 5.358a.5.5 0 0 1 .707 0l.643.643 1.46-.402-.414-1.615a2.5 2.5 0 0 1 4.985.266l.013.196-.02.133-.414 1.615 1.46.402.643-.643a.5.5 0 0 1 .707 0l1.414 1.414a.5.5 0 0 1 0 .707l-.643.643 1.46.402.414-1.615c.021-.084.023-.17.013-.255A2.5 2.5 0 0 1 21.5 12z"
+                />
+              </svg>
+            </button>
           </div>
         </div>
       </header>
       <main className="app-main mx-auto max-w-6xl px-4 py-6 md:pb-6">
         <Outlet />
       </main>
+      {settingsOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-transparent"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="absolute inset-0 bg-slate-900/40"
+            onClick={closeSettings}
+            aria-hidden="true"
+          />
+          <div className="relative w-full max-w-md rounded-t-2xl bg-white p-4 shadow-2xl dark:bg-slate-900 dark:text-slate-100">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-sm font-semibold">Configurações</p>
+              <button
+                type="button"
+                onClick={closeSettings}
+                className="text-slate-500 transition hover:text-slate-700 dark:text-slate-400 dark:hover:text-white"
+                aria-label="Fechar configurações"
+              >
+                ×
+              </button>
+            </div>
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  toggleTheme();
+                }}
+                className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-100"
+              >
+                Alternar tema
+                <span>{theme === "dark" ? "🌙" : "☀️"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleLogoutFromSheet}
+                className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-rose-600 transition hover:border-rose-300 hover:text-rose-700 dark:border-slate-700"
+              >
+                Logout
+                <span aria-hidden="true">↗</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <AssistantWidget />
       <BottomTabBar />
 
