@@ -1,12 +1,15 @@
-import type { CSSProperties } from "react";
+import { useCallback, useEffect } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { NavLink } from "react-router-dom";
+import { ASSISTANT_OPEN_EVENT } from "../constants/assistantEvents";
 
-const tabBarStyle: CSSProperties & { "--tabbar-height": string } = {
-  height: "var(--tabbar-height, 64px)",
-  "--tabbar-height": "64px",
+type TabItem = {
+  label: string;
+  to: string;
+  icon: ReactNode;
 };
 
-const tabs = [
+const tabs: TabItem[] = [
   {
     label: "Início",
     to: "/",
@@ -45,38 +48,77 @@ const tabs = [
   },
 ];
 
+const tabBarStyle: CSSProperties & { "--tabbar-height": string } = {
+  height: "var(--tabbar-height, 64px)",
+  "--tabbar-height": "64px",
+  paddingBottom: "env(safe-area-inset-bottom, 0px)",
+};
+
 const BottomTabBar = () => {
+  const openAssistant = useCallback(() => {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(new CustomEvent(ASSISTANT_OPEN_EVENT));
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof document === "undefined") return undefined;
+    const html = document.documentElement;
+    const setHeight = () => {
+      const value = window.matchMedia("(max-width: 767px)").matches ? "64px" : "0px";
+      html.style.setProperty("--tabbar-height", value);
+    };
+    setHeight();
+    window.addEventListener("resize", setHeight);
+    return () => {
+      window.removeEventListener("resize", setHeight);
+      html.style.setProperty("--tabbar-height", "0px");
+    };
+  }, []);
+
+  const renderTab = (tab: TabItem) => (
+    <NavLink
+      key={tab.to}
+      to={tab.to}
+      end={tab.to === "/"}
+      className={({ isActive }: { isActive: boolean }) =>
+        [
+          "flex-1 flex flex-col items-center justify-center rounded-2xl px-2 py-2 text-xs font-semibold transition",
+          isActive ? "text-primary" : "text-slate-500 hover:text-primary",
+        ].join(" ")
+      }
+    >
+      <svg
+        viewBox="0 0 20 20"
+        fill="none"
+        className="h-6 w-6"
+        aria-hidden="true"
+        stroke="currentColor"
+      >
+        {tab.icon}
+      </svg>
+      <span>{tab.label}</span>
+    </NavLink>
+  );
+
   return (
     <nav
       aria-label="Navegação principal"
-      className="fixed bottom-0 left-0 right-0 z-50 flex bg-white border-t border-slate-200 md:hidden"
+      className="fixed bottom-0 left-0 right-0 z-[70] overflow-visible border-t border-slate-200 bg-white shadow-[0_-2px_12px_rgba(15,23,42,0.04)] md:hidden"
       style={tabBarStyle}
     >
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-2">
-        {tabs.map((tab) => (
-          <NavLink
-            key={tab.to}
-            to={tab.to}
-            end={tab.to === "/"}
-            className={({ isActive }: { isActive: boolean }) =>
-              [
-                "flex-1 flex flex-col items-center justify-center rounded-2xl px-2 py-2 text-xs font-semibold transition",
-                isActive ? "text-primary" : "text-slate-500 hover:text-primary",
-              ].join(" ")
-            }
+        <div className="flex flex-1 items-center gap-1">{tabs.slice(0, 2).map(renderTab)}</div>
+        <div className="relative flex h-full items-center justify-center">
+          <button
+            type="button"
+            onClick={openAssistant}
+            aria-label="Abrir assistente"
+            className="relative -top-6 flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-primary text-2xl text-white shadow-lg shadow-slate-900/20 transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:translate-y-0.5"
           >
-            <svg
-              viewBox="0 0 20 20"
-              fill="none"
-              className="h-6 w-6"
-              aria-hidden="true"
-              stroke="currentColor"
-            >
-              {tab.icon}
-            </svg>
-            <span>{tab.label}</span>
-          </NavLink>
-        ))}
+            🙂
+          </button>
+        </div>
+        <div className="flex flex-1 items-center justify-end gap-1">{tabs.slice(2).map(renderTab)}</div>
       </div>
     </nav>
   );

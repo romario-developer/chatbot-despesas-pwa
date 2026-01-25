@@ -130,15 +130,25 @@ body.chat-lock-scroll {
 
 @media (prefers-reduced-motion: reduce) {
   .dashboard-cta {
-    transition: box-shadow 120ms ease, background-color 120ms ease;
-  }
+  transition: box-shadow 120ms ease, background-color 120ms ease;
+}
 
-  .dashboard-cta:hover {
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.07);
-  }
+.dashboard-cta:hover {
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.07);
+}
 
-  .dashboard-cta:active {
-    transform: none;
-    opacity: 1;
+.dashboard-cta:active {
+  transform: none;
+  opacity: 1;
+}
+
+.app-main {
+  padding-bottom: calc(var(--tabbar-height, 64px) + env(safe-area-inset-bottom, 16px));
+}
+
+@media (min-width: 768px) {
+  .app-main {
+    padding-bottom: 1.5rem;
   }
+}
 }

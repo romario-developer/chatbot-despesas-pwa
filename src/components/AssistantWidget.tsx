@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { postAssistantMessage, type AssistantAction, type AssistantCard } from "../api/assistant";
 import { getCurrentMonthInTimeZone } from "../utils/months";
 import useViewportVh from "../hooks/useViewportVh";
+import { ASSISTANT_OPEN_EVENT } from "../constants/assistantEvents";
 
 const STORAGE_KEY = "assistantConversationId";
 const WIDGET_STATE_KEY = "assistantWidgetState";
@@ -334,6 +335,15 @@ const AssistantWidget = () => {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isExpanded]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const handleAssistantOpen = () => {
+      setWidgetState("expanded");
+    };
+    window.addEventListener(ASSISTANT_OPEN_EVENT, handleAssistantOpen);
+    return () => window.removeEventListener(ASSISTANT_OPEN_EVENT, handleAssistantOpen);
+  }, [setWidgetState]);
 
   useEffect(() => {
     return () => {

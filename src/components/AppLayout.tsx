@@ -51,7 +51,7 @@ const AppLayout = () => {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-6 pb-24 md:pb-6">
+      <main className="app-main mx-auto max-w-6xl px-4 py-6 md:pb-6">
         <Outlet />
       </main>
       <AssistantWidget />
