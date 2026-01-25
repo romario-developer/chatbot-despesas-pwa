@@ -1,34 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import MonthPicker, {
-  MonthPickerFieldTrigger,
-  monthPickerFieldButtonClassName,
-} from "./MonthPicker";
 import { postAssistantMessage, type AssistantAction, type AssistantCard } from "../api/assistant";
-import {
-  formatMonthLabel,
-  getCurrentMonthInTimeZone,
-  getDefaultMonthRange,
-  isMonthInRange,
-} from "../utils/months";
+import { getCurrentMonthInTimeZone } from "../utils/months";
 
 const STORAGE_KEY = "assistantConversationId";
 const WIDGET_STATE_KEY = "assistantWidgetState";
-const ASSISTANT_INTRO =
-  "Oi! Quer analisar saldo, gastos, cartões ou planejamento?";
-const INITIAL_MESSAGE_ID = "assistant-intro";
-
 type AssistantMessage = {
   id: string;
   from: "user" | "assistant";
   text: string;
   cards?: AssistantCard[];
-};
-
-const INITIAL_ASSISTANT_MESSAGE: AssistantMessage = {
-  id: INITIAL_MESSAGE_ID,
-  from: "assistant",
-  text: ASSISTANT_INTRO,
 };
 
 const logAssistant = (...args: unknown[]) => {
@@ -104,22 +85,26 @@ const categorizeSuggestedActions = (actions: AssistantAction[]): AssistantAction
   };
 };
 
+const summarizeAssistantText = (text?: string) => {
+  if (!text) return null;
+  const firstLine = text
+    .split("\n")
+    .map((segment) => segment.trim())
+    .find(Boolean);
+  if (!firstLine) return null;
+  const normalized = firstLine.replace(/\s+/g, " ").trim();
+  return normalized.length > 90 ? `${normalized.slice(0, 90).trim()}…` : normalized;
+};
+
 const AssistantWidget = () => {
   const currentMonthValue = useMemo(
     () => getCurrentMonthInTimeZone("America/Bahia"),
     [],
   );
-  const monthRange = useMemo(
-    () => getDefaultMonthRange({ endMonth: currentMonthValue, monthsBack: 24 }),
-    [currentMonthValue],
-  );
-  const [month, setMonth] = useState(() => {
+  const [month] = useState(() => {
     if (typeof window === "undefined") return currentMonthValue;
     const stored = localStorage.getItem("selectedMonth");
-    if (stored && isMonthInRange(stored, monthRange.start, monthRange.end)) {
-      return stored;
-    }
-    return currentMonthValue;
+    return stored ?? currentMonthValue;
   });
   const [widgetState, setWidgetState] = useState<"collapsed" | "expanded">(() => {
     if (typeof window === "undefined") return "collapsed";
@@ -128,10 +113,12 @@ const AssistantWidget = () => {
   });
   const isExpanded = widgetState === "expanded";
   const [inputValue, setInputValue] = useState("");
-  const [messages, setMessages] = useState<AssistantMessage[]>([INITIAL_ASSISTANT_MESSAGE]);
+  const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [assistantCards, setAssistantCards] = useState<AssistantCard[]>([]);
+  const [confirmationNote, setConfirmationNote] = useState<string | null>(null);
   const [suggestedActions, setSuggestedActions] = useState<AssistantAction[]>([]);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -149,11 +136,6 @@ const AssistantWidget = () => {
       setConversationId(storedId);
     }
   }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem("selectedMonth", month);
-  }, [month]);
 
   useEffect(() => {
     if (!scrollRef.current) return;
@@ -254,10 +236,15 @@ const AssistantWidget = () => {
       from: "user",
       text: trimmed,
     };
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev) => {
+      const next = [...prev, userMessage];
+      return next.length > 12 ? next.slice(-12) : next;
+    });
     setInputValue("");
     setIsTyping(true);
     setIsSending(true);
+    setAssistantCards([]);
+    setConfirmationNote(null);
     setSuggestedActions([]);
 
     try {
@@ -279,7 +266,12 @@ const AssistantWidget = () => {
         text: response.assistantMessage,
         cards: safeCards,
       };
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages((prev) => {
+        const next = [...prev, assistantMessage];
+        return next.length > 14 ? next.slice(-14) : next;
+      });
+      setAssistantCards(safeCards);
+      setConfirmationNote(summarizeAssistantText(response.assistantMessage));
       setSuggestedActions(safeSuggestedActions);
     } catch (error) {
       logAssistant("assistant error", error);
@@ -288,7 +280,10 @@ const AssistantWidget = () => {
         from: "assistant",
         text: "Não consegui responder agora. Tente novamente.",
       };
-      setMessages((prev) => [...prev, assistantErrorMessage]);
+      setMessages((prev) => {
+        const next = [...prev, assistantErrorMessage];
+        return next.length > 14 ? next.slice(-14) : next;
+      });
       setSuggestedActions([]);
     } finally {
       setIsTyping(false);
@@ -307,7 +302,6 @@ const AssistantWidget = () => {
     inputRef.current?.focus();
   };
 
-  const monthLabel = useMemo(() => formatMonthLabel(month), [month]);
   const overlayTransitionClass = prefersReducedMotion ? "" : "transition-opacity duration-200 ease-out";
   const panelTransitionClass = prefersReducedMotion ? "" : "transition-all duration-200 ease-out";
 
@@ -315,7 +309,10 @@ const AssistantWidget = () => {
     ? "translate-y-0 opacity-100"
     : "translate-y-6 opacity-0 pointer-events-none";
 
-  const safeMessages = messages ?? [];
+  const userMessages = useMemo(
+    () => messages.filter((message) => message.from === "user"),
+    [messages],
+  );
   const actionGroups = useMemo(() => categorizeSuggestedActions(suggestedActions), [suggestedActions]);
   const { paymentActions, cardActions, categoryActions, adjustmentActions } = actionGroups;
   const hasQuickActionGroups =
@@ -329,7 +326,7 @@ const AssistantWidget = () => {
     <>
       <div
         aria-hidden={!isExpanded}
-        className={`fixed inset-0 z-50 flex items-end justify-center px-4 pb-4 ${isExpanded ? "" : "pointer-events-none"}`}
+        className={`fixed inset-0 z-50 flex items-end ${isExpanded ? "pointer-events-auto" : "pointer-events-none"} justify-center md:justify-end`}
       >
         <div
           className={`${overlayTransitionClass} absolute inset-0 bg-slate-900/40`}
@@ -337,192 +334,180 @@ const AssistantWidget = () => {
           aria-hidden="true"
           onClick={handleCollapse}
         />
-        <div
-          role="dialog"
-          aria-label="Assistente"
-          aria-modal="true"
-          id="assistant-widget-panel"
-          className={`relative w-full max-w-md rounded-3xl border border-slate-200 bg-white shadow-2xl ${panelTransitionClass} ${panelStateClasses} ${prefersReducedMotion ? "transition-none" : ""}`}
-          onClick={(event) => event.stopPropagation()}
-        >
-          <div className="flex items-center justify-between gap-3 rounded-t-3xl border-b border-slate-100 px-4 py-3">
-            <div className="flex items-start gap-3">
-              <span className="h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center text-2xl">
-                🙂
-              </span>
-              <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Assistente</p>
-                <p className="text-sm font-semibold text-slate-900">Conversa inteligente</p>
+        <div className="relative flex w-full justify-center md:justify-end">
+          <div
+            role="dialog"
+            aria-label="Assistente"
+            aria-modal="true"
+            id="assistant-widget-panel"
+            className={`relative mx-3 mb-4 flex w-full max-w-[420px] flex-col rounded-3xl border border-slate-200 bg-white shadow-2xl ${panelTransitionClass} ${panelStateClasses} ${prefersReducedMotion ? "transition-none" : ""} max-h-[60vh] md:max-h-[70vh]`}
+            style={{ minHeight: "320px" }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3 rounded-t-3xl border-b border-slate-100 px-4 py-3">
+              <div className="flex items-center gap-3">
+                <span className="h-9 w-9 rounded-2xl bg-primary text-white flex items-center justify-center text-lg">
+                  🙂
+                </span>
+                <p className="text-sm font-semibold text-slate-900">Assistente</p>
               </div>
+              <button
+                type="button"
+                onClick={handleCollapse}
+                aria-label="Fechar assistente"
+                className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+              >
+                ×
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={handleCollapse}
-              aria-label="Fechar assistente"
-              className="rounded-full border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
-            >
-              ×
-            </button>
-          </div>
-          <div className="px-4 pb-3 pt-2">
-            <MonthPicker
-              valueMonth={month}
-              onChangeMonth={setMonth}
-              minMonth={monthRange.start}
-              maxMonth={monthRange.end}
-              buttonClassName={monthPickerFieldButtonClassName}
-              trigger={<MonthPickerFieldTrigger label={`Mês: ${monthLabel}`} />}
-            />
-          </div>
-          <div className="flex h-[70vh] min-h-[360px] flex-col">
-            <div
-              ref={scrollRef}
-              aria-live="polite"
-              className="flex-1 space-y-3 overflow-y-auto px-4 py-3 text-sm leading-relaxed"
-            >
-              {safeMessages.map((message) => {
-                const messageCards = Array.isArray(message.cards) ? message.cards : [];
-                return (
-                  <div
-                    key={message.id}
-                    className={`flex flex-col gap-2 ${message.from === "user" ? "items-end" : ""}`}
-                  >
-                    <div
-                      className={`max-w-full rounded-2xl border px-4 py-3 text-sm ${
-                        message.from === "user"
-                          ? "bg-primary text-white border-primary/60"
-                          : "bg-slate-50 border border-slate-200 text-slate-900"
-                      }`}
-                    >
-                      {(message.text ?? "")
-                        .split("\n")
-                        .map((segment, index) => (
-                          <p key={`${message.id}-${index}`} className={index ? "mt-1" : ""}>
-                            {segment}
-                          </p>
-                        ))}
-                    </div>
-                    {messageCards.length > 0 && (
-                      <div className="grid gap-3 md:grid-cols-2">
-                        {messageCards.map(renderCard)}
+            <div className="px-4 pt-3">
+              {confirmationNote && (
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-900 shadow-sm">
+                  {confirmationNote}
+                </div>
+              )}
+            </div>
+            <div className="flex flex-1 flex-col overflow-hidden">
+              <div
+                ref={scrollRef}
+                aria-live="polite"
+                className="flex-1 overflow-y-auto px-4 py-3 text-sm leading-relaxed"
+                style={{ minHeight: 0 }}
+              >
+                {userMessages.length === 0 && !isTyping ? (
+                  <p className="text-xs leading-relaxed text-slate-500">Digite uma despesa… (ex: mercado 50)</p>
+                ) : (
+                  userMessages.map((message) => (
+                    <div key={message.id} className="flex flex-col gap-2 items-end">
+                      <div className="max-w-full rounded-2xl border border-primary/60 bg-primary px-4 py-3 text-sm font-semibold text-white">
+                        {(message.text ?? "")
+                          .split("\n")
+                          .map((segment, index) => (
+                            <p key={`${message.id}-${index}`} className={index ? "mt-1" : ""}>
+                              {segment}
+                            </p>
+                          ))}
                       </div>
+                    </div>
+                  ))
+                )}
+                {assistantCards.length > 0 && (
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    {assistantCards.map(renderCard)}
+                  </div>
+                )}
+                {isTyping && (
+                  <div className="mt-2 max-w-[70%] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                    Digitando...
+                  </div>
+                )}
+              </div>
+              <div className="border-t border-slate-200 px-4 py-3 pb-[env(safe-area-inset-bottom,1rem)]">
+                {adjustmentActions.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Confirmação</p>
+                    <p className="text-sm font-semibold text-slate-900">Despesa registrada!</p>
+                    <div className="flex flex-wrap gap-2">
+                      {adjustmentActions.map((action) => (
+                        <button
+                          key={`adjust-${action.label}`}
+                          type="button"
+                          onClick={() => handleSuggestedAction(action)}
+                          className={adjustmentChipClassName}
+                        >
+                          {action.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {hasQuickActionGroups && (
+                  <div className="mt-3 space-y-3">
+                    {paymentActions.length > 0 && (
+                      <section className="space-y-2">
+                        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Pagamento</p>
+                        <div className="flex flex-wrap gap-2">
+                          {paymentActions.map((action) => (
+                            <button
+                              key={`payment-${action.label}`}
+                              type="button"
+                              onClick={() => handleSuggestedAction(action)}
+                              className={quickActionChipClassName}
+                            >
+                              {action.label}
+                            </button>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+                    {cardActions.length > 0 && (
+                      <section className="space-y-2">
+                        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Cartões</p>
+                        <div className="flex flex-wrap gap-2">
+                          {cardActions.map((action) => (
+                            <button
+                              key={`card-${action.label}`}
+                              type="button"
+                              onClick={() => handleSuggestedAction(action)}
+                              className={quickActionChipClassName}
+                            >
+                              {action.label}
+                            </button>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+                    {categoryActions.length > 0 && (
+                      <section className="space-y-2">
+                        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Categorias sugeridas</p>
+                        <div className="flex flex-wrap gap-2">
+                          {categoryActions.map((action) => (
+                            <button
+                              key={`category-${action.label}`}
+                              type="button"
+                              onClick={() => handleSuggestedAction(action)}
+                              className={quickActionChipClassName}
+                            >
+                              {action.label}
+                            </button>
+                          ))}
+                        </div>
+                      </section>
                     )}
                   </div>
-                );
-              })}
-              {isTyping && (
-                <div className="max-w-[70%] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                  Digitando...
-                </div>
-              )}
-            </div>
-            <div className="border-t border-slate-200 px-4 py-3">
-              {adjustmentActions.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Confirmação</p>
-                  <p className="text-sm font-semibold text-slate-900">Despesa registrada!</p>
-                  <div className="flex flex-wrap gap-2">
-                    {adjustmentActions.map((action) => (
-                      <button
-                        key={`adjust-${action.label}`}
-                        type="button"
-                        onClick={() => handleSuggestedAction(action)}
-                        className={adjustmentChipClassName}
-                      >
-                        {action.label}
-                      </button>
-                    ))}
+                )}
+                <form onSubmit={handleSubmit} className="mt-4">
+                  <div className="flex items-center gap-3">
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      value={inputValue}
+                      onChange={(event) => setInputValue(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" && !event.shiftKey) {
+                          event.preventDefault();
+                          handleSendMessage(inputValue);
+                        }
+                      }}
+                      placeholder="Digite uma despesa… (ex: mercado 50)"
+                      className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!inputValue.trim() || isSending}
+                      className="inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-primary px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isSending ? "Enviando..." : "Enviar"}
+                    </button>
                   </div>
-                </div>
-              )}
-              {hasQuickActionGroups && (
-                <div className="mt-3 space-y-3">
-                  {paymentActions.length > 0 && (
-                    <section className="space-y-2">
-                      <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Pagamento</p>
-                      <div className="flex flex-wrap gap-2">
-                        {paymentActions.map((action) => (
-                          <button
-                            key={`payment-${action.label}`}
-                            type="button"
-                            onClick={() => handleSuggestedAction(action)}
-                            className={quickActionChipClassName}
-                          >
-                            {action.label}
-                          </button>
-                        ))}
-                      </div>
-                    </section>
-                  )}
-                  {cardActions.length > 0 && (
-                    <section className="space-y-2">
-                      <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Cartões</p>
-                      <div className="flex flex-wrap gap-2">
-                        {cardActions.map((action) => (
-                          <button
-                            key={`card-${action.label}`}
-                            type="button"
-                            onClick={() => handleSuggestedAction(action)}
-                            className={quickActionChipClassName}
-                          >
-                            {action.label}
-                          </button>
-                        ))}
-                      </div>
-                    </section>
-                  )}
-                  {categoryActions.length > 0 && (
-                    <section className="space-y-2">
-                      <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Categorias sugeridas</p>
-                      <div className="flex flex-wrap gap-2">
-                        {categoryActions.map((action) => (
-                          <button
-                            key={`category-${action.label}`}
-                            type="button"
-                            onClick={() => handleSuggestedAction(action)}
-                            className={quickActionChipClassName}
-                          >
-                            {action.label}
-                          </button>
-                        ))}
-                      </div>
-                    </section>
-                  )}
-                </div>
-              )}
-              <form onSubmit={handleSubmit} className="mt-4 border-t border-slate-200 pt-3">
-                <div className="flex items-center gap-3">
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={inputValue}
-                    onChange={(event) => setInputValue(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" && !event.shiftKey) {
-                        event.preventDefault();
-                        handleSendMessage(inputValue);
-                      }
-                    }}
-                    placeholder="Digite uma pergunta ou peça um insight..."
-                    className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!inputValue.trim() || isSending}
-                    className="inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-primary px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {isSending ? "Enviando..." : "Enviar"}
-                  </button>
-                </div>
-              </form>
+                </form>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div
-        className={`fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-[env(safe-area-inset-bottom,1rem)]`}
-      >
+      <div className="fixed inset-x-3 bottom-[env(safe-area-inset-bottom,1rem)] z-40 flex justify-center md:inset-auto md:bottom-4 md:right-4 md:justify-end">
         <button
           ref={toggleButtonRef}
           type="button"
@@ -539,7 +524,7 @@ const AssistantWidget = () => {
               </span>
               <div>
                 <p className="text-sm font-semibold text-slate-900">Assistente</p>
-                <p className="text-xs text-slate-500">Pergunte sobre seu mês</p>
+                <p className="text-xs text-slate-500">Registrar despesas</p>
               </div>
             </div>
             <span
