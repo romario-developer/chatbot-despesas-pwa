@@ -12,6 +12,11 @@ type AssistantMessage = {
   cards?: AssistantCard[];
 };
 
+type AssistantUiHint = {
+  kind?: string;
+  summary?: string;
+};
+
 const logAssistant = (...args: unknown[]) => {
   if (typeof window === "undefined") return;
   if (window.localStorage.getItem("DEBUG_ASSISTANT") === "1") {
@@ -118,7 +123,9 @@ const AssistantWidget = () => {
   const [isSending, setIsSending] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [assistantCards, setAssistantCards] = useState<AssistantCard[]>([]);
-  const [confirmationNote, setConfirmationNote] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [currentStage, setCurrentStage] = useState<string | null>(null);
+  const [lastUiHint, setLastUiHint] = useState<AssistantUiHint | null>(null);
   const [suggestedActions, setSuggestedActions] = useState<AssistantAction[]>([]);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -188,7 +195,7 @@ const AssistantWidget = () => {
 
   useEffect(() => {
     if (!isExpanded) {
-      setConfirmationNote(null);
+      setToastMessage(null);
     }
   }, [isExpanded]);
 
@@ -268,7 +275,7 @@ const AssistantWidget = () => {
     setIsTyping(true);
     setIsSending(true);
     setAssistantCards([]);
-    setConfirmationNote(null);
+    setToastMessage(null);
     setSuggestedActions([]);
 
     try {
@@ -284,31 +291,39 @@ const AssistantWidget = () => {
       const safeSuggestedActions = Array.isArray(response.suggestedActions)
         ? response.suggestedActions
         : [];
-      const actionBuckets = categorizeSuggestedActions(safeSuggestedActions);
-      const justSaved = actionBuckets.adjustmentActions.length > 0;
+      const stage = response.state?.stage ?? null;
+      const uiHint = response.uiHint ?? null;
+      const isSavedStage = stage === "saved" || uiHint?.kind === "saved";
       const assistantMessage: AssistantMessage = {
         id: `assistant-${Date.now()}`,
         from: "assistant",
         text: response.assistantMessage,
         cards: safeCards,
       };
-      setMessages((prev) => {
-        const next = [...prev, assistantMessage];
-        return next.length > 14 ? next.slice(-14) : next;
-      });
+      setCurrentStage(stage);
+      setLastUiHint(uiHint);
       setAssistantCards(safeCards);
-      if (justSaved) {
-        setConfirmationNote(summarizeAssistantText(response.assistantMessage));
+      setSuggestedActions(safeSuggestedActions);
+      const toastSummary =
+        uiHint?.summary ?? summarizeAssistantText(response.assistantMessage) ?? "Registrado";
+      if (isSavedStage) {
+        if (toastSummary) {
+          setToastMessage(toastSummary);
+        }
         if (typeof window !== "undefined") {
           autoCloseTimerRef.current = window.setTimeout(() => {
             setWidgetState("collapsed");
+            setToastMessage(null);
             autoCloseTimerRef.current = null;
-          }, 600);
+          }, 700);
         }
       } else {
-        setConfirmationNote(null);
+        setToastMessage(null);
+        setMessages((prev) => {
+          const next = [...prev, assistantMessage];
+          return next.length > 14 ? next.slice(-14) : next;
+        });
       }
-      setSuggestedActions(safeSuggestedActions);
     } catch (error) {
       logAssistant("assistant error", error);
       const assistantErrorMessage: AssistantMessage = {
@@ -345,14 +360,13 @@ const AssistantWidget = () => {
     ? "opacity-100 pointer-events-auto"
     : "opacity-0 pointer-events-none";
 
-  const userMessages = useMemo(
-    () => messages.filter((message) => message.from === "user"),
-    [messages],
-  );
   const actionGroups = useMemo(() => categorizeSuggestedActions(suggestedActions), [suggestedActions]);
   const { paymentActions, cardActions, categoryActions, adjustmentActions } = actionGroups;
   const hasQuickActionGroups =
     paymentActions.length > 0 || cardActions.length > 0 || categoryActions.length > 0;
+  const isSavedStageRendered =
+    currentStage === "saved" || lastUiHint?.kind === "saved";
+  const shouldShowQuickActions = !isSavedStageRendered && hasQuickActionGroups;
   const quickActionChipClassName =
     "rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary/70";
   const adjustmentChipClassName =
@@ -396,12 +410,12 @@ const AssistantWidget = () => {
               </button>
             </div>
             <div className="px-4 pt-3">
-              {confirmationNote && (
+              {toastMessage && (
                 <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-900 shadow-sm">
-                  {confirmationNote}
+                  {toastMessage}
                 </div>
               )}
-              {adjustmentActions.length > 0 && (
+              {!isSavedStageRendered && adjustmentActions.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {adjustmentActions.map((action) => (
                     <button
@@ -423,22 +437,34 @@ const AssistantWidget = () => {
                 className="flex-1 overflow-y-auto px-4 py-3 text-sm leading-relaxed"
                 style={{ minHeight: 0 }}
               >
-                {userMessages.length === 0 && !isTyping ? (
+                {messages.length === 0 && !isTyping ? (
                   <p className="text-xs leading-relaxed text-slate-500">Exemplos: mercado 50 • uber 23,90 crédito inter</p>
                 ) : (
-                  userMessages.map((message) => (
-                    <div key={message.id} className="flex flex-col gap-2 items-end">
-                      <div className="max-w-full rounded-2xl border border-primary/60 bg-primary px-4 py-3 text-sm font-semibold text-white">
-                        {(message.text ?? "")
-                          .split("\n")
-                          .map((segment, index) => (
-                            <p key={`${message.id}-${index}`} className={index ? "mt-1" : ""}>
-                              {segment}
-                            </p>
-                          ))}
+                  messages.map((message) => {
+                    const isUser = message.from === "user";
+                    return (
+                      <div
+                        key={message.id}
+                        className={`flex flex-col gap-2 ${isUser ? "items-end" : ""}`}
+                      >
+                        <div
+                          className={`max-w-full rounded-2xl border px-4 py-3 text-sm ${
+                            isUser
+                              ? "border-primary/60 bg-primary text-white"
+                              : "border-slate-200 bg-slate-50 text-slate-900"
+                          }`}
+                        >
+                          {(message.text ?? "")
+                            .split("\n")
+                            .map((segment, index) => (
+                              <p key={`${message.id}-${index}`} className={index ? "mt-1" : ""}>
+                                {segment}
+                              </p>
+                            ))}
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
                 {assistantCards.length > 0 && (
                   <div className="mt-3 grid gap-3 md:grid-cols-2">
@@ -452,7 +478,7 @@ const AssistantWidget = () => {
                 )}
               </div>
               <div className="sticky bottom-0 border-t border-slate-200 bg-white px-4 py-3 pb-[env(safe-area-inset-bottom,1rem)]">
-                {hasQuickActionGroups && (
+              {shouldShowQuickActions && (
                   <div className="mt-3 space-y-3">
                     {paymentActions.length > 0 && (
                       <section className="space-y-2">

@@ -30,6 +30,13 @@ export type AssistantResponse = {
   conversationId?: string;
   cards?: AssistantCard[];
   suggestedActions?: AssistantAction[];
+  state?: {
+    stage?: string;
+  };
+  uiHint?: {
+    kind?: string;
+    summary?: string;
+  };
 };
 
 export type AssistantRequest = {
