@@ -123,6 +123,7 @@ const AssistantWidget = () => {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const toggleButtonRef = useRef<HTMLButtonElement | null>(null);
+  const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const prefersReducedMotion = useMemo(() => {
     if (typeof window === "undefined") return false;
@@ -176,6 +177,21 @@ const AssistantWidget = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isExpanded]);
 
+  useEffect(() => {
+    return () => {
+      if (autoCloseTimerRef.current && typeof window !== "undefined") {
+        window.clearTimeout(autoCloseTimerRef.current);
+        autoCloseTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isExpanded) {
+      setConfirmationNote(null);
+    }
+  }, [isExpanded]);
+
   const renderCard = (card: AssistantCard, index: number) => {
     const baseClass =
       "rounded-2xl border border-slate-200 bg-white/80 p-3 shadow-sm shadow-slate-900/5";
@@ -224,6 +240,10 @@ const AssistantWidget = () => {
   }, []);
 
   const handleCollapse = useCallback(() => {
+    if (autoCloseTimerRef.current && typeof window !== "undefined") {
+      window.clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
     logAssistant("assistant close");
     setWidgetState("collapsed");
   }, []);
@@ -236,6 +256,10 @@ const AssistantWidget = () => {
       from: "user",
       text: trimmed,
     };
+    if (autoCloseTimerRef.current && typeof window !== "undefined") {
+      window.clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
     setMessages((prev) => {
       const next = [...prev, userMessage];
       return next.length > 12 ? next.slice(-12) : next;
@@ -260,6 +284,8 @@ const AssistantWidget = () => {
       const safeSuggestedActions = Array.isArray(response.suggestedActions)
         ? response.suggestedActions
         : [];
+      const actionBuckets = categorizeSuggestedActions(safeSuggestedActions);
+      const justSaved = actionBuckets.adjustmentActions.length > 0;
       const assistantMessage: AssistantMessage = {
         id: `assistant-${Date.now()}`,
         from: "assistant",
@@ -271,7 +297,17 @@ const AssistantWidget = () => {
         return next.length > 14 ? next.slice(-14) : next;
       });
       setAssistantCards(safeCards);
-      setConfirmationNote(summarizeAssistantText(response.assistantMessage));
+      if (justSaved) {
+        setConfirmationNote(summarizeAssistantText(response.assistantMessage));
+        if (typeof window !== "undefined") {
+          autoCloseTimerRef.current = window.setTimeout(() => {
+            setWidgetState("collapsed");
+            autoCloseTimerRef.current = null;
+          }, 600);
+        }
+      } else {
+        setConfirmationNote(null);
+      }
       setSuggestedActions(safeSuggestedActions);
     } catch (error) {
       logAssistant("assistant error", error);
@@ -306,8 +342,8 @@ const AssistantWidget = () => {
   const panelTransitionClass = prefersReducedMotion ? "" : "transition-all duration-200 ease-out";
 
   const panelStateClasses = isExpanded
-    ? "translate-y-0 opacity-100"
-    : "translate-y-6 opacity-0 pointer-events-none";
+    ? "opacity-100 pointer-events-auto"
+    : "opacity-0 pointer-events-none";
 
   const userMessages = useMemo(
     () => messages.filter((message) => message.from === "user"),
@@ -326,24 +362,23 @@ const AssistantWidget = () => {
     <>
       <div
         aria-hidden={!isExpanded}
-        className={`fixed inset-0 z-50 flex items-end ${isExpanded ? "pointer-events-auto" : "pointer-events-none"} justify-center md:justify-end`}
+        className={`fixed inset-0 z-50 ${isExpanded ? "" : "pointer-events-none"}`}
       >
         <div
-          className={`${overlayTransitionClass} absolute inset-0 bg-slate-900/40`}
+          className={`${overlayTransitionClass} absolute inset-0 z-40 bg-slate-900/40`}
           style={{ opacity: isExpanded ? 1 : 0 }}
           aria-hidden="true"
           onClick={handleCollapse}
         />
-        <div className="relative flex w-full justify-center md:justify-end">
-          <div
-            role="dialog"
-            aria-label="Assistente"
-            aria-modal="true"
-            id="assistant-widget-panel"
-            className={`relative mx-3 mb-4 flex w-full max-w-[420px] flex-col rounded-3xl border border-slate-200 bg-white shadow-2xl ${panelTransitionClass} ${panelStateClasses} ${prefersReducedMotion ? "transition-none" : ""} max-h-[60vh] md:max-h-[70vh]`}
-            style={{ minHeight: "320px" }}
-            onClick={(event) => event.stopPropagation()}
-          >
+        <div
+          role="dialog"
+          aria-label="Assistente"
+          aria-modal="true"
+          id="assistant-widget-panel"
+          className={`fixed bottom-3 left-3 right-3 z-50 w-auto rounded-3xl border border-slate-200 bg-white shadow-2xl ${panelTransitionClass} ${panelStateClasses} ${prefersReducedMotion ? "transition-none" : ""} max-h-[60svh] md:right-4 md:bottom-4 md:left-auto md:w-[380px] md:max-h-[58vh]`}
+          style={{ minHeight: "320px" }}
+          onClick={(event) => event.stopPropagation()}
+        >
             <div className="flex items-center justify-between gap-3 rounded-t-3xl border-b border-slate-100 px-4 py-3">
               <div className="flex items-center gap-3">
                 <span className="h-9 w-9 rounded-2xl bg-primary text-white flex items-center justify-center text-lg">
@@ -389,7 +424,7 @@ const AssistantWidget = () => {
                 style={{ minHeight: 0 }}
               >
                 {userMessages.length === 0 && !isTyping ? (
-                  <p className="text-xs leading-relaxed text-slate-500">Digite uma despesa… (ex: mercado 50)</p>
+                  <p className="text-xs leading-relaxed text-slate-500">Exemplos: mercado 50 • uber 23,90 crédito inter</p>
                 ) : (
                   userMessages.map((message) => (
                     <div key={message.id} className="flex flex-col gap-2 items-end">
@@ -416,7 +451,7 @@ const AssistantWidget = () => {
                   </div>
                 )}
               </div>
-              <div className="border-t border-slate-200 px-4 py-3 pb-[env(safe-area-inset-bottom,1rem)]">
+              <div className="sticky bottom-0 border-t border-slate-200 bg-white px-4 py-3 pb-[env(safe-area-inset-bottom,1rem)]">
                 {hasQuickActionGroups && (
                   <div className="mt-3 space-y-3">
                     {paymentActions.length > 0 && (
@@ -501,7 +536,6 @@ const AssistantWidget = () => {
             </div>
           </div>
         </div>
-      </div>
 
       <div className="fixed inset-x-3 bottom-[env(safe-area-inset-bottom,1rem)] z-40 flex justify-center md:inset-auto md:bottom-4 md:right-4 md:justify-end">
         <button
