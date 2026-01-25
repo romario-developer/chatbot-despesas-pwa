@@ -68,9 +68,8 @@ const DashboardCardsList = () => {
   const visibleRows = rows.slice(0, MAX_VISIBLE_CARDS);
   const hasMore = cards.length > MAX_VISIBLE_CARDS;
 
-  const handleCardClick = (cardId: string) => {
-    const encodedId = encodeURIComponent(cardId);
-    navigate(`/credit?cardId=${encodedId}`);
+  const handleCardClick = () => {
+    navigate("/cards");
   };
 
   const handleAddCard = () => {
@@ -78,7 +77,7 @@ const DashboardCardsList = () => {
   };
 
   const handleSeeAll = () => {
-    navigate("/credit");
+    navigate("/cards");
   };
 
   const renderDatesLine = (invoice?: CardInvoice) => {
@@ -136,7 +135,7 @@ const DashboardCardsList = () => {
               <button
                 key={card.id}
                 type="button"
-                onClick={() => handleCardClick(card.id)}
+                onClick={handleCardClick}
                 aria-label={`Abrir cartão ${card.name}`}
                 className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-white px-3 py-3 text-left transition-shadow hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 motion-safe:duration-200 motion-safe:ease-out"
               >

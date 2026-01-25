@@ -44,7 +44,6 @@ const AppRouter = () => (
             <Route path="/entries/:id/edit" element={<EntryEditPage />} />
             <Route path="/planning" element={<PlanningPage />} />
             <Route path="/categories" element={<CategoriesPage />} />
-            <Route path="/credit" element={<Navigate replace to="/cards" />} />
             <Route
               path="/credit/cards/:cardId/invoices/:cycleEnd"
               element={<InvoiceDetailsPage />}
