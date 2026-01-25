@@ -36,6 +36,8 @@ const AssistantWidget = () => {
   const focusScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resizeFrameRef = useRef<number | null>(null);
 
+  const savedStageRef = useRef(false);
+
   const prefersReducedMotion = useMemo(() => {
     if (typeof window === "undefined") return false;
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -252,11 +254,17 @@ const AssistantWidget = () => {
   }, []);
 
   useEffect(() => {
-    if (!isSavedStageRendered || !isExpanded || typeof window === "undefined") return;
+    if (!isSavedStageRendered || !isExpanded || typeof window === "undefined") {
+      savedStageRef.current = false;
+      return;
+    }
+    if (savedStageRef.current) return;
+    savedStageRef.current = true;
     if (autoCloseTimerRef.current) {
       window.clearTimeout(autoCloseTimerRef.current);
     }
     autoCloseTimerRef.current = window.setTimeout(() => {
+      savedStageRef.current = false;
       setWidgetState("collapsed");
       setToastMessage(null);
       autoCloseTimerRef.current = null;
@@ -275,6 +283,7 @@ const AssistantWidget = () => {
     }
     logAssistant("assistant close");
     setWidgetState("collapsed");
+    savedStageRef.current = false;
   }, []);
 
   const overlayTransitionClass = prefersReducedMotion ? "" : "transition-opacity duration-200 ease-out";
