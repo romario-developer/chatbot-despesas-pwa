@@ -15,6 +15,7 @@ const ChangePasswordPage = lazy(() => import("../pages/ChangePasswordPage"));
 const CategoriesPage = lazy(() => import("../pages/CategoriesPage"));
 const CardInvoicePage = lazy(() => import("../pages/CardInvoicePage"));
 const CardsPage = lazy(() => import("../pages/CardsPage"));
+const AssistantPage = lazy(() => import("../pages/AssistantPage"));
 
 const AppRouter = () => (
   <BrowserRouter>
@@ -46,6 +47,7 @@ const AppRouter = () => (
             <Route path="/categories" element={<CategoriesPage />} />
             <Route path="/cards/:cardId/invoice" element={<CardInvoicePage />} />
             <Route path="/cards" element={<CardsPage />} />
+            <Route path="/assistant" element={<AssistantPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

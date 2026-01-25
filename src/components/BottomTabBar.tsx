@@ -1,6 +1,6 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { ASSISTANT_OPEN_EVENT } from "../constants/assistantEvents";
 
 type TabItem = {
@@ -59,17 +59,35 @@ const BottomTabBar = () => {
     if (typeof window === "undefined") return;
     window.dispatchEvent(new CustomEvent(ASSISTANT_OPEN_EVENT));
   }, []);
+  const navigate = useNavigate();
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.matchMedia("(max-width: 767px)").matches;
+  });
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof document === "undefined") return undefined;
     const html = document.documentElement;
+    const mq = window.matchMedia("(max-width: 767px)");
     const setHeight = () => {
-      const value = window.matchMedia("(max-width: 767px)").matches ? "64px" : "0px";
+      const mobile = mq.matches;
+      setIsMobile(mobile);
+      const value = mobile ? "64px" : "0px";
       html.style.setProperty("--tabbar-height", value);
     };
     setHeight();
+    if (typeof mq.addEventListener === "function") {
+      mq.addEventListener("change", setHeight);
+    } else {
+      mq.addListener(setHeight);
+    }
     window.addEventListener("resize", setHeight);
     return () => {
+      if (typeof mq.removeEventListener === "function") {
+        mq.removeEventListener("change", setHeight);
+      } else {
+        mq.removeListener(setHeight);
+      }
       window.removeEventListener("resize", setHeight);
       html.style.setProperty("--tabbar-height", "0px");
     };
@@ -113,7 +131,13 @@ const BottomTabBar = () => {
         <div className="relative flex h-full items-center justify-center">
           <button
             type="button"
-            onClick={openAssistant}
+            onClick={() => {
+              if (isMobile) {
+                navigate("/assistant");
+              } else {
+                openAssistant();
+              }
+            }}
             aria-label="Abrir assistente"
             className="relative -top-6 flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-primary text-2xl text-white shadow-lg shadow-slate-900/20 transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:translate-y-0.5"
           >

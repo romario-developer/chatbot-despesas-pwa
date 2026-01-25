@@ -1,135 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { postAssistantMessage, type AssistantAction, type AssistantCard } from "../api/assistant";
-import { getCurrentMonthInTimeZone } from "../utils/months";
+import type { AssistantCard } from "../api/assistant";
 import useViewportVh from "../hooks/useViewportVh";
+import { useAssistantChat } from "../hooks/useAssistantChat";
 import { ASSISTANT_OPEN_EVENT } from "../constants/assistantEvents";
 
-const STORAGE_KEY = "assistantConversationId";
 const WIDGET_STATE_KEY = "assistantWidgetState";
-type AssistantMessage = {
-  id: string;
-  from: "user" | "assistant";
-  text: string;
-  cards?: AssistantCard[];
-};
-
-type AssistantUiHint = {
-  kind?: string;
-  summary?: string;
-};
+const TABBAR_BOTTOM_OFFSET = "calc(var(--tabbar-height, 64px) + env(safe-area-inset-bottom, 0px))";
+const LAUNCHER_BOTTOM_OFFSET = "calc(var(--tabbar-height, 64px) + env(safe-area-inset-bottom, 0px) + 12px)";
 
 const logAssistant = (...args: unknown[]) => {
   if (typeof window === "undefined") return;
   if (window.localStorage.getItem("DEBUG_ASSISTANT") === "1") {
-    // eslint-disable-next-line no-console
     console.debug("[assistant-debug]", ...args);
   }
 };
 
-const PAYMENT_KEYWORDS = ["pix", "débito", "debito", "crédito", "credito", "dinheiro"];
-const ADJUST_KEYWORDS = ["desfazer", "trocar", "ajustar"];
-const CARD_HINTS = [
-  "cartão",
-  "cartao",
-  "visa",
-  "mastercard",
-  "amex",
-  "nubank",
-  "inter",
-  "itau",
-  "itaú",
-  "bradesco",
-  "banco do brasil",
-  "santander",
-  "c6",
-  "credicard",
-  "cielo",
-  "digio",
-  "neon",
-  "pan",
-];
-
-type AssistantActionBuckets = {
-  paymentActions: AssistantAction[];
-  cardActions: AssistantAction[];
-  categoryActions: AssistantAction[];
-  adjustmentActions: AssistantAction[];
-};
-
-const categorizeSuggestedActions = (actions: AssistantAction[]): AssistantActionBuckets => {
-  const paymentActions: AssistantAction[] = [];
-  const cardActions: AssistantAction[] = [];
-  const categoryActions: AssistantAction[] = [];
-  const adjustmentActions: AssistantAction[] = [];
-
-  actions.forEach((action) => {
-    const label = action.label?.toLowerCase() ?? "";
-    const prompt = action.prompt?.toLowerCase() ?? "";
-    const matchesAdjustment = ADJUST_KEYWORDS.some((keyword) => label.includes(keyword) || prompt.includes(keyword));
-    if (matchesAdjustment) {
-      adjustmentActions.push(action);
-      return;
-    }
-    const matchesPayment = PAYMENT_KEYWORDS.some((keyword) => label.includes(keyword) || prompt.includes(keyword));
-    if (matchesPayment) {
-      paymentActions.push(action);
-      return;
-    }
-    const matchesCardHint = CARD_HINTS.some((keyword) => label.includes(keyword) || prompt.includes(keyword));
-    if (matchesCardHint) {
-      cardActions.push(action);
-      return;
-    }
-    categoryActions.push(action);
-  });
-
-  return {
-    paymentActions,
-    cardActions,
-    categoryActions: categoryActions.slice(0, 3),
-    adjustmentActions,
-  };
-};
-
-const summarizeAssistantText = (text?: string) => {
-  if (!text) return null;
-  const firstLine = text
-    .split("\n")
-    .map((segment) => segment.trim())
-    .find(Boolean);
-  if (!firstLine) return null;
-  const normalized = firstLine.replace(/\s+/g, " ").trim();
-  return normalized.length > 90 ? `${normalized.slice(0, 90).trim()}…` : normalized;
-};
-
 const AssistantWidget = () => {
-  const currentMonthValue = useMemo(
-    () => getCurrentMonthInTimeZone("America/Bahia"),
-    [],
-  );
-  const [month] = useState(() => {
-    if (typeof window === "undefined") return currentMonthValue;
-    const stored = localStorage.getItem("selectedMonth");
-    return stored ?? currentMonthValue;
-  });
   const [widgetState, setWidgetState] = useState<"collapsed" | "expanded">(() => {
     if (typeof window === "undefined") return "collapsed";
-    const stored = localStorage.getItem(WIDGET_STATE_KEY);
+    const stored = window.localStorage.getItem(WIDGET_STATE_KEY);
     return stored === "expanded" ? "expanded" : "collapsed";
   });
   const isExpanded = widgetState === "expanded";
-  const [inputValue, setInputValue] = useState("");
-  const [messages, setMessages] = useState<AssistantMessage[]>([]);
-  const [conversationId, setConversationId] = useState<string | null>(null);
-  const [isSending, setIsSending] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
-  const [assistantCards, setAssistantCards] = useState<AssistantCard[]>([]);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [currentStage, setCurrentStage] = useState<string | null>(null);
-  const [lastUiHint, setLastUiHint] = useState<AssistantUiHint | null>(null);
-  const [suggestedActions, setSuggestedActions] = useState<AssistantAction[]>([]);
-  const [enteringMessageId, setEnteringMessageId] = useState<string | null>(null);
   const [isMobileView, setIsMobileView] = useState(() => {
     if (typeof window === "undefined") return true;
     return window.innerWidth < 768;
@@ -143,9 +36,6 @@ const AssistantWidget = () => {
   const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const focusScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resizeFrameRef = useRef<number | null>(null);
-
-  const TABBAR_BOTTOM_OFFSET = "calc(var(--tabbar-height, 64px) + env(safe-area-inset-bottom, 0px))";
-  const LAUNCHER_BOTTOM_OFFSET = "calc(var(--tabbar-height, 64px) + env(safe-area-inset-bottom, 0px) + 12px)";
 
   const prefersReducedMotion = useMemo(() => {
     if (typeof window === "undefined") return false;
@@ -228,91 +118,6 @@ const AssistantWidget = () => {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const storedId = localStorage.getItem(STORAGE_KEY);
-    if (storedId) {
-      setConversationId(storedId);
-    }
-  }, []);
-
-  const scrollMessagesInstant = useCallback(() => {
-    if (!scrollRef.current) return;
-    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, []);
-
-  const scrollToLatestMessage = useCallback(() => {
-    if (typeof window === "undefined") {
-      scrollMessagesInstant();
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-      return;
-    }
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        scrollMessagesInstant();
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-      });
-    });
-  }, [scrollMessagesInstant, messagesEndRef]);
-
-  // Keep the textarea under three lines (≈96px) so it never overwhelms the viewport.
-  const adjustInputHeight = useCallback(() => {
-    const el = inputRef.current;
-    if (!el) return;
-    const resize = () => {
-      el.style.height = "auto";
-      const maxHeight = 96;
-      const nextHeight = Math.min(el.scrollHeight, maxHeight);
-      el.style.height = `${nextHeight}px`;
-      resizeFrameRef.current = null;
-    };
-    if (typeof window === "undefined") {
-      resize();
-      return;
-    }
-    if (resizeFrameRef.current) {
-      window.cancelAnimationFrame(resizeFrameRef.current);
-    }
-    resizeFrameRef.current = window.requestAnimationFrame(resize);
-  }, []);
-
-  const handleInputFocus = useCallback(() => {
-    if (typeof window === "undefined") return;
-    if (focusScrollTimeoutRef.current) {
-      window.clearTimeout(focusScrollTimeoutRef.current);
-    }
-    // Delay scroll until the keyboard finishes sliding up so the input stays visible.
-    focusScrollTimeoutRef.current = window.setTimeout(() => {
-      scrollToLatestMessage();
-    }, 300);
-  }, [scrollToLatestMessage]);
-
-  useEffect(() => {
-    scrollToLatestMessage();
-  }, [messages, isTyping, scrollToLatestMessage]);
-
-  useEffect(() => {
-    if (!messages.length) {
-      setEnteringMessageId(null);
-      return;
-    }
-    const lastId = messages[messages.length - 1].id;
-    setEnteringMessageId((prev) => (prev === lastId ? prev : lastId));
-  }, [messages]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (conversationId) {
-      localStorage.setItem(STORAGE_KEY, conversationId);
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
-    }
-  }, [conversationId]);
-
-  useEffect(() => {
-    adjustInputHeight();
-  }, [inputValue, adjustInputHeight]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
     localStorage.setItem(WIDGET_STATE_KEY, widgetState);
   }, [widgetState]);
 
@@ -343,19 +148,104 @@ const AssistantWidget = () => {
     };
     window.addEventListener(ASSISTANT_OPEN_EVENT, handleAssistantOpen);
     return () => window.removeEventListener(ASSISTANT_OPEN_EVENT, handleAssistantOpen);
-  }, [setWidgetState]);
+  }, []);
+
+  const {
+    assistantCards,
+    actionGroups,
+    enteringMessageId,
+    handleSendMessage,
+    handleSuggestedAction,
+    inputValue,
+    isSending,
+    isTyping,
+    messages,
+    setInputValue,
+    setToastMessage,
+    toastMessage,
+    currentStage,
+    lastUiHint,
+  } = useAssistantChat();
+
+  const { paymentActions, cardActions, categoryActions, adjustmentActions } = actionGroups;
+  const hasQuickActionGroups =
+    paymentActions.length > 0 || cardActions.length > 0 || categoryActions.length > 0;
+  const isSavedStageRendered = currentStage === "saved" || lastUiHint?.kind === "saved";
+  const shouldShowQuickActions = !isSavedStageRendered && hasQuickActionGroups;
+
+  const scrollMessagesInstant = useCallback(() => {
+    if (!scrollRef.current) return;
+    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, []);
+
+  const scrollToLatestMessage = useCallback(() => {
+    if (typeof window === "undefined") {
+      scrollMessagesInstant();
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        scrollMessagesInstant();
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+      });
+    });
+  }, [scrollMessagesInstant]);
 
   useEffect(() => {
+    scrollToLatestMessage();
+  }, [messages, isTyping, scrollToLatestMessage]);
+
+  const adjustInputHeight = useCallback(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    const resize = () => {
+      el.style.height = "auto";
+      const maxHeight = 96;
+      const nextHeight = Math.min(el.scrollHeight, maxHeight);
+      el.style.height = `${nextHeight}px`;
+      resizeFrameRef.current = null;
+    };
+    if (typeof window === "undefined") {
+      resize();
+      return;
+    }
+    if (resizeFrameRef.current) {
+      window.cancelAnimationFrame(resizeFrameRef.current);
+    }
+    resizeFrameRef.current = window.requestAnimationFrame(resize);
+  }, []);
+
+  useEffect(() => {
+    adjustInputHeight();
+  }, [inputValue, adjustInputHeight]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (autoCloseTimerRef.current && typeof window !== "undefined") {
+      window.clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isExpanded) {
+      setToastMessage(null);
+    }
+  }, [isExpanded, setToastMessage]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
     return () => {
-      if (autoCloseTimerRef.current && typeof window !== "undefined") {
+      if (autoCloseTimerRef.current) {
         window.clearTimeout(autoCloseTimerRef.current);
         autoCloseTimerRef.current = null;
       }
-      if (focusScrollTimeoutRef.current && typeof window !== "undefined") {
+      if (focusScrollTimeoutRef.current) {
         window.clearTimeout(focusScrollTimeoutRef.current);
         focusScrollTimeoutRef.current = null;
       }
-      if (resizeFrameRef.current && typeof window !== "undefined") {
+      if (resizeFrameRef.current) {
         window.cancelAnimationFrame(resizeFrameRef.current);
         resizeFrameRef.current = null;
       }
@@ -363,52 +253,16 @@ const AssistantWidget = () => {
   }, []);
 
   useEffect(() => {
-    if (!isExpanded) {
+    if (!isSavedStageRendered || !isExpanded || typeof window === "undefined") return;
+    if (autoCloseTimerRef.current) {
+      window.clearTimeout(autoCloseTimerRef.current);
+    }
+    autoCloseTimerRef.current = window.setTimeout(() => {
+      setWidgetState("collapsed");
       setToastMessage(null);
-    }
-  }, [isExpanded]);
-
-  const renderCard = (card: AssistantCard, index: number) => {
-    const baseClass =
-      "rounded-2xl border border-slate-200 bg-white/80 p-3 shadow-sm shadow-slate-900/5";
-    if (card.type === "metric") {
-      return (
-        <div key={`${card.type}-${index}`} className={baseClass}>
-          <p className="text-[10px] uppercase tracking-[0.3em] text-slate-500">{card.title}</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">{card.value}</p>
-          {card.subtitle && <p className="text-xs text-slate-500">{card.subtitle}</p>}
-        </div>
-      );
-    }
-    if (card.type === "list") {
-      const listItems = Array.isArray(card.items) ? card.items : [];
-      return (
-        <div key={`${card.type}-${index}`} className={baseClass}>
-          <p className="text-xs font-semibold text-slate-900">{card.title}</p>
-          {card.subtitle && <p className="text-xs text-slate-500">{card.subtitle}</p>}
-          <ul className="mt-2 space-y-1 text-sm text-slate-700">
-            {listItems.map((item, itemIndex) => (
-              <li key={`${item}-${itemIndex}`}>• {item}</li>
-            ))}
-          </ul>
-        </div>
-      );
-    }
-    return (
-      <div key={`${card.type}-${index}`} className={baseClass}>
-        <p className="text-xs font-semibold text-slate-900">{card.title}</p>
-        {card.subtitle && <p className="text-xs text-slate-500">{card.subtitle}</p>}
-          <div className="mt-2 space-y-1">
-            {(Array.isArray(card.fields) ? card.fields : []).map((field) => (
-              <div key={field.label} className="flex items-center justify-between text-sm">
-                <span className="text-slate-500">{field.label}</span>
-                <span className="font-semibold text-slate-900">{field.value}</span>
-              </div>
-            ))}
-          </div>
-      </div>
-    );
-  };
+      autoCloseTimerRef.current = null;
+    }, 700);
+  }, [isSavedStageRendered, isExpanded, setToastMessage]);
 
   const handleExpand = useCallback(() => {
     logAssistant("assistant open");
@@ -416,113 +270,13 @@ const AssistantWidget = () => {
   }, []);
 
   const handleCollapse = useCallback(() => {
-    if (autoCloseTimerRef.current && typeof window !== "undefined") {
+    if (autoCloseTimerRef.current) {
       window.clearTimeout(autoCloseTimerRef.current);
       autoCloseTimerRef.current = null;
     }
     logAssistant("assistant close");
     setWidgetState("collapsed");
   }, []);
-
-  const handleSendMessage = async (value: string) => {
-    const trimmed = value.trim();
-    if (!trimmed || isSending) return;
-    const userMessage: AssistantMessage = {
-      id: `user-${Date.now()}`,
-      from: "user",
-      text: trimmed,
-    };
-    if (autoCloseTimerRef.current && typeof window !== "undefined") {
-      window.clearTimeout(autoCloseTimerRef.current);
-      autoCloseTimerRef.current = null;
-    }
-    setMessages((prev) => {
-      const next = [...prev, userMessage];
-      return next.length > 12 ? next.slice(-12) : next;
-    });
-    setInputValue("");
-    setIsTyping(true);
-    setIsSending(true);
-    setAssistantCards([]);
-    setToastMessage(null);
-    setSuggestedActions([]);
-
-    try {
-      const response = await postAssistantMessage({
-        message: trimmed,
-        month,
-        conversationId: conversationId ?? undefined,
-      });
-      if (response.conversationId) {
-        setConversationId(response.conversationId);
-      }
-      const safeCards = Array.isArray(response.cards) ? response.cards : [];
-      const safeSuggestedActions = Array.isArray(response.suggestedActions)
-        ? response.suggestedActions
-        : [];
-      const stage = response.state?.stage ?? null;
-      const uiHint = response.uiHint ?? null;
-      const isSavedStage = stage === "saved" || uiHint?.kind === "saved";
-      const assistantMessage: AssistantMessage = {
-        id: `assistant-${Date.now()}`,
-        from: "assistant",
-        text: response.assistantMessage,
-        cards: safeCards,
-      };
-      setCurrentStage(stage);
-      setLastUiHint(uiHint);
-      setAssistantCards(safeCards);
-      setSuggestedActions(safeSuggestedActions);
-      const toastSummary =
-        uiHint?.summary ?? summarizeAssistantText(response.assistantMessage) ?? "Registrado";
-      if (isSavedStage) {
-        if (toastSummary) {
-          setToastMessage(toastSummary);
-        }
-        if (typeof window !== "undefined") {
-          autoCloseTimerRef.current = window.setTimeout(() => {
-            setWidgetState("collapsed");
-            setToastMessage(null);
-            autoCloseTimerRef.current = null;
-          }, 700);
-        }
-      } else {
-        setToastMessage(null);
-        setMessages((prev) => {
-          const next = [...prev, assistantMessage];
-          return next.length > 14 ? next.slice(-14) : next;
-        });
-      }
-    } catch (error) {
-      logAssistant("assistant error", error);
-      const assistantErrorMessage: AssistantMessage = {
-        id: `assistant-error-${Date.now()}`,
-        from: "assistant",
-        text: "Não consegui responder agora. Tente novamente.",
-      };
-      setMessages((prev) => {
-        const next = [...prev, assistantErrorMessage];
-        return next.length > 14 ? next.slice(-14) : next;
-      });
-      setSuggestedActions([]);
-    } finally {
-      setIsTyping(false);
-      setIsSending(false);
-    }
-  };
-
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const trimmed = inputValue.trim();
-    if (!trimmed) return;
-    handleSendMessage(trimmed);
-  };
-
-  const handleSuggestedAction = (action: AssistantAction) => {
-    const payload = action.prompt?.trim() || action.label;
-    handleSendMessage(payload);
-    inputRef.current?.focus();
-  };
 
   const overlayTransitionClass = prefersReducedMotion ? "" : "transition-opacity duration-200 ease-out";
   const panelTransitionClass = prefersReducedMotion ? "" : "transition-all duration-200 ease-out";
@@ -540,17 +294,75 @@ const AssistantWidget = () => {
         minHeight: "320px",
       };
 
-  const actionGroups = useMemo(() => categorizeSuggestedActions(suggestedActions), [suggestedActions]);
-  const { paymentActions, cardActions, categoryActions, adjustmentActions } = actionGroups;
-  const hasQuickActionGroups =
-    paymentActions.length > 0 || cardActions.length > 0 || categoryActions.length > 0;
-  const isSavedStageRendered =
-    currentStage === "saved" || lastUiHint?.kind === "saved";
-  const shouldShowQuickActions = !isSavedStageRendered && hasQuickActionGroups;
   const quickActionChipClassName =
     "rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary/70 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-primary/70";
   const adjustmentChipClassName =
     "rounded-full border border-slate-200 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm shadow-slate-900/40 transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 dark:border-slate-600";
+
+  const renderCard = useCallback(
+    (card: AssistantCard, index: number) => {
+      const baseClass =
+        "rounded-2xl border border-slate-200 bg-white/80 p-3 shadow-sm shadow-slate-900/5 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100";
+      if (card.type === "metric") {
+        return (
+          <div key={`${card.type}-${index}`} className={baseClass}>
+            <p className="text-[10px] uppercase tracking-[0.3em] text-slate-500">{card.title}</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-100">{card.value}</p>
+            {card.subtitle && <p className="text-xs text-slate-500">{card.subtitle}</p>}
+          </div>
+        );
+      }
+      if (card.type === "list") {
+        const listItems = Array.isArray(card.items) ? card.items : [];
+        return (
+          <div key={`${card.type}-${index}`} className={baseClass}>
+            <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">{card.title}</p>
+            {card.subtitle && <p className="text-xs text-slate-500">{card.subtitle}</p>}
+            <ul className="mt-2 space-y-1 text-sm text-slate-700 dark:text-slate-200">
+              {listItems.map((item, itemIndex) => (
+                <li key={`${item}-${itemIndex}`}>• {item}</li>
+              ))}
+            </ul>
+          </div>
+        );
+      }
+      return (
+        <div key={`${card.type}-${index}`} className={baseClass}>
+          <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">{card.title}</p>
+          {card.subtitle && <p className="text-xs text-slate-500">{card.subtitle}</p>}
+          <div className="mt-2 space-y-1">
+            {(Array.isArray(card.fields) ? card.fields : []).map((field) => (
+              <div key={field.label} className="flex items-center justify-between text-sm">
+                <span className="text-slate-500">{field.label}</span>
+                <span className="font-semibold text-slate-900">{field.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    },
+    [],
+  );
+
+  const handleInputFocus = useCallback(() => {
+    if (typeof window === "undefined") return;
+    if (focusScrollTimeoutRef.current) {
+      window.clearTimeout(focusScrollTimeoutRef.current);
+    }
+    focusScrollTimeoutRef.current = window.setTimeout(() => {
+      scrollToLatestMessage();
+    }, 300);
+  }, [scrollToLatestMessage]);
+
+  const handleSubmit = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      const trimmed = inputValue.trim();
+      if (!trimmed) return;
+      handleSendMessage(trimmed);
+    },
+    [handleSendMessage, inputValue],
+  );
 
   return (
     <>
@@ -582,7 +394,7 @@ const AssistantWidget = () => {
               <span className="h-9 w-9 rounded-2xl bg-primary text-white flex items-center justify-center text-lg">
                 🙂
               </span>
-              <p className="text-sm font-semibold text-slate-900">Assistente</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Assistente</p>
             </div>
             <button
               type="button"
@@ -623,13 +435,14 @@ const AssistantWidget = () => {
               style={{ minHeight: 0, WebkitOverflowScrolling: "touch" }}
             >
               {messages.length === 0 && !isTyping ? (
-                <p className="text-xs leading-relaxed text-slate-500">Exemplos: mercado 50 • uber 23,90 crédito inter</p>
+                <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-300">
+                  Exemplos: mercado 50 • uber 23,90 crédito inter
+                </p>
               ) : (
                 messages.map((message) => {
                   const isUser = message.from === "user";
                   const shouldAnimateMessage =
                     !prefersReducedMotion && message.id === enteringMessageId;
-                  // Skip animation when the user prefers reduced motion.
                   const messageWrapperClass = [
                     "assistant-message",
                     shouldAnimateMessage ? "assistant-message-enter" : "",
@@ -646,7 +459,7 @@ const AssistantWidget = () => {
                             ? "border-primary/60 bg-primary text-white"
                             : "border-slate-200 bg-slate-50 text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                           }`}
-                        >
+                      >
                         {(message.text ?? "")
                           .split("\n")
                           .map((segment, index) => (
@@ -659,18 +472,18 @@ const AssistantWidget = () => {
                   );
                 })
               )}
-                {assistantCards.length > 0 && (
-                  <div className="mt-3 grid gap-3 md:grid-cols-2">
-                    {assistantCards.map(renderCard)}
-                  </div>
-                )}
-                {isTyping && (
-                  <div className="mt-2 max-w-[70%] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                    Digitando...
-                  </div>
-                )}
-                <div ref={messagesEndRef} aria-hidden="true" className="h-px w-full" />
-              </div>
+              {assistantCards.length > 0 && (
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  {assistantCards.map(renderCard)}
+                </div>
+              )}
+              {isTyping && (
+                <div className="mt-2 max-w-[70%] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                  Digitando...
+                </div>
+              )}
+              <div ref={messagesEndRef} aria-hidden="true" className="h-px w-full" />
+            </div>
             <div
               className="flex-shrink-0 border-t border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-950"
               style={{ paddingBottom: "var(--composer-safe, env(safe-area-inset-bottom,1rem))" }}
@@ -680,7 +493,9 @@ const AssistantWidget = () => {
                   <div className="space-y-3">
                     {paymentActions.length > 0 && (
                       <section className="space-y-2">
-                        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Pagamento</p>
+                        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
+                          Pagamento
+                        </p>
                         <div className="flex flex-wrap gap-2">
                           {paymentActions.map((action) => (
                             <button
@@ -697,7 +512,9 @@ const AssistantWidget = () => {
                     )}
                     {cardActions.length > 0 && (
                       <section className="space-y-2">
-                        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Cartões</p>
+                        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
+                          Cartões
+                        </p>
                         <div className="flex flex-wrap gap-2">
                           {cardActions.map((action) => (
                             <button
@@ -714,7 +531,9 @@ const AssistantWidget = () => {
                     )}
                     {categoryActions.length > 0 && (
                       <section className="space-y-2">
-                        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Categorias sugeridas</p>
+                        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
+                          Categorias sugeridas
+                        </p>
                         <div className="flex flex-wrap gap-2">
                           {categoryActions.map((action) => (
                             <button
@@ -753,7 +572,7 @@ const AssistantWidget = () => {
                   <button
                     type="submit"
                     disabled={!inputValue.trim() || isSending}
-                    className="inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-primary px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-primary px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
                   >
                     {isSending ? "Enviando..." : "Enviar"}
                   </button>
@@ -762,7 +581,7 @@ const AssistantWidget = () => {
             </div>
           </div>
         </div>
-        </div>
+      </div>
 
       <div
         className="fixed z-[96] flex md:inset-auto md:bottom-4 md:right-4 md:justify-end"
@@ -793,15 +612,15 @@ const AssistantWidget = () => {
                 🙂
               </span>
               <div>
-                <p className="text-sm font-semibold text-slate-900">Assistente</p>
-                <p className="text-xs text-slate-500">Registrar despesas</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Assistente</p>
+                <p className="text-xs text-slate-500 dark:text-slate-300">Registrar despesas</p>
               </div>
             </div>
             <span
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 transition group-hover:border-primary"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 transition group-hover:border-primary dark:border-slate-700"
               aria-hidden="true"
             >
-              <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 stroke-slate-600" strokeWidth="1.5">
+              <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 stroke-slate-600 dark:stroke-slate-100" strokeWidth="1.5">
                 <path d="M5 8l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </span>
