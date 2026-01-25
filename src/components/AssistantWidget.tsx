@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { postAssistantMessage, type AssistantAction, type AssistantCard } from "../api/assistant";
 import { getCurrentMonthInTimeZone } from "../utils/months";
+import useViewportVh from "../hooks/useViewportVh";
 
 const STORAGE_KEY = "assistantConversationId";
 const WIDGET_STATE_KEY = "assistantWidgetState";
@@ -127,14 +128,48 @@ const AssistantWidget = () => {
   const [currentStage, setCurrentStage] = useState<string | null>(null);
   const [lastUiHint, setLastUiHint] = useState<AssistantUiHint | null>(null);
   const [suggestedActions, setSuggestedActions] = useState<AssistantAction[]>([]);
+  const [enteringMessageId, setEnteringMessageId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const chatRootRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const toggleButtonRef = useRef<HTMLButtonElement | null>(null);
   const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const focusScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resizeFrameRef = useRef<number | null>(null);
 
   const prefersReducedMotion = useMemo(() => {
     if (typeof window === "undefined") return false;
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }, []);
+
+  useViewportVh();
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.body.classList.add("chat-lock-scroll");
+    return () => {
+      document.body.classList.remove("chat-lock-scroll");
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const vv = window.visualViewport;
+    if (!vv) return undefined;
+    // VisualViewport keeps the iOS PWA height in sync when the keyboard opens.
+    const onVvResize = () => {
+      if (!chatRootRef.current) return;
+      chatRootRef.current.style.height = `${vv.height}px`;
+      document.documentElement.style.setProperty("--vh", `${vv.height * 0.01}px`);
+    };
+    onVvResize();
+    vv.addEventListener("resize", onVvResize);
+    vv.addEventListener("scroll", onVvResize);
+    return () => {
+      vv.removeEventListener("resize", onVvResize);
+      vv.removeEventListener("scroll", onVvResize);
+    };
   }, []);
 
   useEffect(() => {
@@ -145,10 +180,69 @@ const AssistantWidget = () => {
     }
   }, []);
 
-  useEffect(() => {
+  const scrollMessagesInstant = useCallback(() => {
     if (!scrollRef.current) return;
     scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages, isTyping]);
+  }, []);
+
+  const scrollToLatestMessage = useCallback(() => {
+    if (typeof window === "undefined") {
+      scrollMessagesInstant();
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        scrollMessagesInstant();
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+      });
+    });
+  }, [scrollMessagesInstant, messagesEndRef]);
+
+  // Keep the textarea under three lines (≈96px) so it never overwhelms the viewport.
+  const adjustInputHeight = useCallback(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    const resize = () => {
+      el.style.height = "auto";
+      const maxHeight = 96;
+      const nextHeight = Math.min(el.scrollHeight, maxHeight);
+      el.style.height = `${nextHeight}px`;
+      resizeFrameRef.current = null;
+    };
+    if (typeof window === "undefined") {
+      resize();
+      return;
+    }
+    if (resizeFrameRef.current) {
+      window.cancelAnimationFrame(resizeFrameRef.current);
+    }
+    resizeFrameRef.current = window.requestAnimationFrame(resize);
+  }, []);
+
+  const handleInputFocus = useCallback(() => {
+    if (typeof window === "undefined") return;
+    if (focusScrollTimeoutRef.current) {
+      window.clearTimeout(focusScrollTimeoutRef.current);
+    }
+    // Delay scroll until the keyboard finishes sliding up so the input stays visible.
+    focusScrollTimeoutRef.current = window.setTimeout(() => {
+      scrollToLatestMessage();
+    }, 300);
+  }, [scrollToLatestMessage]);
+
+  useEffect(() => {
+    scrollToLatestMessage();
+  }, [messages, isTyping, scrollToLatestMessage]);
+
+  useEffect(() => {
+    if (!messages.length) {
+      setEnteringMessageId(null);
+      return;
+    }
+    const lastId = messages[messages.length - 1].id;
+    setEnteringMessageId((prev) => (prev === lastId ? prev : lastId));
+  }, [messages]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -158,6 +252,10 @@ const AssistantWidget = () => {
       localStorage.removeItem(STORAGE_KEY);
     }
   }, [conversationId]);
+
+  useEffect(() => {
+    adjustInputHeight();
+  }, [inputValue, adjustInputHeight]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -189,6 +287,14 @@ const AssistantWidget = () => {
       if (autoCloseTimerRef.current && typeof window !== "undefined") {
         window.clearTimeout(autoCloseTimerRef.current);
         autoCloseTimerRef.current = null;
+      }
+      if (focusScrollTimeoutRef.current && typeof window !== "undefined") {
+        window.clearTimeout(focusScrollTimeoutRef.current);
+        focusScrollTimeoutRef.current = null;
+      }
+      if (resizeFrameRef.current && typeof window !== "undefined") {
+        window.cancelAnimationFrame(resizeFrameRef.current);
+        resizeFrameRef.current = null;
       }
     };
   }, []);
@@ -389,83 +495,93 @@ const AssistantWidget = () => {
           aria-label="Assistente"
           aria-modal="true"
           id="assistant-widget-panel"
-          className={`fixed bottom-3 left-3 right-3 z-50 w-auto rounded-3xl border border-slate-200 bg-white shadow-2xl ${panelTransitionClass} ${panelStateClasses} ${prefersReducedMotion ? "transition-none" : ""} max-h-[60svh] md:right-4 md:bottom-4 md:left-auto md:w-[380px] md:max-h-[58vh]`}
+          ref={chatRootRef}
+          className={`mx-3 my-3 flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl ${panelTransitionClass} ${panelStateClasses} ${prefersReducedMotion ? "transition-none" : ""} md:mx-0 md:w-[380px] md:max-h-[58vh]`}
           style={{ minHeight: "320px" }}
           onClick={(event) => event.stopPropagation()}
         >
-            <div className="flex items-center justify-between gap-3 rounded-t-3xl border-b border-slate-100 px-4 py-3">
-              <div className="flex items-center gap-3">
-                <span className="h-9 w-9 rounded-2xl bg-primary text-white flex items-center justify-center text-lg">
-                  🙂
-                </span>
-                <p className="text-sm font-semibold text-slate-900">Assistente</p>
+          <div className="flex items-center justify-between gap-3 rounded-t-3xl border-b border-slate-100 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <span className="h-9 w-9 rounded-2xl bg-primary text-white flex items-center justify-center text-lg">
+                🙂
+              </span>
+              <p className="text-sm font-semibold text-slate-900">Assistente</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleCollapse}
+              aria-label="Fechar assistente"
+              className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+            >
+              ×
+            </button>
+          </div>
+          <div className="px-4 pt-3">
+            {toastMessage && (
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-900 shadow-sm">
+                {toastMessage}
               </div>
-              <button
-                type="button"
-                onClick={handleCollapse}
-                aria-label="Fechar assistente"
-                className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
-              >
-                ×
-              </button>
-            </div>
-            <div className="px-4 pt-3">
-              {toastMessage && (
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-900 shadow-sm">
-                  {toastMessage}
-                </div>
-              )}
-              {!isSavedStageRendered && adjustmentActions.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {adjustmentActions.map((action) => (
-                    <button
-                      key={`adjust-${action.label}`}
-                      type="button"
-                      onClick={() => handleSuggestedAction(action)}
-                      className={adjustmentChipClassName}
-                    >
-                      {action.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="flex flex-1 flex-col overflow-hidden">
-              <div
-                ref={scrollRef}
-                aria-live="polite"
-                className="flex-1 overflow-y-auto px-4 py-3 text-sm leading-relaxed"
-                style={{ minHeight: 0 }}
-              >
-                {messages.length === 0 && !isTyping ? (
-                  <p className="text-xs leading-relaxed text-slate-500">Exemplos: mercado 50 • uber 23,90 crédito inter</p>
-                ) : (
-                  messages.map((message) => {
-                    const isUser = message.from === "user";
-                    return (
+            )}
+            {!isSavedStageRendered && adjustmentActions.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {adjustmentActions.map((action) => (
+                  <button
+                    key={`adjust-${action.label}`}
+                    type="button"
+                    onClick={() => handleSuggestedAction(action)}
+                    className={adjustmentChipClassName}
+                  >
+                    {action.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-1 flex-col overflow-hidden">
+            {/* Overscroll behavior keeps the scroll chain inside the chat panel. */}
+            <div
+              ref={scrollRef}
+              aria-live="polite"
+              className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 pt-3 text-sm leading-relaxed overscroll-contain scroll-smooth"
+              style={{ minHeight: 0, WebkitOverflowScrolling: "touch" }}
+            >
+              {messages.length === 0 && !isTyping ? (
+                <p className="text-xs leading-relaxed text-slate-500">Exemplos: mercado 50 • uber 23,90 crédito inter</p>
+              ) : (
+                messages.map((message) => {
+                  const isUser = message.from === "user";
+                  const shouldAnimateMessage =
+                    !prefersReducedMotion && message.id === enteringMessageId;
+                  // Skip animation when the user prefers reduced motion.
+                  const messageWrapperClass = [
+                    "assistant-message",
+                    shouldAnimateMessage ? "assistant-message-enter" : "",
+                    "flex flex-col gap-2",
+                    isUser ? "items-end" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ");
+                  return (
+                    <div key={message.id} className={messageWrapperClass}>
                       <div
-                        key={message.id}
-                        className={`flex flex-col gap-2 ${isUser ? "items-end" : ""}`}
-                      >
-                        <div
-                          className={`max-w-full rounded-2xl border px-4 py-3 text-sm ${
-                            isUser
-                              ? "border-primary/60 bg-primary text-white"
-                              : "border-slate-200 bg-slate-50 text-slate-900"
+                        className={`max-w-full rounded-2xl border px-4 py-3 text-sm ${
+                          isUser
+                            ? "border-primary/60 bg-primary text-white"
+                            : "border-slate-200 bg-slate-50 text-slate-900"
                           }`}
                         >
-                          {(message.text ?? "")
-                            .split("\n")
-                            .map((segment, index) => (
-                              <p key={`${message.id}-${index}`} className={index ? "mt-1" : ""}>
-                                {segment}
-                              </p>
-                            ))}
-                        </div>
+                        {(message.text ?? "")
+                          .split("\n")
+                          .map((segment, index) => (
+                            <p key={`${message.id}-${index}`} className={index ? "mt-1" : ""}>
+                              {segment}
+                            </p>
+                          ))}
                       </div>
-                    );
-                  })
-                )}
+                    </div>
+                  );
+                })
+              )}
                 {assistantCards.length > 0 && (
                   <div className="mt-3 grid gap-3 md:grid-cols-2">
                     {assistantCards.map(renderCard)}
@@ -476,10 +592,12 @@ const AssistantWidget = () => {
                     Digitando...
                   </div>
                 )}
+                <div ref={messagesEndRef} aria-hidden="true" className="h-px w-full" />
               </div>
-              <div className="sticky bottom-0 border-t border-slate-200 bg-white px-4 py-3 pb-[env(safe-area-inset-bottom,1rem)]">
+            <div className="flex-shrink-0 border-t border-slate-200 bg-white px-4 py-3 pb-[env(safe-area-inset-bottom,1rem)]">
               {shouldShowQuickActions && (
-                  <div className="mt-3 space-y-3">
+                <div className="mt-3 max-h-[170px] overflow-y-auto pr-1">
+                  <div className="space-y-3">
                     {paymentActions.length > 0 && (
                       <section className="space-y-2">
                         <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Pagamento</p>
@@ -532,35 +650,38 @@ const AssistantWidget = () => {
                       </section>
                     )}
                   </div>
-                )}
-                <form onSubmit={handleSubmit} className="mt-4">
-                  <div className="flex items-center gap-3">
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      value={inputValue}
-                      onChange={(event) => setInputValue(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" && !event.shiftKey) {
-                          event.preventDefault();
-                          handleSendMessage(inputValue);
-                        }
-                      }}
-                      placeholder="Digite uma despesa… (ex: mercado 50)"
-                      className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!inputValue.trim() || isSending}
-                      className="inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-primary px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {isSending ? "Enviando..." : "Enviar"}
-                    </button>
-                  </div>
-                </form>
-              </div>
+                </div>
+              )}
+              <form onSubmit={handleSubmit} className="mt-4">
+                <div className="flex items-center gap-3">
+                  <textarea
+                    ref={inputRef}
+                    rows={1}
+                    value={inputValue}
+                    onChange={(event) => setInputValue(event.target.value)}
+                    onFocus={handleInputFocus}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" && !event.shiftKey) {
+                        event.preventDefault();
+                        handleSendMessage(inputValue);
+                      }
+                    }}
+                    placeholder="Digite uma despesa… (ex: mercado 50)"
+                    className="flex-1 min-h-[44px] max-h-[96px] resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
+                    style={{ maxHeight: "min(96px, calc(var(--vh, 1vh) * 25))" }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!inputValue.trim() || isSending}
+                    className="inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-primary px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isSending ? "Enviando..." : "Enviar"}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
+        </div>
         </div>
 
       <div className="fixed inset-x-3 bottom-[env(safe-area-inset-bottom,1rem)] z-40 flex justify-center md:inset-auto md:bottom-4 md:right-4 md:justify-end">

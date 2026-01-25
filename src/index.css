@@ -2,8 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+#assistant-widget-panel {
+  /* Mirror the viewport via --vh instead of trusting 100vh on mobile chrome. */
+  height: 100dvh;
+  height: calc(var(--vh, 1vh) * 100);
+}
+
 :root {
   color-scheme: light;
+}
+
+html,
+body {
+  height: 100%;
 }
 
 body {
@@ -12,6 +23,39 @@ body {
 
 #root {
   @apply min-h-screen;
+}
+
+body.chat-lock-scroll {
+  /* Lock body scroll when the assistant is mounted so only the chat scrolls. */
+  overflow: hidden;
+}
+
+.assistant-message {
+  /* Soft transition for new messages before the override animation hits. */
+  transition: opacity 160ms ease-out, transform 160ms ease-out;
+}
+
+.assistant-message-enter {
+  opacity: 0;
+  transform: translateY(6px);
+  animation: assistantMessageIn 160ms ease-out forwards;
+}
+
+@keyframes assistantMessageIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assistant-message,
+  .assistant-message-enter {
+    animation: none;
+    transition: none;
+    transform: none;
+    opacity: 1;
+  }
 }
 
 .card {
