@@ -43,13 +43,6 @@ const tabs = [
       <path d="M5 7h10v10H5zM12 7v10M8 7v4" strokeWidth="1.5" strokeLinecap="round" />
     ),
   },
-  {
-    label: "Mais",
-    to: "/more",
-    icon: (
-      <path d="M6 10h8M6 6h8M6 14h8" strokeWidth="1.5" strokeLinecap="round" />
-    ),
-  },
 ];
 
 const BottomTabBar = () => {
@@ -67,7 +60,7 @@ const BottomTabBar = () => {
             end={tab.to === "/"}
             className={({ isActive }: { isActive: boolean }) =>
               [
-                "flex flex-col items-center justify-center rounded-2xl px-2 py-2 text-xs font-semibold transition",
+                "flex-1 flex flex-col items-center justify-center rounded-2xl px-2 py-2 text-xs font-semibold transition",
                 isActive ? "text-primary" : "text-slate-500 hover:text-primary",
               ].join(" ")
             }
