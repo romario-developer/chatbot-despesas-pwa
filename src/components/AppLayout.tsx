@@ -17,7 +17,7 @@ const mobileLinkClasses = ({ isActive }: { isActive: boolean }) =>
   ].join(" ");
 
 const AppLayout = () => {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {

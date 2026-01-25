@@ -58,13 +58,12 @@ const BottomTabBar = () => {
             key={tab.to}
             to={tab.to}
             end={tab.to === "/"}
-            className={({ isActive }) =>
+            className={({ isActive }: { isActive: boolean }) =>
               [
                 "flex flex-col items-center justify-center rounded-2xl px-2 py-2 text-xs font-semibold transition",
                 isActive ? "text-primary" : "text-slate-500 hover:text-primary",
               ].join(" ")
             }
-            aria-current={({ isActive }) => (isActive ? "page" : undefined)}
           >
             <svg
               viewBox="0 0 20 20"
