@@ -2,6 +2,7 @@ import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import AssistantWidget from "./AssistantWidget";
+import BottomTabBar from "./BottomTabBar";
 
 const linkClasses = ({ isActive }: { isActive: boolean }) =>
   [
@@ -36,55 +37,66 @@ const AppLayout = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
-            <div className="text-lg font-semibold text-primary">Despesas</div>
-            {label && (
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                {label}
-              </span>
-            )}
-          </div>
-          <nav className="hidden items-center gap-4 md:flex">
-            <NavLink to="/" end className={linkClasses}>
-              Dashboard
-            </NavLink>
-            <NavLink to="/entries" className={linkClasses}>
-              Lancamentos
-            </NavLink>
-            <NavLink to="/categories" className={linkClasses}>
-              Categorias
-            </NavLink>
-            <NavLink to="/planning" className={linkClasses}>
-              Planejamento
-            </NavLink>
+            <header class="sticky top-0 z-10 border-b border-slate-200 bg-white pt-[env(safe-area-inset-top)]">
+        <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+          <div class="flex items-center gap-3">
             <button
               type="button"
-              onClick={handleLogout}
-              className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:border-primary hover:text-primary"
+              class="md:hidden rounded-full border border-slate-200 p-2 text-slate-700 transition hover:border-primary hover:text-primary"
+              aria-label="Abrir menu"
             >
-              Logout
+              <svg viewBox="0 0 20 20" class="h-5 w-5" fill="currentColor" aria-hidden="true">
+                <path d="M3 6h14M3 10h14M3 14h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
             </button>
-          </nav>
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen(true)}
-            className="rounded-full border border-slate-200 p-2 text-slate-700 transition hover:border-primary hover:text-primary md:hidden"
-            aria-label="Abrir menu"
-          >
-            <svg
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              className="h-5 w-5"
-              aria-hidden="true"
+            <span class="hidden text-lg font-semibold text-primary md:block">Despesas</span>
+          </div>
+          <div class="flex items-center justify-center">
+            <div class="h-10 w-10 rounded-full border border-slate-200 bg-primary text-white shadow-sm flex items-center justify-center text-lg font-semibold">
+              D
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <nav class="hidden items-center gap-4 md:flex">
+              <NavLink to="/" end className={linkClasses}>
+                Dashboard
+              </NavLink>
+              <NavLink to="/entries" className={linkClasses}>
+                Lancamentos
+              </NavLink>
+              <NavLink to="/categories" className={linkClasses}>
+                Categorias
+              </NavLink>
+              <NavLink to="/planning" className={linkClasses}>
+                Planejamento
+              </NavLink>
+              <button
+                type="button"
+                onClick={handleLogout}
+                class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:border-primary hover:text-primary"
+              >
+                Logout
+              </button>
+            </nav>
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              class="md:hidden rounded-full border border-slate-200 p-2 text-slate-700 transition hover:border-primary hover:text-primary"
+              aria-label="Abrir menu"
             >
-              <path d="M10 6.25a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5zM10 11.25a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5zM10 16.25a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5z" />
-            </svg>
-          </button>
+              <svg
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                class="h-5 w-5"
+                aria-hidden="true"
+              >
+                <path d="M10 6.25a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5zM10 11.25a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5zM10 16.25a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5z" />
+              </svg>
+            </button>
+          </div>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-6">
+      <main className="mx-auto max-w-6xl px-4 py-6 pb-24 md:pb-6">
         <Outlet />
       </main>
       {mobileMenuOpen && (
@@ -166,6 +178,7 @@ const AppLayout = () => {
         </div>
       )}
       <AssistantWidget />
+      <BottomTabBar />
 
     </div>
   );
