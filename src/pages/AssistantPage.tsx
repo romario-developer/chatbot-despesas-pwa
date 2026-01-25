@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import type { AssistantCard } from "../api/assistant";
@@ -17,6 +18,7 @@ const AssistantPage = () => {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const [prefersReducedMotion] = useState(() => {
     if (typeof window === "undefined") return false;
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -96,6 +98,9 @@ const AssistantPage = () => {
       const offsetTop = vv?.offsetTop ?? 0;
       const inset = Math.max(window.innerHeight - viewportHeight - offsetTop, 0);
       setKeyboardInset(inset);
+      if (rootRef.current) {
+        rootRef.current.style.setProperty("--kbd", `${inset}px`);
+      }
     };
     updateInset();
     if (vv) {
@@ -111,6 +116,9 @@ const AssistantPage = () => {
       }
       window.removeEventListener("resize", updateInset);
       window.removeEventListener("orientationchange", updateInset);
+      if (rootRef.current) {
+        rootRef.current.style.removeProperty("--kbd");
+      }
     };
   }, []);
 
@@ -203,8 +211,22 @@ const AssistantPage = () => {
     [],
   );
 
+  const bubbleStyle: CSSProperties = {
+    maxWidth: "85%",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word",
+    whiteSpace: "pre-wrap",
+  };
+
   return (
-    <div className="fixed inset-0 flex flex-col bg-slate-950 text-slate-50">
+    <div
+      ref={rootRef}
+      className="fixed inset-0 flex flex-col bg-slate-950 text-slate-50"
+      style={{
+        height: "100dvh",
+        minHeight: "calc(var(--vh, 1vh) * 100)",
+      }}
+    >
       <header className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
         <button
           type="button"
@@ -330,6 +352,7 @@ const AssistantPage = () => {
                           ? "border-primary/60 bg-primary text-white"
                           : "border-slate-700 bg-slate-900 text-slate-100"
                         }`}
+                      style={bubbleStyle}
                     >
                       {(message.text ?? "")
                         .split("\n")

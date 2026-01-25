@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
 import AssistantWidget from "./AssistantWidget";
@@ -15,6 +15,11 @@ const AppLayout = () => {
   const { logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.innerWidth < 768;
+  });
+  const location = useLocation();
 
   const handleLogout = () => {
     logout();
@@ -28,6 +33,29 @@ const AppLayout = () => {
     closeSettings();
     logout();
   };
+
+  const hideTabBar = isMobileView && location.pathname.startsWith("/assistant");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 767px)");
+    const handleChange = () => setIsMobileView(mq.matches);
+    handleChange();
+    if (typeof mq.addEventListener === "function") {
+      mq.addEventListener("change", handleChange);
+    } else {
+      mq.addListener(handleChange);
+    }
+    window.addEventListener("resize", handleChange);
+    return () => {
+      if (typeof mq.removeEventListener === "function") {
+        mq.removeEventListener("change", handleChange);
+      } else {
+        mq.removeListener(handleChange);
+      }
+      window.removeEventListener("resize", handleChange);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
@@ -86,7 +114,7 @@ const AppLayout = () => {
           </div>
         </div>
       </header>
-      <main className="app-main mx-auto max-w-6xl px-4 py-6 md:pb-6">
+      <main className={`${hideTabBar ? "pb-6" : "app-main"} mx-auto max-w-6xl px-4 py-6 md:pb-6`}>
         <Outlet />
       </main>
       {settingsOpen && (
