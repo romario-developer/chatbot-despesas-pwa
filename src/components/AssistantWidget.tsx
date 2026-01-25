@@ -39,6 +39,71 @@ const logAssistant = (...args: unknown[]) => {
   }
 };
 
+const PAYMENT_KEYWORDS = ["pix", "débito", "debito", "crédito", "credito", "dinheiro"];
+const ADJUST_KEYWORDS = ["desfazer", "trocar", "ajustar"];
+const CARD_HINTS = [
+  "cartão",
+  "cartao",
+  "visa",
+  "mastercard",
+  "amex",
+  "nubank",
+  "inter",
+  "itau",
+  "itaú",
+  "bradesco",
+  "banco do brasil",
+  "santander",
+  "c6",
+  "credicard",
+  "cielo",
+  "digio",
+  "neon",
+  "pan",
+];
+
+type AssistantActionBuckets = {
+  paymentActions: AssistantAction[];
+  cardActions: AssistantAction[];
+  categoryActions: AssistantAction[];
+  adjustmentActions: AssistantAction[];
+};
+
+const categorizeSuggestedActions = (actions: AssistantAction[]): AssistantActionBuckets => {
+  const paymentActions: AssistantAction[] = [];
+  const cardActions: AssistantAction[] = [];
+  const categoryActions: AssistantAction[] = [];
+  const adjustmentActions: AssistantAction[] = [];
+
+  actions.forEach((action) => {
+    const label = action.label?.toLowerCase() ?? "";
+    const prompt = action.prompt?.toLowerCase() ?? "";
+    const matchesAdjustment = ADJUST_KEYWORDS.some((keyword) => label.includes(keyword) || prompt.includes(keyword));
+    if (matchesAdjustment) {
+      adjustmentActions.push(action);
+      return;
+    }
+    const matchesPayment = PAYMENT_KEYWORDS.some((keyword) => label.includes(keyword) || prompt.includes(keyword));
+    if (matchesPayment) {
+      paymentActions.push(action);
+      return;
+    }
+    const matchesCardHint = CARD_HINTS.some((keyword) => label.includes(keyword) || prompt.includes(keyword));
+    if (matchesCardHint) {
+      cardActions.push(action);
+      return;
+    }
+    categoryActions.push(action);
+  });
+
+  return {
+    paymentActions,
+    cardActions,
+    categoryActions: categoryActions.slice(0, 3),
+    adjustmentActions,
+  };
+};
+
 const AssistantWidget = () => {
   const currentMonthValue = useMemo(
     () => getCurrentMonthInTimeZone("America/Bahia"),
@@ -239,6 +304,7 @@ const AssistantWidget = () => {
   const handleSuggestedAction = (action: AssistantAction) => {
     const payload = action.prompt?.trim() || action.label;
     handleSendMessage(payload);
+    inputRef.current?.focus();
   };
 
   const monthLabel = useMemo(() => formatMonthLabel(month), [month]);
@@ -250,7 +316,14 @@ const AssistantWidget = () => {
     : "translate-y-6 opacity-0 pointer-events-none";
 
   const safeMessages = messages ?? [];
-  const safeSuggestedActions = suggestedActions ?? [];
+  const actionGroups = useMemo(() => categorizeSuggestedActions(suggestedActions), [suggestedActions]);
+  const { paymentActions, cardActions, categoryActions, adjustmentActions } = actionGroups;
+  const hasQuickActionGroups =
+    paymentActions.length > 0 || cardActions.length > 0 || categoryActions.length > 0;
+  const quickActionChipClassName =
+    "rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary/70";
+  const adjustmentChipClassName =
+    "rounded-full border border-slate-200 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm shadow-slate-900/40 transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900";
 
   return (
     <>
@@ -343,48 +416,106 @@ const AssistantWidget = () => {
                 </div>
               )}
             </div>
-            {safeSuggestedActions.length > 0 && (
-              <div className="border-t border-slate-100 px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Sugestões</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {safeSuggestedActions.map((action) => (
-                    <button
-                      key={action.label}
-                      type="button"
-                      onClick={() => handleSuggestedAction(action)}
-                      className="rounded-2xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-primary hover:text-primary"
-                    >
-                      {action.label}
-                    </button>
-                  ))}
+            <div className="border-t border-slate-200 px-4 py-3">
+              {adjustmentActions.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Confirmação</p>
+                  <p className="text-sm font-semibold text-slate-900">Despesa registrada!</p>
+                  <div className="flex flex-wrap gap-2">
+                    {adjustmentActions.map((action) => (
+                      <button
+                        key={`adjust-${action.label}`}
+                        type="button"
+                        onClick={() => handleSuggestedAction(action)}
+                        className={adjustmentChipClassName}
+                      >
+                        {action.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-            <form onSubmit={handleSubmit} className="border-t border-slate-200 px-4 py-3">
-              <div className="flex items-center gap-3">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={inputValue}
-                  onChange={(event) => setInputValue(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" && !event.shiftKey) {
-                      event.preventDefault();
-                      handleSendMessage(inputValue);
-                    }
-                  }}
-                  placeholder="Digite uma pergunta ou peça um insight..."
-                  className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
-                />
-                <button
-                  type="submit"
-                  disabled={!inputValue.trim() || isSending}
-                  className="inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-primary px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isSending ? "Enviando..." : "Enviar"}
-                </button>
-              </div>
-            </form>
+              )}
+              {hasQuickActionGroups && (
+                <div className="mt-3 space-y-3">
+                  {paymentActions.length > 0 && (
+                    <section className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Pagamento</p>
+                      <div className="flex flex-wrap gap-2">
+                        {paymentActions.map((action) => (
+                          <button
+                            key={`payment-${action.label}`}
+                            type="button"
+                            onClick={() => handleSuggestedAction(action)}
+                            className={quickActionChipClassName}
+                          >
+                            {action.label}
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                  {cardActions.length > 0 && (
+                    <section className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Cartões</p>
+                      <div className="flex flex-wrap gap-2">
+                        {cardActions.map((action) => (
+                          <button
+                            key={`card-${action.label}`}
+                            type="button"
+                            onClick={() => handleSuggestedAction(action)}
+                            className={quickActionChipClassName}
+                          >
+                            {action.label}
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                  {categoryActions.length > 0 && (
+                    <section className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Categorias sugeridas</p>
+                      <div className="flex flex-wrap gap-2">
+                        {categoryActions.map((action) => (
+                          <button
+                            key={`category-${action.label}`}
+                            type="button"
+                            onClick={() => handleSuggestedAction(action)}
+                            className={quickActionChipClassName}
+                          >
+                            {action.label}
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                </div>
+              )}
+              <form onSubmit={handleSubmit} className="mt-4 border-t border-slate-200 pt-3">
+                <div className="flex items-center gap-3">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={inputValue}
+                    onChange={(event) => setInputValue(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" && !event.shiftKey) {
+                        event.preventDefault();
+                        handleSendMessage(inputValue);
+                      }
+                    }}
+                    placeholder="Digite uma pergunta ou peça um insight..."
+                    className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!inputValue.trim() || isSending}
+                    className="inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-primary px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isSending ? "Enviando..." : "Enviar"}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       </div>
