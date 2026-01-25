@@ -143,6 +143,9 @@ const AssistantWidget = () => {
   const focusScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resizeFrameRef = useRef<number | null>(null);
 
+  const TABBAR_BOTTOM_OFFSET = "calc(var(--tabbar-height, 64px) + env(safe-area-inset-bottom, 0px))";
+  const LAUNCHER_BOTTOM_OFFSET = "calc(var(--tabbar-height, 64px) + env(safe-area-inset-bottom, 0px) + 12px)";
+
   const prefersReducedMotion = useMemo(() => {
     if (typeof window === "undefined") return false;
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -193,7 +196,7 @@ const AssistantWidget = () => {
       const keyboardOpen = vv ? visibleHeight < window.innerHeight - 50 : false;
       const nextHeight = Math.max(320, Math.min(targetHeight, visibleHeight - 8));
       chatRootRef.current.style.height = `${nextHeight}px`;
-      chatRootRef.current.style.bottom = "0px";
+      chatRootRef.current.style.bottom = TABBAR_BOTTOM_OFFSET;
       chatRootRef.current.style.top = "auto";
       chatRootRef.current.style.setProperty("--composer-safe", keyboardOpen ? "0px" : "env(safe-area-inset-bottom)");
     };
@@ -207,6 +210,7 @@ const AssistantWidget = () => {
         if (chatRootRef.current) {
           chatRootRef.current.style.height = "";
           chatRootRef.current.style.bottom = "";
+          chatRootRef.current.style.top = "";
           chatRootRef.current.style.removeProperty("--composer-safe");
         }
       };
@@ -215,6 +219,7 @@ const AssistantWidget = () => {
       if (chatRootRef.current) {
         chatRootRef.current.style.height = "";
         chatRootRef.current.style.bottom = "";
+        chatRootRef.current.style.top = "";
         chatRootRef.current.style.removeProperty("--composer-safe");
       }
     };
@@ -519,7 +524,7 @@ const AssistantWidget = () => {
   const panelLayoutStyle = isMobileView
     ? {
         height: "var(--chat-vh, calc(var(--vh, 1vh) * 82))",
-        bottom: "0px",
+        bottom: TABBAR_BOTTOM_OFFSET,
       }
     : {
         minHeight: "320px",
@@ -541,10 +546,10 @@ const AssistantWidget = () => {
     <>
       <div
         aria-hidden={!isExpanded}
-        className={`fixed inset-0 z-50 ${isExpanded ? "" : "pointer-events-none"}`}
+        className={`fixed inset-0 z-[90] ${isExpanded ? "" : "pointer-events-none"}`}
       >
         <div
-          className={`${overlayTransitionClass} absolute inset-0 z-40 bg-slate-900/40`}
+          className={`${overlayTransitionClass} absolute inset-0 z-[88] bg-slate-900/40`}
           style={{ opacity: isExpanded ? 1 : 0 }}
           aria-hidden="true"
           onClick={handleCollapse}
@@ -555,7 +560,7 @@ const AssistantWidget = () => {
           aria-modal="true"
           id="assistant-widget-panel"
           ref={chatRootRef}
-          className={`fixed left-0 right-0 bottom-0 z-[52] flex h-full flex-col overflow-hidden rounded-t-[24px] bg-white ${panelTransitionClass} ${panelStateClasses} ${prefersReducedMotion ? "transition-none" : ""} md:inset-auto md:right-4 md:bottom-4 md:left-auto md:w-[380px] md:max-h-[70vh] md:h-auto md:rounded-3xl md:border md:border-slate-200 md:shadow-2xl`}
+          className={`fixed left-0 right-0 bottom-0 z-[94] flex h-full flex-col overflow-hidden rounded-t-[24px] bg-white ${panelTransitionClass} ${panelStateClasses} ${prefersReducedMotion ? "transition-none" : ""} md:inset-auto md:right-4 md:bottom-4 md:left-auto md:w-[380px] md:max-h-[70vh] md:h-auto md:rounded-3xl md:border md:border-slate-200 md:shadow-2xl md:z-[52]`}
           style={panelLayoutStyle}
           onClick={(event) => event.stopPropagation()}
         >
@@ -749,7 +754,17 @@ const AssistantWidget = () => {
         </div>
         </div>
 
-      <div className="fixed inset-x-3 bottom-[env(safe-area-inset-bottom,1rem)] z-40 flex justify-center md:inset-auto md:bottom-4 md:right-4 md:justify-end">
+      <div
+        className="fixed z-[96] flex md:inset-auto md:bottom-4 md:right-4 md:justify-end"
+        style={
+          isMobileView
+            ? {
+                left: "16px",
+                bottom: LAUNCHER_BOTTOM_OFFSET,
+              }
+            : undefined
+        }
+      >
         <button
           ref={toggleButtonRef}
           type="button"
@@ -757,9 +772,12 @@ const AssistantWidget = () => {
           aria-controls="assistant-widget-panel"
           aria-label="Abrir assistente"
           onClick={handleExpand}
-          className="group w-full max-w-sm rounded-full border border-slate-200 bg-white px-4 py-3 text-left shadow-lg shadow-slate-200 transition hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+          className="group flex h-14 w-14 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-lg shadow-slate-200 transition hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white md:h-auto md:w-full md:max-w-sm md:gap-3 md:px-4 md:py-3 md:rounded-[32px]"
         >
-          <div className="flex items-center justify-between gap-3">
+          <span className="h-9 w-9 rounded-full bg-primary text-white flex items-center justify-center text-2xl md:hidden">
+            🙂
+          </span>
+          <div className="hidden w-full items-center justify-between gap-3 md:flex">
             <div className="flex items-center gap-3">
               <span className="h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center text-2xl">
                 🙂

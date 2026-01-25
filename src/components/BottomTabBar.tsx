@@ -1,4 +1,10 @@
+import type { CSSProperties } from "react";
 import { NavLink } from "react-router-dom";
+
+const tabBarStyle: CSSProperties & { "--tabbar-height": string } = {
+  height: "var(--tabbar-height, 64px)",
+  "--tabbar-height": "64px",
+};
 
 const tabs = [
   {
@@ -51,6 +57,7 @@ const BottomTabBar = () => {
     <nav
       aria-label="Navegação principal"
       className="fixed bottom-0 left-0 right-0 z-50 flex bg-white border-t border-slate-200 md:hidden"
+      style={tabBarStyle}
     >
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-2">
         {tabs.map((tab) => (
