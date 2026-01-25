@@ -18,9 +18,8 @@ import {
 } from "../utils/months";
 import { cardBase, cardHover, subtleText } from "../styles/dashboardTokens";
 import { buildTag } from "../constants/build";
-import { listCardInvoices } from "../api/cards";
-import { listCardsCached } from "../services/cardsService";
 import type { DashboardSummary, Entry } from "../types";
+import DashboardCardsList from "../components/DashboardCardsList";
 
 const CATEGORY_FALLBACK_COLORS = [
   "#0ea5e9",
@@ -83,8 +82,6 @@ const DashboardPage = () => {
     null,
   );
   const [isMonthPanelOpen, setIsMonthPanelOpen] = useState(false);
-  const [cardsCount, setCardsCount] = useState<number | null>(null);
-  const [invoiceSummary, setInvoiceSummary] = useState<{ totalRemaining: number } | null>(null);
   const buildVersion = import.meta.env.VITE_APP_VERSION || buildTag;
   const showBuildTag = !import.meta.env.VITE_APP_VERSION;
 
@@ -165,49 +162,6 @@ const DashboardPage = () => {
   }, [loadDashboard]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-    let active = true;
-
-    setInvoiceSummary(null);
-
-    listCardsCached()
-      .then((cards) => {
-        if (active) {
-          setCardsCount(cards.length);
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setCardsCount(null);
-        }
-      });
-
-    listCardInvoices({ scope: "open" })
-      .then((invoices) => {
-        if (!active) return;
-        const totalRemaining = invoices.reduce((sum, invoice) => {
-          const remaining =
-            typeof invoice.remaining === "number" && Number.isFinite(invoice.remaining)
-              ? invoice.remaining
-              : 0;
-          return sum + Math.max(0, remaining);
-        }, 0);
-        if (active) {
-          setInvoiceSummary({ totalRemaining });
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setInvoiceSummary(null);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
     if (typeof window === "undefined") return;
     localStorage.setItem("selectedMonth", month);
   }, [month]);
@@ -215,25 +169,6 @@ const DashboardPage = () => {
   useEffect(() => {
     logDashboardDebug("month selected", month);
   }, [month]);
-
-  const badgeInfo = useMemo(() => {
-    if (invoiceSummary) {
-      if (invoiceSummary.totalRemaining > 0) {
-        return {
-          label: `Em aberto: ${formatBRL(invoiceSummary.totalRemaining)}`,
-          variant: "highlight",
-        };
-      }
-      return { label: "Tudo pago", variant: "positive" };
-    }
-    if (cardsCount !== null) {
-      return {
-        label: cardsCount === 1 ? "1 cartão" : `${cardsCount} cartões`,
-        variant: "neutral",
-      };
-    }
-    return null;
-  }, [cardsCount, invoiceSummary]);
 
   const refreshDashboard = useCallback(() => {
     if (!entriesPollingEnabled) return;
@@ -309,10 +244,6 @@ const DashboardPage = () => {
   const handleMonthToggle = () => {
     setIsMonthPanelOpen((prev) => !prev);
   };
-
-  const handleGoToCards = useCallback(() => {
-    navigate("/cards");
-  }, [navigate]);
 
   useEffect(() => {
     if (!summary) return;
@@ -426,58 +357,7 @@ const DashboardPage = () => {
               </div>
             </div>
           </div>
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Ir para cartões e faturas"
-            onClick={handleGoToCards}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                handleGoToCards();
-              }
-            }}
-            className="dashboard-cta group flex items-center gap-4 rounded-3xl border border-slate-200 bg-white px-5 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white cursor-pointer"
-          >
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-emerald-50 text-emerald-600 shadow-inner transition group-hover:border-emerald-300">
-              <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-                <path d="M4 6.5A1.5 1.5 0 0 1 5.5 5h9A1.5 1.5 0 0 1 16 6.5V8H4V6.5z" />
-                <path
-                  fillRule="evenodd"
-                  d="M3 8.75A1.25 1.25 0 0 1 4.25 7.5h11.5A1.25 1.25 0 0 1 17 8.75v4.5A1.25 1.25 0 0 1 15.75 14H4.25A1.25 1.25 0 0 1 3 12.25v-3.5zm4.75 1.25a.75.75 0 0 0-.75.75v.5a.75.75 0 0 0 .75.75h4.5a.75.75 0 0 0 .75-.75v-.5a.75.75 0 0 0-.75-.75h-4.5z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
-                  Cartões e faturas
-                </p>
-                {badgeInfo && (
-                  <span
-                    className={`dashboard-cta-badge dashboard-cta-badge--${badgeInfo.variant}`}
-                    title={badgeInfo.label}
-                  >
-                    {badgeInfo.label}
-                  </span>
-                )}
-              </div>
-              <p className="text-sm font-semibold text-slate-900 leading-snug">
-                Acesse os cartões e acompanhe faturas recentes.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-slate-500 transition group-hover:text-primary">
-              <span className="text-xs font-semibold uppercase tracking-[0.3em]">Ir</span>
-              <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-                <path
-                  fillRule="evenodd"
-                  d="M10.23 4.47a.75.75 0 0 1 1.06-.02l4.24 4.25a.75.75 0 0 1 0 1.06l-4.24 4.25a.75.75 0 0 1-1.06-1.06L13.44 10l-3.21-3.21a.75.75 0 0 1-.02-1.06z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-          </div>
+          <DashboardCardsList />
 
           <div className="grid gap-4 lg:grid-cols-3">
             <div className={`${cardBase} ${cardHover} lg:col-span-2`}>
