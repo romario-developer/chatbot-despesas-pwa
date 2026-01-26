@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { AssistantCard } from "../api/assistant";
+import AssistantIcon from "./AssistantIcon";
 import { useAssistantChat } from "../hooks/useAssistantChat";
 import { ASSISTANT_OPEN_EVENT } from "../constants/assistantEvents";
 
@@ -123,34 +124,6 @@ const AssistantWidget = ({ onStateChange }: AssistantWidgetProps) => {
     setCurrentStage,
     setLastUiHint,
   } = useAssistantChat();
-
-  const orderedMessages = useMemo(() => {
-    if (!messages.length) return messages;
-    const hasNumericTs = messages.every((message) => {
-      const raw = message as Record<string, unknown>;
-      return typeof raw.ts === "number";
-    });
-    const hasCreatedAt = messages.every((message) => {
-      const raw = message as Record<string, unknown>;
-      const value = typeof raw.createdAt === "string" ? Date.parse(raw.createdAt) : NaN;
-      return !Number.isNaN(value);
-    });
-    if (!hasNumericTs && !hasCreatedAt) {
-      return messages;
-    }
-    const next = [...messages];
-    const getTimestamp = (message: typeof messages[number]) => {
-      const raw = message as Record<string, unknown>;
-      if (typeof raw.ts === "number") return raw.ts;
-      if (typeof raw.createdAt === "string") {
-        const parsed = Date.parse(raw.createdAt);
-        if (!Number.isNaN(parsed)) return parsed;
-      }
-      return 0;
-    };
-    next.sort((a, b) => getTimestamp(a) - getTimestamp(b));
-    return next;
-  }, [messages]);
 
   const { paymentActions, cardActions, categoryActions, adjustmentActions } = actionGroups;
   const hasQuickActionGroups =
@@ -438,12 +411,12 @@ const AssistantWidget = ({ onStateChange }: AssistantWidgetProps) => {
               className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 pt-3 text-sm leading-relaxed overscroll-contain scroll-smooth"
               style={{ minHeight: 0, WebkitOverflowScrolling: "touch" }}
             >
-              {orderedMessages.length === 0 && !isTyping ? (
+              {messages.length === 0 && !isTyping ? (
                 <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-300">
                   Exemplos: mercado 50 • uber 23,90 crédito inter
                 </p>
               ) : (
-                orderedMessages.map((message) => {
+                messages.map((message) => {
                   const isUser = message.from === "user";
                   const shouldAnimateMessage =
                     !prefersReducedMotion && message.id === enteringMessageId;
@@ -589,33 +562,21 @@ const AssistantWidget = ({ onStateChange }: AssistantWidgetProps) => {
         </div>
       </div>
 
-      <div className="fixed z-[96] right-4 bottom-4">
-        <button
-          ref={toggleButtonRef}
-          type="button"
-          aria-expanded={isExpanded}
-          aria-controls="assistant-widget-panel"
-          aria-label="Abrir assistente"
-          onClick={handleExpand}
-          className="group flex min-h-[56px] items-center gap-3 rounded-[32px] border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-lg shadow-slate-200 transition hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950"
-        >
-          <span className="h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center text-2xl">
-            🙂
-          </span>
-          <div className="flex flex-1 flex-col items-start">
-            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Assistente</p>
-            <p className="text-xs text-slate-500 dark:text-slate-300">Registrar despesas</p>
-          </div>
-          <span
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 transition group-hover:border-primary dark:border-slate-700"
-            aria-hidden="true"
+      {!isExpanded && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <button
+            ref={toggleButtonRef}
+            type="button"
+            aria-expanded={isExpanded}
+            aria-controls="assistant-widget-panel"
+            aria-label="Abrir assistente"
+            onClick={handleExpand}
+            className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-[#25D366] text-white shadow-lg shadow-slate-900/20 transition hover:-translate-y-0.5 active:translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
           >
-            <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 stroke-slate-600 dark:stroke-slate-100" strokeWidth="1.5">
-              <path d="M5 8l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </span>
-        </button>
-      </div>
+            <AssistantIcon className="h-8 w-8 text-white" />
+          </button>
+        </div>
+      )}
     </>
   );
 };
