@@ -236,7 +236,7 @@ const AssistantPage = () => {
         maxWidth: "100%",
       }}
     >
-      <header className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
+      <header className="sticky top-0 z-50 flex items-center justify-between border-b border-slate-800 bg-slate-950 px-4 py-3 shadow-sm shadow-slate-900/40">
         <button
           type="button"
           onClick={() => navigate(-1)}
