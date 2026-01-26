@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { deleteEntry, listEntries } from "../api/entries";
 import MonthChipsBar from "../components/MonthChipsBar";
 import ConfirmDialog from "../components/ConfirmDialog";
