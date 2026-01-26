@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
@@ -218,6 +218,30 @@ const AssistantPage = () => {
     whiteSpace: "pre-wrap",
   };
 
+  const orderedMessages = useMemo(() => {
+    if (messages.length < 2) return messages;
+    const hasNumericTs = messages.every((message) => typeof (message as Record<string, unknown>).ts === "number");
+    const hasCreatedAt = messages.every((message) => {
+      const createdAt = (message as Record<string, unknown>).createdAt;
+      return typeof createdAt === "string" && !Number.isNaN(Date.parse(createdAt));
+    });
+    if (!hasNumericTs && !hasCreatedAt) {
+      return messages;
+    }
+    const next = [...messages];
+    const getTimestamp = (message: typeof messages[number]) => {
+      const raw = message as Record<string, unknown>;
+      if (typeof raw.ts === "number") return raw.ts;
+      if (typeof raw.createdAt === "string") {
+        const parsed = Date.parse(raw.createdAt);
+        if (!Number.isNaN(parsed)) return parsed;
+      }
+      return 0;
+    };
+    next.sort((a, b) => getTimestamp(a) - getTimestamp(b));
+    return next;
+  }, [messages]);
+
   useEffect(() => {
     if (typeof document === "undefined") return;
     document.body.classList.add("assistant-no-x");
@@ -337,12 +361,12 @@ const AssistantPage = () => {
             </div>
           )}
           <div className="flex-1">
-            {(messages.length === 0 && !isTyping) ? (
+            {(orderedMessages.length === 0 && !isTyping) ? (
               <p className="mt-6 text-xs leading-relaxed text-slate-400">
                 Exemplos: mercado 50 • uber 23,90 crédito inter
               </p>
             ) : (
-              messages.map((message) => {
+              orderedMessages.map((message) => {
                 const isUser = message.from === "user";
                 const shouldAnimateMessage =
                   !prefersReducedMotion && message.id === enteringMessageId;
