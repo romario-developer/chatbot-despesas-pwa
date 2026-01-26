@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
@@ -216,31 +216,6 @@ const AssistantPage = () => {
     whiteSpace: "pre-wrap",
   };
 
-  const orderedMessages = useMemo(() => {
-    if (messages.length < 2) return messages;
-    const indexed = messages.map((message, index) => {
-      const raw = message as Record<string, unknown>;
-      let tsValue = Infinity;
-      if (typeof raw.ts === "number") {
-        tsValue = raw.ts;
-      } else if (typeof raw.createdAt === "string") {
-        const parsed = Date.parse(raw.createdAt);
-        if (!Number.isNaN(parsed)) {
-          tsValue = parsed;
-        }
-      }
-      return { message, index, tsValue };
-    });
-    const hasInvalidTimestamp = indexed.some((entry) => entry.tsValue === Infinity);
-    if (hasInvalidTimestamp) {
-      return messages;
-    }
-    const sorted = [...indexed].sort((a, b) => {
-      if (a.tsValue === b.tsValue) return a.index - b.index;
-      return a.tsValue - b.tsValue;
-    });
-    return sorted.map((entry) => entry.message);
-  }, [messages]);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -356,12 +331,12 @@ const AssistantPage = () => {
             </div>
           )}
           <div className="flex-1">
-            {(orderedMessages.length === 0 && !isTyping) ? (
+            {(messages.length === 0 && !isTyping) ? (
               <p className="mt-6 text-xs leading-relaxed text-slate-400">
                 Exemplos: mercado 50 • uber 23,90 crédito inter
               </p>
             ) : (
-              orderedMessages.map((message) => {
+              messages.map((message) => {
                 const isUser = message.from === "user";
                 const shouldAnimateMessage =
                   !prefersReducedMotion && message.id === enteringMessageId;
@@ -398,7 +373,7 @@ const AssistantPage = () => {
             {toastMessage && (
               <div className="assistant-message mt-3 flex flex-col gap-2">
                 <div
-                  className="max-w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-100"
+                  className="max-w-full rounded-2xl border border-emerald-500 bg-emerald-600 px-4 py-3 text-sm font-semibold text-white"
                   style={bubbleStyle}
                 >
                   {toastMessage}
