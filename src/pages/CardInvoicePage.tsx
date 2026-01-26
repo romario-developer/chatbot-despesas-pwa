@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { getCardInvoiceByMonth } from "../api/cards";
 import { formatBRL, formatDate } from "../utils/format";
 import { formatMonthLabel, getCurrentMonthInTimeZone, shiftMonth } from "../utils/months";
@@ -50,26 +50,40 @@ type DayGroup = {
 };
 
 const CardInvoicePage = () => {
-  const { cardId } = useParams<{ cardId: string }>();
+  const params = useParams<{ cardId?: string; id?: string }>();
+  const derivedCardId = params.cardId ?? params.id;
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const [invoice, setInvoice] = useState<InvoiceDetails | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchValue, setSearchValue] = useState("");
 
   const fallbackMonth = getCurrentMonthInTimeZone("America/Bahia");
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const requestedMonth = searchParams.get("month");
   const normalizedMonth = normalizeMonthValue(requestedMonth ?? undefined, fallbackMonth);
 
   useEffect(() => {
     if (!requestedMonth || requestedMonth.trim() !== normalizedMonth) {
-      setSearchParams({ month: normalizedMonth }, { replace: true });
+      const paramsCopy = new URLSearchParams(location.search);
+      if (normalizedMonth) {
+        paramsCopy.set("month", normalizedMonth);
+      } else {
+        paramsCopy.delete("month");
+      }
+      navigate(
+        {
+          pathname: location.pathname,
+          search: paramsCopy.toString() ? `?${paramsCopy.toString()}` : "",
+        },
+        { replace: true },
+      );
     }
-  }, [requestedMonth, normalizedMonth, setSearchParams]);
+  }, [location.pathname, location.search, normalizedMonth, requestedMonth, navigate]);
 
   useEffect(() => {
-    if (!cardId) {
+    if (!derivedCardId) {
       setInvoice(null);
       setError("Cartão não informado.");
       setLoading(false);
@@ -78,10 +92,17 @@ const CardInvoicePage = () => {
     let active = true;
     setLoading(true);
     setError(null);
-    getCardInvoiceByMonth(cardId, normalizedMonth)
+    getCardInvoiceByMonth(derivedCardId, normalizedMonth)
       .then((data) => {
         if (!active) return;
         setInvoice(data);
+        if (!data.purchases?.length) {
+          console.info("Invoice returned with no purchases", {
+            cardId: derivedCardId,
+            month: normalizedMonth,
+            invoice: data,
+          });
+        }
       })
       .catch((err) => {
         if (!active) return;
@@ -98,11 +119,11 @@ const CardInvoicePage = () => {
     return () => {
       active = false;
     };
-  }, [cardId, normalizedMonth]);
+  }, [derivedCardId, normalizedMonth]);
 
   useEffect(() => {
     setSearchValue("");
-  }, [cardId, normalizedMonth]);
+  }, [derivedCardId, normalizedMonth]);
 
   const filteredPurchases = useMemo(() => {
     if (!invoice?.purchases?.length) return [];
@@ -160,7 +181,15 @@ const CardInvoicePage = () => {
   };
 
   const changeMonth = (target: string) => {
-    setSearchParams({ month: target });
+    const paramsCopy = new URLSearchParams(location.search);
+    paramsCopy.set("month", target);
+    navigate(
+      {
+        pathname: location.pathname,
+        search: `?${paramsCopy.toString()}`,
+      },
+      { replace: true },
+    );
   };
 
   const renderPurchases = () => {
