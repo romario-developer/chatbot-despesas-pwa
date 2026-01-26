@@ -158,6 +158,24 @@ export type InvoiceDetails = {
   purchases: InvoicePurchase[];
 };
 
+export type InvoiceSummaryItem = {
+  id: string;
+  description: string;
+  date?: string;
+  installmentCount?: number;
+  installmentCurrent?: number;
+  installmentAmount?: number;
+  totalAmount?: number;
+};
+
+export type CardInvoiceSummary = {
+  cardId: string;
+  cardName?: string;
+  month: string;
+  total: number;
+  items: InvoiceSummaryItem[];
+};
+
 export type PlanningExtra = {
   id: string;
   label?: string;

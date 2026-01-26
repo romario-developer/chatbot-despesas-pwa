@@ -3,6 +3,7 @@ import { api, shouldLogApi } from "../services/api";
 import { listEntries } from "./entries";
 import type {
   CardInvoice,
+  CardInvoiceSummary,
   CreditCard,
   Entry,
   InvoiceDetails,
@@ -503,6 +504,27 @@ export const getCardInvoiceByMonth = async (
     method: "GET",
   });
   return normalizeInvoiceDetails(data, cardId);
+};
+
+export const getCardInvoiceSummary = async (
+  cardId: string,
+  month?: string,
+): Promise<CardInvoiceSummary> => {
+  const encodedCardId = encodeURIComponent(cardId);
+  const params = new URLSearchParams();
+  if (month) {
+    params.append("month", month);
+  }
+  const query = params.toString();
+  const url = `/api/cards/${encodedCardId}/invoice/summary${query ? `?${query}` : ""}`;
+  const data = await apiRequest<CardInvoiceSummary>({
+    url,
+    method: "GET",
+  });
+  return {
+    ...data,
+    items: Array.isArray(data.items) ? data.items : [],
+  };
 };
 
 const normalizeInvoice = (value: RawInvoice): CardInvoice | null => {

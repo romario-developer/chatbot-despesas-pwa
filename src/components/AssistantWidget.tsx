@@ -24,6 +24,10 @@ const AssistantWidget = ({ onStateChange }: AssistantWidgetProps) => {
     return stored === "expanded" ? "expanded" : "collapsed";
   });
   const isExpanded = widgetState === "expanded";
+  const [isMobileView, setIsMobileView] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.innerWidth < 768;
+  });
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const chatRootRef = useRef<HTMLDivElement | null>(null);
@@ -39,6 +43,27 @@ const AssistantWidget = ({ onStateChange }: AssistantWidgetProps) => {
   const prefersReducedMotion = useMemo(() => {
     if (typeof window === "undefined") return false;
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const mq = window.matchMedia("(max-width: 767px)");
+    const handleChange = () => setIsMobileView(mq.matches);
+    handleChange();
+    if (typeof mq.addEventListener === "function") {
+      mq.addEventListener("change", handleChange);
+    } else {
+      mq.addListener(handleChange);
+    }
+    window.addEventListener("resize", handleChange);
+    return () => {
+      if (typeof mq.removeEventListener === "function") {
+        mq.removeEventListener("change", handleChange);
+      } else {
+        mq.removeListener(handleChange);
+      }
+      window.removeEventListener("resize", handleChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -339,10 +364,17 @@ const AssistantWidget = ({ onStateChange }: AssistantWidgetProps) => {
       event.preventDefault();
       const trimmed = inputValue.trim();
       if (!trimmed) return;
+      if (typeof window !== "undefined") {
+        console.log("[assistant] send:", trimmed);
+      }
       handleSendMessage(trimmed);
     },
     [handleSendMessage, inputValue],
   );
+
+  if (isMobileView) {
+    return null;
+  }
 
   return (
     <>
