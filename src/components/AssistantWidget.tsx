@@ -23,10 +23,6 @@ const AssistantWidget = ({ onStateChange }: AssistantWidgetProps) => {
     return stored === "expanded" ? "expanded" : "collapsed";
   });
   const isExpanded = widgetState === "expanded";
-  const [isMobileView, setIsMobileView] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.matchMedia("(max-width: 767px)").matches;
-  });
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const chatRootRef = useRef<HTMLDivElement | null>(null);
@@ -46,28 +42,23 @@ const AssistantWidget = ({ onStateChange }: AssistantWidgetProps) => {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const mq = window.matchMedia("(max-width: 767px)");
-    const handleChange = () => setIsMobileView(mq.matches);
-    handleChange();
-    if (typeof mq.addEventListener === "function") {
-      mq.addEventListener("change", handleChange);
-      return () => mq.removeEventListener("change", handleChange);
-    }
-    mq.addListener(handleChange);
-    return () => mq.removeListener(handleChange);
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
     localStorage.setItem(WIDGET_STATE_KEY, widgetState);
   }, [widgetState]);
 
   useEffect(() => {
-    if (isExpanded) {
-      inputRef.current?.focus();
-    } else {
+    if (!isExpanded) {
       toggleButtonRef.current?.focus();
+      return;
     }
+    if (typeof window === "undefined") {
+      inputRef.current?.focus();
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      window.setTimeout(() => {
+        inputRef.current?.focus();
+      }, 50);
+    });
   }, [isExpanded]);
 
   useEffect(() => {
@@ -85,15 +76,6 @@ const AssistantWidget = ({ onStateChange }: AssistantWidgetProps) => {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isExpanded]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-    const handleAssistantOpen = () => {
-      setWidgetState("expanded");
-    };
-    window.addEventListener(ASSISTANT_OPEN_EVENT, handleAssistantOpen);
-    return () => window.removeEventListener(ASSISTANT_OPEN_EVENT, handleAssistantOpen);
-  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -222,14 +204,6 @@ const AssistantWidget = ({ onStateChange }: AssistantWidgetProps) => {
   }, [inputValue, adjustInputHeight]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (autoCloseTimerRef.current && typeof window !== "undefined") {
-      window.clearTimeout(autoCloseTimerRef.current);
-      autoCloseTimerRef.current = null;
-    }
-  }, []);
-
-  useEffect(() => {
     if (!isExpanded) {
       setToastMessage(null);
     }
@@ -264,27 +238,50 @@ const AssistantWidget = ({ onStateChange }: AssistantWidgetProps) => {
       window.clearTimeout(autoCloseTimerRef.current);
     }
     autoCloseTimerRef.current = window.setTimeout(() => {
+      autoCloseTimerRef.current = null;
       savedStageRef.current = false;
+      if (typeof document !== "undefined" && document.activeElement === inputRef.current) {
+        return;
+      }
       setWidgetState("collapsed");
       setToastMessage(null);
-      autoCloseTimerRef.current = null;
     }, 700);
   }, [isSavedStageRendered, isExpanded, setToastMessage]);
 
   const handleExpand = useCallback(() => {
+    savedStageRef.current = false;
+    if (typeof window !== "undefined" && autoCloseTimerRef.current) {
+      window.clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
+    setCurrentStage(null);
+    setLastUiHint(null);
+    setToastMessage(null);
     logAssistant("assistant open");
     setWidgetState("expanded");
-  }, []);
+  }, [setCurrentStage, setLastUiHint, setToastMessage]);
 
   const handleCollapse = useCallback(() => {
-    if (autoCloseTimerRef.current) {
+    if (typeof window !== "undefined" && autoCloseTimerRef.current) {
       window.clearTimeout(autoCloseTimerRef.current);
       autoCloseTimerRef.current = null;
     }
     logAssistant("assistant close");
     setWidgetState("collapsed");
     savedStageRef.current = false;
-  }, []);
+    setCurrentStage(null);
+    setLastUiHint(null);
+    setToastMessage(null);
+  }, [setCurrentStage, setLastUiHint, setToastMessage]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const handleAssistantOpen = () => {
+      handleExpand();
+    };
+    window.addEventListener(ASSISTANT_OPEN_EVENT, handleAssistantOpen);
+    return () => window.removeEventListener(ASSISTANT_OPEN_EVENT, handleAssistantOpen);
+  }, [handleExpand]);
 
   const overlayTransitionClass = prefersReducedMotion ? "" : "transition-opacity duration-200 ease-out";
   const panelTransitionClass = prefersReducedMotion ? "" : "transition-all duration-200 ease-out";
@@ -352,6 +349,11 @@ const AssistantWidget = ({ onStateChange }: AssistantWidgetProps) => {
     if (focusScrollTimeoutRef.current) {
       window.clearTimeout(focusScrollTimeoutRef.current);
     }
+    if (autoCloseTimerRef.current) {
+      window.clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
+    savedStageRef.current = false;
     focusScrollTimeoutRef.current = window.setTimeout(() => {
       scrollToLatestMessage();
     }, 300);
@@ -366,10 +368,6 @@ const AssistantWidget = ({ onStateChange }: AssistantWidgetProps) => {
     },
     [handleSendMessage, inputValue],
   );
-
-  if (isMobileView) {
-    return null;
-  }
 
   return (
     <>
@@ -394,9 +392,6 @@ const AssistantWidget = ({ onStateChange }: AssistantWidgetProps) => {
           onClick={(event) => event.stopPropagation()}
         >
           <div className="relative flex items-center justify-between gap-3 rounded-t-3xl border-b border-slate-100 px-4 py-3 dark:border-slate-800">
-            <div className="absolute inset-x-0 top-2 flex justify-center md:hidden">
-              <span className="h-1.5 w-12 rounded-full bg-slate-300" />
-            </div>
             <div className="flex items-center gap-3">
               <span className="h-9 w-9 rounded-2xl bg-primary text-white flex items-center justify-center text-lg">
                 🙂
@@ -592,7 +587,7 @@ const AssistantWidget = ({ onStateChange }: AssistantWidgetProps) => {
         </div>
       </div>
 
-      <div className="fixed z-[96] hidden md:flex md:inset-auto md:bottom-4 md:right-4 md:justify-end">
+      <div className="fixed z-[96] right-4 bottom-4">
         <button
           ref={toggleButtonRef}
           type="button"
@@ -600,30 +595,23 @@ const AssistantWidget = ({ onStateChange }: AssistantWidgetProps) => {
           aria-controls="assistant-widget-panel"
           aria-label="Abrir assistente"
           onClick={handleExpand}
-          className="group flex h-14 w-14 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-lg shadow-slate-200 transition hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white md:h-auto md:w-full md:max-w-sm md:gap-3 md:px-4 md:py-3 md:rounded-[32px]"
+          className="group flex min-h-[56px] items-center gap-3 rounded-[32px] border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-lg shadow-slate-200 transition hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-offset-slate-950"
         >
-          <span className="h-9 w-9 rounded-full bg-primary text-white flex items-center justify-center text-2xl md:hidden">
+          <span className="h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center text-2xl">
             🙂
           </span>
-          <div className="hidden w-full items-center justify-between gap-3 md:flex">
-            <div className="flex items-center gap-3">
-              <span className="h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center text-2xl">
-                🙂
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Assistente</p>
-                <p className="text-xs text-slate-500 dark:text-slate-300">Registrar despesas</p>
-              </div>
-            </div>
-            <span
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 transition group-hover:border-primary dark:border-slate-700"
-              aria-hidden="true"
-            >
-              <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 stroke-slate-600 dark:stroke-slate-100" strokeWidth="1.5">
-                <path d="M5 8l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </span>
+          <div className="flex flex-1 flex-col items-start">
+            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Assistente</p>
+            <p className="text-xs text-slate-500 dark:text-slate-300">Registrar despesas</p>
           </div>
+          <span
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 transition group-hover:border-primary dark:border-slate-700"
+            aria-hidden="true"
+          >
+            <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 stroke-slate-600 dark:stroke-slate-100" strokeWidth="1.5">
+              <path d="M5 8l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
         </button>
       </div>
     </>
