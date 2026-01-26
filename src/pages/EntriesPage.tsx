@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { listCategories } from "../api/categories";
 import { deleteEntry, listEntries } from "../api/entries";
 import MonthChipsBar from "../components/MonthChipsBar";
 import ConfirmDialog from "../components/ConfirmDialog";
@@ -20,7 +19,7 @@ import {
 } from "../utils/paymentMethods";
 import { formatEntryInstallmentLabel } from "../utils/installments";
 import { listCardsCached } from "../services/cardsService";
-import type { Category, CreditCard, Entry } from "../types";
+import type { CreditCard, Entry } from "../types";
 
 const currentMonth = () => getCurrentMonthInTimeZone("America/Bahia");
 
@@ -38,13 +37,7 @@ const EntriesPage = () => {
     [currentMonthValue],
   );
   const [month, setMonth] = useState(currentMonthValue);
-  const [category, setCategory] = useState("");
-  const [search, setSearch] = useState("");
-  const [cardId, setCardId] = useState("");
-  const [categories, setCategories] = useState<Category[]>([]);
   const [cards, setCards] = useState<CreditCard[]>([]);
-  const [cardsLoading, setCardsLoading] = useState(false);
-  const [cardsError, setCardsError] = useState<string | null>(null);
   const [entries, setEntries] = useState<Entry[] | unknown>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,38 +72,16 @@ const EntriesPage = () => {
   }, [location, navigate]);
 
   useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const data = await listCategories();
-        setCategories(data);
-      } catch {
-        setCategories([]);
-      }
-    };
-
-    loadCategories();
-  }, []);
-
-  useEffect(() => {
     let isActive = true;
     const loadCards = async () => {
-      setCardsLoading(true);
-      setCardsError(null);
       try {
         const data = await listCardsCached();
         if (isActive) {
           setCards(data);
         }
-      } catch (err) {
+      } catch {
         if (isActive) {
-          const message =
-            err instanceof Error ? err.message : "Erro ao carregar cartoes.";
-          setCardsError(message);
           setCards([]);
-        }
-      } finally {
-        if (isActive) {
-          setCardsLoading(false);
         }
       }
     };
@@ -130,13 +101,10 @@ const EntriesPage = () => {
       setError(null);
 
       try {
-        const data = await listEntries({
-          from: selectedMonthRange.from,
-          to: selectedMonthRange.to,
-          category: category || undefined,
-          q: search || undefined,
-          cardId: cardId || undefined,
-        });
+    const data = await listEntries({
+      from: selectedMonthRange.from,
+      to: selectedMonthRange.to,
+    });
 
         const safeData = Array.isArray(data) ? data : [];
         const sorted = [...safeData].sort(
@@ -167,7 +135,7 @@ const EntriesPage = () => {
         }
       }
     },
-    [selectedMonthRange, category, search, cardId],
+    [selectedMonthRange],
   );
 
   useEffect(() => {
@@ -256,10 +224,6 @@ const EntriesPage = () => {
     );
   };
 
-  const handleClearCardFilter = () => {
-    setCardId("");
-  };
-
   const handleDeleteConfirm = async () => {
     if (!entryToDelete || isDeleting) return;
     setIsDeleting(true);
@@ -292,24 +256,13 @@ const EntriesPage = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-slate-900">Lancamentos</h2>
-          <p className="text-sm text-slate-600">
-            Filtre por mes, categoria ou busque por descricao.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link
-            to="/entries/new"
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90"
-          >
-            Novo lancamento
-          </Link>
-        </div>
+      <div className="flex flex-col gap-2">
+        <h2 className="text-xl font-semibold text-slate-900">Lancamentos</h2>
+        <p className="text-sm text-slate-600">
+          Use o Assistente para registrar novas despesas e acompanhe os registros abaixo.
+        </p>
       </div>
-
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3">
         <div className="relative flex flex-col gap-2 text-sm font-medium text-slate-700">
           <span className="text-xs font-semibold uppercase text-slate-500">Mes</span>
           <div>
@@ -346,63 +299,6 @@ const EntriesPage = () => {
             />
           </div>
         </div>
-
-        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-          Categoria
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-          >
-            <option value="">Todas</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.name}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-          <span className="flex items-center justify-between">
-            <span>Cartao</span>
-            <button
-              type="button"
-              onClick={handleClearCardFilter}
-              disabled={!cardId}
-              className="text-xs font-semibold text-slate-500 transition hover:text-slate-700 disabled:opacity-50"
-            >
-              Limpar filtro
-            </button>
-          </span>
-          <select
-            value={cardId}
-            onChange={(e) => setCardId(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-          >
-            <option value="">Todos os cartoes</option>
-            {cards.map((card) => (
-              <option key={card.id} value={card.id}>
-                {formatCardLabel(card)}
-              </option>
-            ))}
-          </select>
-          {cardsLoading && (
-            <span className="text-xs text-slate-500">Carregando cartoes...</span>
-          )}
-          {cardsError && <span className="text-xs text-red-600">{cardsError}</span>}
-        </label>
-
-        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-          Busca
-          <input
-            type="search"
-            placeholder="Descricao..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-          />
-        </label>
       </div>
 
       <div className="card p-4">
