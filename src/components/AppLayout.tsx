@@ -177,6 +177,7 @@ const AppLayout = () => {
             aria-hidden="true"
           />
           <div className="relative w-full max-w-md rounded-t-2xl bg-white p-4 shadow-2xl dark:bg-slate-900 dark:text-slate-100">
+            <div className="pointer-events-none absolute -top-2 right-3 h-4 w-4 rotate-45 border-l border-t border-slate-200/20 bg-white dark:bg-slate-950" />
             <div className="mb-3 flex items-center justify-between">
               <p className="text-sm font-semibold">Configurações</p>
               <button
