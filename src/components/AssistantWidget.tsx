@@ -78,6 +78,34 @@ const AssistantWidget = ({ onStateChange }: AssistantWidgetProps) => {
     return () => window.removeEventListener(ASSISTANT_OPEN_EVENT, handleAssistantOpen);
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      chatRootRef.current?.style.removeProperty("--keyboard-offset");
+      return;
+    }
+    if (!isExpanded) {
+      chatRootRef.current?.style.removeProperty("--keyboard-offset");
+      return;
+    }
+    const vv = window.visualViewport;
+    const updateKeyboardOffset = () => {
+      const visibleHeight = vv?.height ?? window.innerHeight;
+      const offsetTop = vv?.offsetTop ?? 0;
+      const offset = Math.max(0, window.innerHeight - visibleHeight - offsetTop);
+      chatRootRef.current?.style.setProperty("--keyboard-offset", `${offset}px`);
+    };
+    updateKeyboardOffset();
+    vv?.addEventListener("resize", updateKeyboardOffset);
+    vv?.addEventListener("scroll", updateKeyboardOffset);
+    window.addEventListener("resize", updateKeyboardOffset);
+    return () => {
+      vv?.removeEventListener("resize", updateKeyboardOffset);
+      vv?.removeEventListener("scroll", updateKeyboardOffset);
+      window.removeEventListener("resize", updateKeyboardOffset);
+      chatRootRef.current?.style.removeProperty("--keyboard-offset");
+    };
+  }, [isExpanded]);
+
   const {
     assistantCards,
     actionGroups,
@@ -94,6 +122,34 @@ const AssistantWidget = ({ onStateChange }: AssistantWidgetProps) => {
     currentStage,
     lastUiHint,
   } = useAssistantChat();
+
+  const orderedMessages = useMemo(() => {
+    if (!messages.length) return messages;
+    const hasNumericTs = messages.every((message) => {
+      const raw = message as Record<string, unknown>;
+      return typeof raw.ts === "number";
+    });
+    const hasCreatedAt = messages.every((message) => {
+      const raw = message as Record<string, unknown>;
+      const value = typeof raw.createdAt === "string" ? Date.parse(raw.createdAt) : NaN;
+      return !Number.isNaN(value);
+    });
+    if (!hasNumericTs && !hasCreatedAt) {
+      return messages;
+    }
+    const next = [...messages];
+    const getTimestamp = (message: typeof messages[number]) => {
+      const raw = message as Record<string, unknown>;
+      if (typeof raw.ts === "number") return raw.ts;
+      if (typeof raw.createdAt === "string") {
+        const parsed = Date.parse(raw.createdAt);
+        if (!Number.isNaN(parsed)) return parsed;
+      }
+      return 0;
+    };
+    next.sort((a, b) => getTimestamp(a) - getTimestamp(b));
+    return next;
+  }, [messages]);
 
   const { paymentActions, cardActions, categoryActions, adjustmentActions } = actionGroups;
   const hasQuickActionGroups =
@@ -364,12 +420,12 @@ const AssistantWidget = ({ onStateChange }: AssistantWidgetProps) => {
               className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 pt-3 text-sm leading-relaxed overscroll-contain scroll-smooth"
               style={{ minHeight: 0, WebkitOverflowScrolling: "touch" }}
             >
-              {messages.length === 0 && !isTyping ? (
+              {orderedMessages.length === 0 && !isTyping ? (
                 <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-300">
                   Exemplos: mercado 50 • uber 23,90 crédito inter
                 </p>
               ) : (
-                messages.map((message) => {
+                orderedMessages.map((message) => {
                   const isUser = message.from === "user";
                   const shouldAnimateMessage =
                     !prefersReducedMotion && message.id === enteringMessageId;
@@ -416,7 +472,9 @@ const AssistantWidget = ({ onStateChange }: AssistantWidgetProps) => {
             </div>
             <div
               className="flex-shrink-0 border-t border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-950"
-              style={{ paddingBottom: "var(--composer-safe, env(safe-area-inset-bottom,1rem))" }}
+              style={{
+                paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + var(--keyboard-offset, 0px))",
+              }}
             >
               {shouldShowQuickActions && (
                 <div className="mt-3 max-h-[170px] overflow-y-auto pr-1">
@@ -513,7 +571,7 @@ const AssistantWidget = ({ onStateChange }: AssistantWidgetProps) => {
         </div>
       </div>
 
-      <div className="fixed z-[96] flex md:inset-auto md:bottom-4 md:right-4 md:justify-end">
+      <div className="fixed z-[96] hidden md:flex md:inset-auto md:bottom-4 md:right-4 md:justify-end">
         <button
           ref={toggleButtonRef}
           type="button"
