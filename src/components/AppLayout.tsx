@@ -6,6 +6,7 @@ import AssistantWidget from "./AssistantWidget";
 import BottomTabBar from "./BottomTabBar";
 import AssistantIcon from "./AssistantIcon";
 import usePrefersReducedMotion from "../hooks/usePrefersReducedMotion";
+import ServiceWorkerUpdate from "./ServiceWorkerUpdate";
 
 const linkClasses = ({ isActive }: { isActive: boolean }) =>
   [
@@ -184,6 +185,7 @@ const AppLayout = () => {
         <AssistantWidget onStateChange={(open) => setAssistantWidgetOpen(open)} />
       )}
       {isMobileNavigation && <BottomTabBar />}
+      <ServiceWorkerUpdate />
 
     </div>
   );

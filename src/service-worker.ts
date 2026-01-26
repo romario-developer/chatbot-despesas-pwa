@@ -20,6 +20,10 @@ precacheAndRoute(self.__WB_MANIFEST);
 registerRoute(isExpensiveExport, new NetworkOnly());
 registerRoute(isApiCall, new NetworkOnly());
 
+self.addEventListener("install", () => {
+  self.skipWaiting();
+});
+
 self.addEventListener("message", (event: ExtendableMessageEvent) => {
   if (event.data?.type === "SKIP_WAITING") {
     self.skipWaiting();
