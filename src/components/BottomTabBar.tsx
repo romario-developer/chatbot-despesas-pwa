@@ -139,9 +139,21 @@ const BottomTabBar = () => {
               }
             }}
             aria-label="Abrir assistente"
-            className="relative -top-6 flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-primary text-2xl text-white shadow-lg shadow-slate-900/20 transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:translate-y-0.5"
+            className="relative -top-6 flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-[#25D366] text-white shadow-lg shadow-slate-900/20 transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:translate-y-0.5"
           >
-            🙂
+            <svg
+              viewBox="0 0 24 24"
+              className="h-8 w-8 text-white"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
+              <path d="M12 9v6M9 12h6" />
+            </svg>
           </button>
         </div>
         <div className="flex flex-1 items-center justify-end gap-1">{tabs.slice(2).map(renderTab)}</div>
