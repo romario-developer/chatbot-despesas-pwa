@@ -1,10 +1,9 @@
 import type { FormEvent } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { login } from "../api/auth";
+import { signup } from "../api/auth";
 import {
   clearAppStorage,
-  consumeLoginMessage,
   getStoredMustChangePassword,
   getStoredToken,
   saveAuthUser,
@@ -12,21 +11,28 @@ import {
   setMustChangePassword,
 } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
-import { apiBaseURL } from "../services/api";
 
-const LoginPage = () => {
+type FieldErrors = {
+  email?: string;
+  password?: string;
+  confirmPassword?: string;
+};
+
+const SignupPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { refreshMe } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [notice] = useState<string | null>(() => consumeLoginMessage());
-  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>(
-    {},
+
+  const from = useMemo(
+    () => ((location.state as { from?: string } | null)?.from ?? "/"),
+    [location.state],
   );
-  const from = (location.state as { from?: string } | null)?.from ?? "/";
 
   useEffect(() => {
     const existingToken = getStoredToken();
@@ -37,7 +43,7 @@ const LoginPage = () => {
   }, [from, navigate]);
 
   const validate = () => {
-    const nextErrors: { email?: string; password?: string } = {};
+    const nextErrors: FieldErrors = {};
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
       nextErrors.email = "Email obrigatorio";
@@ -47,6 +53,12 @@ const LoginPage = () => {
 
     if (!password.trim()) {
       nextErrors.password = "Senha obrigatoria";
+    } else if (password.length < 6) {
+      nextErrors.password = "A senha precisa ter ao menos 6 caracteres";
+    }
+
+    if (confirmPassword !== password) {
+      nextErrors.confirmPassword = "As senhas nao conferem";
     }
 
     setFieldErrors(nextErrors);
@@ -56,22 +68,16 @@ const LoginPage = () => {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     event.stopPropagation();
-    // Evita qualquer submit nativo residual que geraria reload
     event.nativeEvent?.stopImmediatePropagation?.();
 
     if (isLoading) return;
     setError(null);
     if (!validate()) return;
+
     setIsLoading(true);
     try {
       clearAppStorage();
-      if (import.meta.env.DEV) {
-        console.log("[login] baseURL:", apiBaseURL);
-        console.log("[login] endpoint:", "/api/auth/login");
-        console.log("[login] submit controlado via React (sem reload).");
-      }
-
-      const response = await login({ email: email.trim(), password });
+      const response = await signup({ email: email.trim(), password });
       const token = response.token ?? response.accessToken;
       if (!token) {
         throw new Error("Token nao encontrado.");
@@ -93,11 +99,11 @@ const LoginPage = () => {
       await refreshMe();
       navigate(from, { replace: true });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "";
-      if (message === "Credenciais invalidas.") {
-        setError("Credenciais invalidas");
+      const message = err instanceof Error ? err.message : "Erro ao conectar na API";
+      if (/email/i.test(message) || message.includes("Ja existe")) {
+        setError("Email ja cadastrado");
       } else {
-        setError("Falha ao conectar na API");
+        setError("Falha ao cadastrar usuario");
       }
     } finally {
       setIsLoading(false);
@@ -108,13 +114,11 @@ const LoginPage = () => {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-100 to-slate-200 px-4">
       <div className="card w-full max-w-md p-8">
         <h1 className="mb-6 text-center text-2xl font-semibold text-slate-900">
-          Despesas
+          Criar conta
         </h1>
-        {notice && (
-          <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            {notice}
-          </p>
-        )}
+        <p className="mb-4 text-center text-sm text-slate-500">
+          Crie uma conta e comece a registrar despesas imediatamente.
+        </p>
         <form className="space-y-4" noValidate onSubmit={handleSubmit}>
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-slate-700">Email</span>
@@ -131,6 +135,7 @@ const LoginPage = () => {
               <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>
             )}
           </label>
+
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-slate-700">Senha</span>
             <input
@@ -140,29 +145,48 @@ const LoginPage = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-              placeholder="Digite a senha"
+              placeholder="Crie uma senha forte"
             />
             {fieldErrors.password && (
               <p className="mt-1 text-xs text-red-600">{fieldErrors.password}</p>
             )}
           </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-slate-700">
+              Confirmar senha
+            </span>
+            <input
+              type="password"
+              name="confirmPassword"
+              required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+              placeholder="Repita a senha"
+            />
+            {fieldErrors.confirmPassword && (
+              <p className="mt-1 text-xs text-red-600">{fieldErrors.confirmPassword}</p>
+            )}
+          </label>
+
           {error && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-              {error}
-            </p>
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
           )}
+
           <button
             type="submit"
             disabled={isLoading}
             className="flex w-full items-center justify-center rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:opacity-60"
           >
-            {isLoading ? "Entrando..." : "Entrar"}
+            {isLoading ? "Cadastrando..." : "Criar conta"}
           </button>
         </form>
+
         <p className="mt-4 text-center text-sm text-slate-500">
-          Nao tem conta?{" "}
-          <Link to="/signup" className="font-semibold text-primary underline-offset-4 hover:underline">
-            Criar conta
+          Ja possui conta?{" "}
+          <Link to="/login" className="font-semibold text-primary underline-offset-4 hover:underline">
+            Voltar ao login
           </Link>
         </p>
       </div>
@@ -170,4 +194,4 @@ const LoginPage = () => {
   );
 };
 
-export default LoginPage;
+export default SignupPage;

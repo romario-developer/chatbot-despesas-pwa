@@ -16,6 +16,7 @@ const CategoriesPage = lazy(() => import("../pages/CategoriesPage"));
 const CardInvoicePage = lazy(() => import("../pages/CardInvoicePage"));
 const CardsPage = lazy(() => import("../pages/CardsPage"));
 const AssistantPage = lazy(() => import("../pages/AssistantPage"));
+const SignupPage = lazy(() => import("../pages/SignupPage"));
 
 const AppRouter = () => (
   <BrowserRouter>
@@ -24,6 +25,7 @@ const AppRouter = () => (
       <Suspense fallback={<div className="p-6">Carregando.</div>}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
           <Route
             path="/change-password"
             element={
