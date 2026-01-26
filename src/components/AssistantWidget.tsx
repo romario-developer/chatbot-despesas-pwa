@@ -1,13 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { AssistantCard } from "../api/assistant";
-import useViewportVh from "../hooks/useViewportVh";
 import { useAssistantChat } from "../hooks/useAssistantChat";
 import { ASSISTANT_OPEN_EVENT } from "../constants/assistantEvents";
 
 const WIDGET_STATE_KEY = "assistantWidgetState";
-const TABBAR_BOTTOM_OFFSET = "calc(var(--tabbar-height, 64px) + env(safe-area-inset-bottom, 0px))";
-
 const logAssistant = (...args: unknown[]) => {
   if (typeof window === "undefined") return;
   if (window.localStorage.getItem("DEBUG_ASSISTANT") === "1") {
@@ -22,10 +19,6 @@ const AssistantWidget = () => {
     return stored === "expanded" ? "expanded" : "collapsed";
   });
   const isExpanded = widgetState === "expanded";
-  const [isMobileView, setIsMobileView] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return window.innerWidth < 768;
-  });
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const chatRootRef = useRef<HTMLDivElement | null>(null);
@@ -42,80 +35,6 @@ const AssistantWidget = () => {
     if (typeof window === "undefined") return false;
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }, []);
-
-  useViewportVh(isMobileView);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-    const mediaQuery = window.matchMedia("(max-width: 767px)");
-    const handleChange = () => setIsMobileView(mediaQuery.matches);
-    handleChange();
-    if (typeof mediaQuery.addEventListener === "function") {
-      mediaQuery.addEventListener("change", handleChange);
-      return () => mediaQuery.removeEventListener("change", handleChange);
-    }
-    mediaQuery.addListener(handleChange);
-    return () => mediaQuery.removeListener(handleChange);
-  }, []);
-
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    if (!isMobileView || !isExpanded) {
-      document.body.classList.remove("chat-lock-scroll");
-      return;
-    }
-    document.body.classList.add("chat-lock-scroll");
-    return () => {
-      document.body.classList.remove("chat-lock-scroll");
-    };
-  }, [isMobileView, isExpanded]);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !isMobileView || !isExpanded) {
-      if (chatRootRef.current) {
-        chatRootRef.current.style.height = "";
-        chatRootRef.current.style.top = "";
-        chatRootRef.current.style.bottom = "";
-        chatRootRef.current.style.removeProperty("--composer-safe");
-      }
-      return undefined;
-    }
-    const targetHeight = Math.min(window.innerHeight * 0.82, 640);
-    const vv = window.visualViewport;
-    const applyVisualViewport = () => {
-      if (!chatRootRef.current) return;
-      const visibleHeight = vv?.height ?? window.innerHeight;
-      const keyboardOpen = vv ? visibleHeight < window.innerHeight - 50 : false;
-      const nextHeight = Math.max(320, Math.min(targetHeight, visibleHeight - 8));
-      chatRootRef.current.style.height = `${nextHeight}px`;
-      chatRootRef.current.style.bottom = TABBAR_BOTTOM_OFFSET;
-      chatRootRef.current.style.top = "auto";
-      chatRootRef.current.style.setProperty("--composer-safe", keyboardOpen ? "0px" : "env(safe-area-inset-bottom)");
-    };
-    applyVisualViewport();
-    if (vv) {
-      vv.addEventListener("resize", applyVisualViewport);
-      vv.addEventListener("scroll", applyVisualViewport);
-      return () => {
-        vv.removeEventListener("resize", applyVisualViewport);
-        vv.removeEventListener("scroll", applyVisualViewport);
-        if (chatRootRef.current) {
-          chatRootRef.current.style.height = "";
-          chatRootRef.current.style.bottom = "";
-          chatRootRef.current.style.top = "";
-          chatRootRef.current.style.removeProperty("--composer-safe");
-        }
-      };
-    }
-    return () => {
-      if (chatRootRef.current) {
-        chatRootRef.current.style.height = "";
-        chatRootRef.current.style.bottom = "";
-        chatRootRef.current.style.top = "";
-        chatRootRef.current.style.removeProperty("--composer-safe");
-      }
-    };
-  }, [isMobileView, isExpanded]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -293,14 +212,9 @@ const AssistantWidget = () => {
     ? "opacity-100 pointer-events-auto"
     : "opacity-0 pointer-events-none";
 
-  const panelLayoutStyle = isMobileView
-    ? {
-        height: "var(--chat-vh, calc(var(--vh, 1vh) * 82))",
-        bottom: TABBAR_BOTTOM_OFFSET,
-      }
-    : {
-        minHeight: "320px",
-      };
+  const panelLayoutStyle = {
+    minHeight: "320px",
+  };
 
   const quickActionChipClassName =
     "rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary/70 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-primary/70";
@@ -591,42 +505,40 @@ const AssistantWidget = () => {
         </div>
       </div>
 
-      {!isMobileView && (
-        <div className="fixed z-[96] flex md:inset-auto md:bottom-4 md:right-4 md:justify-end">
-          <button
-            ref={toggleButtonRef}
-            type="button"
-            aria-expanded={isExpanded}
-            aria-controls="assistant-widget-panel"
-            aria-label="Abrir assistente"
-            onClick={handleExpand}
-            className="group flex h-14 w-14 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-lg shadow-slate-200 transition hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white md:h-auto md:w-full md:max-w-sm md:gap-3 md:px-4 md:py-3 md:rounded-[32px]"
-          >
-            <span className="h-9 w-9 rounded-full bg-primary text-white flex items-center justify-center text-2xl md:hidden">
-              🙂
-            </span>
-            <div className="hidden w-full items-center justify-between gap-3 md:flex">
-              <div className="flex items-center gap-3">
-                <span className="h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center text-2xl">
-                  🙂
-                </span>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Assistente</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-300">Registrar despesas</p>
-                </div>
-              </div>
-              <span
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 transition group-hover:border-primary dark:border-slate-700"
-                aria-hidden="true"
-              >
-                <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 stroke-slate-600 dark:stroke-slate-100" strokeWidth="1.5">
-                  <path d="M5 8l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+      <div className="fixed z-[96] flex md:inset-auto md:bottom-4 md:right-4 md:justify-end">
+        <button
+          ref={toggleButtonRef}
+          type="button"
+          aria-expanded={isExpanded}
+          aria-controls="assistant-widget-panel"
+          aria-label="Abrir assistente"
+          onClick={handleExpand}
+          className="group flex h-14 w-14 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-lg shadow-slate-200 transition hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white md:h-auto md:w-full md:max-w-sm md:gap-3 md:px-4 md:py-3 md:rounded-[32px]"
+        >
+          <span className="h-9 w-9 rounded-full bg-primary text-white flex items-center justify-center text-2xl md:hidden">
+            🙂
+          </span>
+          <div className="hidden w-full items-center justify-between gap-3 md:flex">
+            <div className="flex items-center gap-3">
+              <span className="h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center text-2xl">
+                🙂
               </span>
+              <div>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Assistente</p>
+                <p className="text-xs text-slate-500 dark:text-slate-300">Registrar despesas</p>
+              </div>
             </div>
-          </button>
-        </div>
-      )}
+            <span
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 transition group-hover:border-primary dark:border-slate-700"
+              aria-hidden="true"
+            >
+              <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 stroke-slate-600 dark:stroke-slate-100" strokeWidth="1.5">
+                <path d="M5 8l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+          </div>
+        </button>
+      </div>
     </>
   );
 };

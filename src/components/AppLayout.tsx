@@ -16,8 +16,12 @@ const AppLayout = () => {
   const { theme, toggleTheme } = useTheme();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [isMobileView, setIsMobileView] = useState(() => {
-    if (typeof window === "undefined") return true;
+    if (typeof window === "undefined") return false;
     return window.innerWidth < 768;
+  });
+  const [isTouchDevice, setIsTouchDevice] = useState(() => {
+    if (typeof navigator === "undefined") return false;
+    return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   });
   const location = useLocation();
 
@@ -34,7 +38,9 @@ const AppLayout = () => {
     logout();
   };
 
-  const hideTabBar = isMobileView && location.pathname.startsWith("/assistant");
+  const isAssistantRoute = location.pathname.startsWith("/assistant");
+  const isMobileNavigation = isTouchDevice && isMobileView && !isAssistantRoute;
+  const hideTabBar = isTouchDevice && isMobileView && isAssistantRoute;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -55,6 +61,11 @@ const AppLayout = () => {
       }
       window.removeEventListener("resize", handleChange);
     };
+  }, []);
+
+  useEffect(() => {
+    if (typeof navigator === "undefined") return;
+    setIsTouchDevice(/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
   }, []);
 
   return (
@@ -163,8 +174,8 @@ const AppLayout = () => {
           </div>
         </div>
       )}
-      <AssistantWidget />
-      <BottomTabBar />
+      {!isMobileNavigation && <AssistantWidget />}
+      {isMobileNavigation && <BottomTabBar />}
 
     </div>
   );
