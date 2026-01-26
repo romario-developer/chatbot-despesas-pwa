@@ -48,6 +48,7 @@ const EntriesPage = () => {
     null,
   );
   const [isMonthPanelOpen, setIsMonthPanelOpen] = useState(false);
+  const [openEntryMenuId, setOpenEntryMenuId] = useState<string | null>(null);
 
   const selectedMonthRange = useMemo(() => monthToRange(month), [month]);
   const monthLabel = useMemo(() => formatMonthLabel(month), [month]);
@@ -250,9 +251,24 @@ const EntriesPage = () => {
     loadEntries();
   }, [loadEntries]);
 
+  const handleEditEntry = (entryId: string) => {
+    navigate(`/entries/${entryId}/edit`);
+    setOpenEntryMenuId(null);
+  };
+
   const handleDeleteClick = (entry: Entry) => {
     setEntryToDelete(entry);
   };
+
+  useEffect(() => {
+    const handleDocumentClick = () => setOpenEntryMenuId(null);
+    document.addEventListener("mousedown", handleDocumentClick);
+    document.addEventListener("touchstart", handleDocumentClick);
+    return () => {
+      document.removeEventListener("mousedown", handleDocumentClick);
+      document.removeEventListener("touchstart", handleDocumentClick);
+    };
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -328,14 +344,51 @@ const EntriesPage = () => {
         {!isLoading && !error && (
           <>
       <div className="mt-4 space-y-1 md:hidden">
-          {safeEntries.length ? (
-            safeEntries.map((entry) => {
-              const descriptionLabel = `${entry.description}${formatInstallmentLabel(entry)}`;
-              return (
+            {safeEntries.length ? (
+              safeEntries.map((entry) => {
+                const descriptionLabel = `${entry.description}${formatInstallmentLabel(entry)}`;
+                const isMenuOpen = openEntryMenuId === entry.id;
+                return (
                 <div
                   key={entry.id}
-                  className="border-b border-slate-100 bg-white px-4 py-3 last:border-b-0"
+                  className="relative border-b border-slate-100 bg-white px-4 py-3 last:border-b-0"
                 >
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setOpenEntryMenuId((prev) => (prev === entry.id ? null : entry.id));
+                    }}
+                    aria-expanded={isMenuOpen}
+                    aria-controls={`entry-menu-${entry.id}`}
+                    className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 md:hidden"
+                  >
+                    <span className="text-lg leading-none" aria-hidden="true">
+                      ⋮
+                    </span>
+                    <span className="sr-only">Abrir ações</span>
+                  </button>
+                  {isMenuOpen && (
+                    <div
+                      id={`entry-menu-${entry.id}`}
+                      className="absolute right-3 top-12 z-20 w-36 rounded-xl border border-slate-200 bg-white shadow-lg md:hidden"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handleEditEntry(entry.id)}
+                        className="w-full px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+                      >
+                        ✏️ Editar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteClick(entry)}
+                        className="w-full px-4 py-2 text-left text-sm text-rose-600 transition hover:bg-slate-50"
+                      >
+                        🗑️ Excluir
+                      </button>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-semibold text-slate-900">{descriptionLabel}</p>
                     <p className="text-sm font-semibold text-slate-900">
@@ -385,7 +438,7 @@ const EntriesPage = () => {
                     safeEntries.map((entry) => {
                       const descriptionLabel = `${entry.description}${formatInstallmentLabel(entry)}`;
                       return (
-                        <tr key={entry.id} className="hover:bg-slate-50">
+                    <tr key={entry.id} className="group hover:bg-slate-50">
                           <td className="px-4 py-3 font-medium text-slate-900">
                             <div className="flex flex-col gap-1">
                               <span>{descriptionLabel}</span>
@@ -410,19 +463,22 @@ const EntriesPage = () => {
                             {formatCurrency(entry.amount)}
                           </td>
                           <td className="px-4 py-3 text-right">
-                            <div className="flex justify-end gap-2">
-                              <Link
-                                to={`/entries/${entry.id}/edit`}
-                                className="text-xs font-semibold text-primary hover:underline"
+                            <div className="flex justify-end gap-2 opacity-0 transition group-hover:opacity-100 md:opacity-0">
+                              <button
+                                type="button"
+                                onClick={() => handleEditEntry(entry.id)}
+                                className="flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-primary"
                               >
-                                Editar
-                              </Link>
+                                ✏️
+                                <span className="sr-only">Editar</span>
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => handleDeleteClick(entry)}
-                                className="text-xs font-semibold text-red-600 hover:underline"
+                                className="flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-semibold text-rose-600 transition hover:bg-rose-50"
                               >
-                                Excluir
+                                🗑️
+                                <span className="sr-only">Excluir</span>
                               </button>
                             </div>
                           </td>
