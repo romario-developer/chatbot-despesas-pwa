@@ -349,7 +349,7 @@ const PlanningPage = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold text-slate-900">Planejamento</h2>
@@ -466,33 +466,31 @@ const PlanningPage = () => {
         <div className="divide-y divide-slate-100">
           {monthExtras.length ? (
             monthExtras.map((extra) => (
-              <div key={extra.id} className="py-3">
-                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {extra.description ?? extra.label ?? "Entrada"}
-                    </p>
-                    <p className="text-xs text-slate-600">
-                      {(extra.date ?? `${monthKey}-01`).slice(0, 10)} -{" "}
-                      {formatBRL(Number.isFinite(Number(extra.amount)) ? Number(extra.amount) : 0)}
-                    </p>
-                  </div>
-                  <div className="flex gap-2 text-xs font-semibold">
-                    <button
-                      type="button"
-                      onClick={() => handleEditExtra(extra)}
-                      className="text-primary hover:underline"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteExtra(extra)}
-                      className="text-red-600 hover:underline"
-                    >
-                      Excluir
-                    </button>
-                  </div>
+              <div key={extra.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {extra.description ?? extra.label ?? "Entrada extra"}
+                  </p>
+                  <p className="text-xs text-slate-600">
+                    {(extra.date ?? `${monthKey}-01`).slice(0, 10)} ·{" "}
+                    {formatBRL(Number.isFinite(Number(extra.amount)) ? Number(extra.amount) : 0)}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 text-xs font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => handleEditExtra(extra)}
+                    className="text-primary hover:underline"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteExtra(extra)}
+                    className="text-red-600 hover:underline"
+                  >
+                    Excluir
+                  </button>
                 </div>
               </div>
             ))
