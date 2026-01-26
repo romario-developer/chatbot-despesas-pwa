@@ -5,8 +5,6 @@ import { useNavigate } from "react-router-dom";
 import type { AssistantCard } from "../api/assistant";
 import { useAssistantChat } from "../hooks/useAssistantChat";
 
-const TABBAR_HEIGHT_VAR = "var(--tabbar-height, 64px)";
-
 const AssistantPage = () => {
   const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(() => {
@@ -220,26 +218,28 @@ const AssistantPage = () => {
 
   const orderedMessages = useMemo(() => {
     if (messages.length < 2) return messages;
-    const hasNumericTs = messages.every((message) => typeof (message as Record<string, unknown>).ts === "number");
-    const hasCreatedAt = messages.every((message) => {
-      const createdAt = (message as Record<string, unknown>).createdAt;
-      return typeof createdAt === "string" && !Number.isNaN(Date.parse(createdAt));
+    const indexed = messages.map((message, index) => {
+      const raw = message as Record<string, unknown>;
+      let tsValue = Infinity;
+      if (typeof raw.ts === "number") {
+        tsValue = raw.ts;
+      } else if (typeof raw.createdAt === "string") {
+        const parsed = Date.parse(raw.createdAt);
+        if (!Number.isNaN(parsed)) {
+          tsValue = parsed;
+        }
+      }
+      return { message, index, tsValue };
     });
-    if (!hasNumericTs && !hasCreatedAt) {
+    const hasInvalidTimestamp = indexed.some((entry) => entry.tsValue === Infinity);
+    if (hasInvalidTimestamp) {
       return messages;
     }
-    const next = [...messages];
-    const getTimestamp = (message: typeof messages[number]) => {
-      const raw = message as Record<string, unknown>;
-      if (typeof raw.ts === "number") return raw.ts;
-      if (typeof raw.createdAt === "string") {
-        const parsed = Date.parse(raw.createdAt);
-        if (!Number.isNaN(parsed)) return parsed;
-      }
-      return 0;
-    };
-    next.sort((a, b) => getTimestamp(a) - getTimestamp(b));
-    return next;
+    const sorted = [...indexed].sort((a, b) => {
+      if (a.tsValue === b.tsValue) return a.index - b.index;
+      return a.tsValue - b.tsValue;
+    });
+    return sorted.map((entry) => entry.message);
   }, [messages]);
 
   useEffect(() => {
@@ -278,14 +278,9 @@ const AssistantPage = () => {
           className="flex h-full flex-col overflow-y-auto px-4 py-3 pb-4"
           style={{
             WebkitOverflowScrolling: "touch",
-            paddingBottom: `calc(${TABBAR_HEIGHT_VAR} + env(safe-area-inset-bottom, 16px) + 32px)`,
+            paddingBottom: "calc(env(safe-area-inset-bottom, 16px) + 24px)",
           }}
         >
-          {toastMessage && (
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-900 shadow-sm text-left text-slate-950">
-              {toastMessage}
-            </div>
-          )}
           {assistantCards.length > 0 && (
             <div className="mt-3 grid gap-3 md:grid-cols-2">{assistantCards.map(renderCard)}</div>
           )}
@@ -400,6 +395,16 @@ const AssistantPage = () => {
                 );
               })
             )}
+            {toastMessage && (
+              <div className="assistant-message mt-3 flex flex-col gap-2">
+                <div
+                  className="max-w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-100"
+                  style={bubbleStyle}
+                >
+                  {toastMessage}
+                </div>
+              </div>
+            )}
             {assistantCards.length === 0 && isTyping && (
               <div className="mt-2 max-w-[70%] rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-300">
                 Digitando...
@@ -412,7 +417,7 @@ const AssistantPage = () => {
       <div
         className="border-t border-slate-800 bg-slate-950 px-4 py-3"
         style={{
-          paddingBottom: `calc(${TABBAR_HEIGHT_VAR} + env(safe-area-inset-bottom, 16px) + ${keyboardInset}px)`,
+          paddingBottom: `calc(env(safe-area-inset-bottom, 16px) + ${keyboardInset}px)`,
         }}
       >
         <form ref={formRef} onSubmit={handleSubmit} className="flex items-center gap-3">
@@ -423,7 +428,7 @@ const AssistantPage = () => {
             onChange={(event) => setInputValue(event.target.value)}
             onFocus={handleInputFocus}
             placeholder="Digite uma despesa… (ex: mercado 50)"
-            className="flex-1 min-h-[44px] max-h-[96px] resize-none rounded-3xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-slate-100 outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
+            className="flex-1 min-h-[44px] max-h-[96px] resize-none rounded-3xl border border-slate-700 bg-slate-900 px-4 py-2 text-base md:text-sm text-slate-100 outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
             style={{ maxHeight: "min(96px, calc(var(--vh, 1vh) * 25))" }}
           />
           <button
