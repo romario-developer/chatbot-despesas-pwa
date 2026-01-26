@@ -181,11 +181,14 @@ const BottomTabBar = () => {
       {isMoreMenuOpen && (
         <>
           <div
-            className="fixed inset-0 z-[69] bg-black/30"
+            className="fixed inset-0 z-[100] bg-black/30"
             onClick={() => setIsMoreMenuOpen(false)}
             aria-hidden="true"
           />
-          <div className="fixed inset-x-3 bottom-[var(--tabbar-height,64px)] z-[70] rounded-2xl border border-slate-200 bg-white p-4 shadow-lg dark:border-slate-800 dark:bg-slate-900">
+          <div
+            className="fixed inset-x-3 z-[100] rounded-2xl border border-slate-200 bg-white p-4 shadow-lg dark:border-slate-800 dark:bg-slate-900"
+            style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 72px)" }}
+          >
             <button
               type="button"
               onClick={() => {
