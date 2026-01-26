@@ -349,7 +349,7 @@ const PlanningPage = () => {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4 overflow-x-hidden">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold text-slate-900">Planejamento</h2>
@@ -357,7 +357,7 @@ const PlanningPage = () => {
             Cadastre salario, entradas extras e contas fixas para o mes.
           </p>
         </div>
-        <div className="sm:w-60">
+        <div className="w-full sm:w-60">
           <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
             Mes
             <MonthPicker
