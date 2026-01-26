@@ -463,7 +463,7 @@ const EntriesPage = () => {
                             {formatCurrency(entry.amount)}
                           </td>
                           <td className="px-4 py-3 text-right">
-                            <div className="flex justify-end gap-2 opacity-0 transition group-hover:opacity-100 md:opacity-0">
+                            <div className="flex justify-end gap-2 opacity-0 transition group-hover:opacity-100">
                               <button
                                 type="button"
                                 onClick={() => handleEditEntry(entry.id)}
