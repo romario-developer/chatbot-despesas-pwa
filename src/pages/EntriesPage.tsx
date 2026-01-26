@@ -48,8 +48,6 @@ const EntriesPage = () => {
     null,
   );
   const [isMonthPanelOpen, setIsMonthPanelOpen] = useState(false);
-  const [openEntryMenuId, setOpenEntryMenuId] = useState<string | null>(null);
-
   const selectedMonthRange = useMemo(() => monthToRange(month), [month]);
   const monthLabel = useMemo(() => formatMonthLabel(month), [month]);
   const monthOptions = useMemo(
@@ -351,44 +349,8 @@ const EntriesPage = () => {
                 return (
                 <div
                   key={entry.id}
-                  className="relative border-b border-slate-100 bg-white px-4 py-3 last:border-b-0"
+                  className="border-b border-slate-100 bg-white px-4 py-3 last:border-b-0"
                 >
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setOpenEntryMenuId((prev) => (prev === entry.id ? null : entry.id));
-                    }}
-                    aria-expanded={isMenuOpen}
-                    aria-controls={`entry-menu-${entry.id}`}
-                    className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 md:hidden"
-                  >
-                    <span className="text-lg leading-none" aria-hidden="true">
-                      ⋮
-                    </span>
-                    <span className="sr-only">Abrir ações</span>
-                  </button>
-                  {isMenuOpen && (
-                    <div
-                      id={`entry-menu-${entry.id}`}
-                      className="absolute right-3 top-12 z-20 w-36 rounded-xl border border-slate-200 bg-white shadow-lg md:hidden"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => handleEditEntry(entry.id)}
-                        className="w-full px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
-                      >
-                        ✏️ Editar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteClick(entry)}
-                        className="w-full px-4 py-2 text-left text-sm text-rose-600 transition hover:bg-slate-50"
-                      >
-                        🗑️ Excluir
-                      </button>
-                    </div>
-                  )}
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-semibold text-slate-900">{descriptionLabel}</p>
                     <p className="text-sm font-semibold text-slate-900">
@@ -412,6 +374,22 @@ const EntriesPage = () => {
                         </span>
                       )}
                     </span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-slate-600">
+                    <button
+                      type="button"
+                      onClick={() => handleEditEntry(entry.id)}
+                      className="text-slate-500 transition hover:text-primary"
+                    >
+                      ✏️ Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteClick(entry)}
+                      className="text-rose-600 transition hover:text-rose-500"
+                    >
+                      🗑️ Excluir
+                    </button>
                   </div>
                 </div>
               );
