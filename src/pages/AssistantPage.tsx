@@ -250,7 +250,7 @@ const AssistantPage = () => {
       <div className="flex-1 overflow-hidden">
         <div
           ref={scrollRef}
-          className="flex h-full flex-col overflow-y-auto px-4 py-3 pb-4"
+          className="flex h-full flex-col overflow-y-auto space-y-3 px-4 pt-5 pb-4"
           style={{
             WebkitOverflowScrolling: "touch",
             paddingBottom: "calc(env(safe-area-inset-bottom, 16px) + 24px)",
