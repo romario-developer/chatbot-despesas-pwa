@@ -251,22 +251,11 @@ const EntriesPage = () => {
 
   const handleEditEntry = (entryId: string) => {
     navigate(`/entries/${entryId}/edit`);
-    setOpenEntryMenuId(null);
   };
 
   const handleDeleteClick = (entry: Entry) => {
     setEntryToDelete(entry);
   };
-
-  useEffect(() => {
-    const handleDocumentClick = () => setOpenEntryMenuId(null);
-    document.addEventListener("mousedown", handleDocumentClick);
-    document.addEventListener("touchstart", handleDocumentClick);
-    return () => {
-      document.removeEventListener("mousedown", handleDocumentClick);
-      document.removeEventListener("touchstart", handleDocumentClick);
-    };
-  }, []);
 
   return (
     <div className="space-y-4">
@@ -342,11 +331,10 @@ const EntriesPage = () => {
         {!isLoading && !error && (
           <>
       <div className="mt-4 space-y-1 md:hidden">
-            {safeEntries.length ? (
-              safeEntries.map((entry) => {
-                const descriptionLabel = `${entry.description}${formatInstallmentLabel(entry)}`;
-                const isMenuOpen = openEntryMenuId === entry.id;
-                return (
+              {safeEntries.length ? (
+                safeEntries.map((entry) => {
+                  const descriptionLabel = `${entry.description}${formatInstallmentLabel(entry)}`;
+                  return (
                 <div
                   key={entry.id}
                   className="border-b border-slate-100 bg-white px-4 py-3 last:border-b-0"
