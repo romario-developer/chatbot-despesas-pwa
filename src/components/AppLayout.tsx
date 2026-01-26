@@ -4,6 +4,8 @@ import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
 import AssistantWidget from "./AssistantWidget";
 import BottomTabBar from "./BottomTabBar";
+import AssistantIcon from "./AssistantIcon";
+import usePrefersReducedMotion from "../hooks/usePrefersReducedMotion";
 
 const linkClasses = ({ isActive }: { isActive: boolean }) =>
   [
@@ -15,6 +17,7 @@ const AppLayout = () => {
   const { logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [assistantWidgetOpen, setAssistantWidgetOpen] = useState(false);
   const [isMobileView, setIsMobileView] = useState(() => {
     if (typeof window === "undefined") return false;
     return window.innerWidth < 768;
@@ -38,7 +41,9 @@ const AppLayout = () => {
     logout();
   };
 
+  const prefersReducedMotion = usePrefersReducedMotion();
   const isAssistantRoute = location.pathname.startsWith("/assistant");
+  const assistantActive = assistantWidgetOpen || isAssistantRoute;
   const isMobileNavigation = isTouchDevice && isMobileView && !isAssistantRoute;
   const hideTabBar = isTouchDevice && isMobileView && isAssistantRoute;
 
@@ -74,8 +79,16 @@ const AppLayout = () => {
         <div className="mx-auto flex max-w-5xl items-center px-4 py-3">
           <div className="flex-1 md:hidden" />
           <div className="flex flex-1 items-center justify-center">
-            <div className="h-10 w-10 rounded-full border border-slate-200 bg-primary text-white shadow-sm flex items-center justify-center text-lg font-semibold">
-              D
+            <div
+              className={[
+                "flex h-10 w-10 items-center justify-center rounded-full border border-white/70 bg-[#25D366] transition",
+                assistantActive ? "ring-2 ring-[#25D366]/50" : "ring-0",
+                assistantActive && !prefersReducedMotion ? "motion-safe:animate-[pulse_1.3s_ease-in-out]" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              <AssistantIcon className="h-6 w-6 text-white" />
             </div>
           </div>
           <div className="flex flex-1 justify-end items-center md:gap-4">
@@ -174,7 +187,9 @@ const AppLayout = () => {
           </div>
         </div>
       )}
-      {!isMobileNavigation && <AssistantWidget />}
+      {!isMobileNavigation && (
+        <AssistantWidget onStateChange={(open) => setAssistantWidgetOpen(open)} />
+      )}
       {isMobileNavigation && <BottomTabBar />}
 
     </div>

@@ -12,7 +12,11 @@ const logAssistant = (...args: unknown[]) => {
   }
 };
 
-const AssistantWidget = () => {
+type AssistantWidgetProps = {
+  onStateChange?: (isExpanded: boolean) => void;
+};
+
+const AssistantWidget = ({ onStateChange }: AssistantWidgetProps) => {
   const [widgetState, setWidgetState] = useState<"collapsed" | "expanded">(() => {
     if (typeof window === "undefined") return "collapsed";
     const stored = window.localStorage.getItem(WIDGET_STATE_KEY);
@@ -48,6 +52,10 @@ const AssistantWidget = () => {
       toggleButtonRef.current?.focus();
     }
   }, [isExpanded]);
+
+  useEffect(() => {
+    onStateChange?.(isExpanded);
+  }, [isExpanded, onStateChange]);
 
   useEffect(() => {
     if (!isExpanded || typeof window === "undefined") return undefined;
