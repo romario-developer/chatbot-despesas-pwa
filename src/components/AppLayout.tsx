@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
@@ -23,6 +24,8 @@ const AppLayout = () => {
     if (typeof window === "undefined") return false;
     return window.innerWidth < 768;
   });
+  const gearRef = useRef<HTMLButtonElement | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 8, right: 16 });
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -66,6 +69,20 @@ const AppLayout = () => {
     };
   }, []);
 
+  useLayoutEffect(() => {
+    if (!settingsOpen || typeof window === "undefined") return;
+    const rect = gearRef.current?.getBoundingClientRect();
+    if (!rect) {
+      setDropdownPosition({ top: 8, right: 16 });
+      return;
+    }
+    const baseTop = rect.bottom + 8;
+    const maxTop = window.innerHeight - 220;
+    const safeTop = Math.max(8, Math.min(baseTop, maxTop));
+    const right = Math.max(12, window.innerWidth - rect.right);
+    setDropdownPosition({ top: safeTop, right });
+  }, [settingsOpen]);
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       {isAssistantRoute ? (
@@ -84,6 +101,7 @@ const AppLayout = () => {
             <button
               type="button"
               onClick={openSettings}
+              ref={gearRef}
               className="md:hidden rounded-full border border-slate-200 p-2 text-slate-700 transition hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-100 dark:hover:text-white"
               aria-label="Abrir configurações"
             >
@@ -147,6 +165,7 @@ const AppLayout = () => {
               <button
                 type="button"
                 onClick={openSettings}
+                ref={gearRef}
                 className="md:hidden rounded-full border border-slate-200 p-2 text-slate-700 transition hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-100 dark:hover:text-white"
                 aria-label="Abrir configurações"
               >
@@ -165,53 +184,50 @@ const AppLayout = () => {
       <main className={`${hideTabBar ? "pb-6" : "app-main"} mx-auto max-w-6xl px-4 py-6 md:pb-6`}>
         <Outlet />
       </main>
-      {settingsOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-transparent"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div
-            className="absolute inset-0 bg-slate-900/40"
-            onClick={closeSettings}
-            aria-hidden="true"
-          />
-          <div className="relative w-full max-w-md rounded-t-2xl bg-white p-4 shadow-2xl dark:bg-slate-900 dark:text-slate-100">
-            <div className="pointer-events-none absolute -top-2 right-3 h-4 w-4 rotate-45 border-l border-t border-slate-200/20 bg-white dark:bg-slate-950" />
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-sm font-semibold">Configurações</p>
-              <button
-                type="button"
-                onClick={closeSettings}
-                className="text-slate-500 transition hover:text-slate-700 dark:text-slate-400 dark:hover:text-white"
-                aria-label="Fechar configurações"
-              >
-                ×
-              </button>
+      {settingsOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <>
+            <button
+              type="button"
+              className="fixed inset-0 z-[998] cursor-default bg-transparent"
+              onClick={closeSettings}
+              aria-label="Fechar configurações"
+            />
+            <div
+            className="relative z-[999] w-56 rounded-xl border border-slate-200/20 bg-white/95 p-4 shadow-lg backdrop-blur dark:border-slate-800/30 dark:bg-slate-950/95 dropdown-in"
+              style={{
+                position: "fixed",
+                top: dropdownPosition.top,
+                right: dropdownPosition.right,
+              }}
+            >
+              <div className="pointer-events-none absolute -top-2 right-4 h-4 w-4 rotate-45 border-l border-t border-slate-200/20 bg-white/95 dark:bg-slate-950/95" />
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    toggleTheme();
+                    closeSettings();
+                  }}
+                  className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-100"
+                >
+                  Alternar tema
+                  <span>{theme === "dark" ? "🌙" : "☀️"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLogoutFromSheet}
+                  className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-rose-600 transition hover:border-rose-300 hover:text-rose-700 dark:border-slate-700"
+                >
+                  Logout
+                  <span aria-hidden="true">↗</span>
+                </button>
+              </div>
             </div>
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => {
-                  toggleTheme();
-                }}
-                className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-100"
-              >
-                Alternar tema
-                <span>{theme === "dark" ? "🌙" : "☀️"}</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleLogoutFromSheet}
-                className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-rose-600 transition hover:border-rose-300 hover:text-rose-700 dark:border-slate-700"
-              >
-                Logout
-                <span aria-hidden="true">↗</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </>,
+          document.body,
+        )}
       {!isMobileView && (
         <AssistantWidget onStateChange={(open) => setAssistantWidgetOpen(open)} />
       )}
