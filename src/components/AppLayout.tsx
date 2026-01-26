@@ -66,69 +66,71 @@ const AppLayout = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white pt-[env(safe-area-inset-top)] dark:border-slate-800 dark:bg-slate-950">
-        <div className="mx-auto flex max-w-5xl items-center px-4 py-3">
-          <div className="flex-1 md:hidden" />
-          <div className="flex flex-1 items-center justify-center">
-            <div
-              className={[
-                "flex h-10 w-10 items-center justify-center rounded-full border border-white/70 bg-[#25D366] transition",
-                assistantActive ? "ring-2 ring-[#25D366]/50" : "ring-0",
-                assistantActive && !prefersReducedMotion ? "motion-safe:animate-[pulse_1.3s_ease-in-out]" : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-            >
-              <AssistantIcon className="h-6 w-6 text-white" />
+      {!isAssistantRoute && (
+        <header className="sticky top-0 z-10 border-b border-slate-200 bg-white pt-[env(safe-area-inset-top)] dark:border-slate-800 dark:bg-slate-950">
+          <div className="mx-auto flex max-w-5xl items-center px-4 py-3">
+            <div className="flex-1 md:hidden" />
+            <div className="flex flex-1 items-center justify-center">
+              <div
+                className={[
+                  "flex h-10 w-10 items-center justify-center rounded-full border border-white/70 bg-[#25D366] transition",
+                  assistantActive ? "ring-2 ring-[#25D366]/50" : "ring-0",
+                  assistantActive && !prefersReducedMotion ? "motion-safe:animate-[pulse_1.3s_ease-in-out]" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                <AssistantIcon className="h-6 w-6 text-white" />
+              </div>
+            </div>
+            <div className="flex flex-1 justify-end items-center md:gap-4">
+              <nav className="hidden items-center gap-4 md:flex">
+                <NavLink to="/" end className={linkClasses}>
+                  Dashboard
+                </NavLink>
+                <NavLink to="/entries" className={linkClasses}>
+                  Lancamentos
+                </NavLink>
+                <NavLink to="/categories" className={linkClasses}>
+                  Categorias
+                </NavLink>
+                <NavLink to="/planning" className={linkClasses}>
+                  Planejamento
+                </NavLink>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-100"
+                >
+                  Logout
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className="rounded-full border border-slate-200 px-3 py-1.5 text-sm text-slate-700 transition hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-100"
+                  aria-label="Alternar tema"
+                >
+                  {theme === "dark" ? "🌙" : "☀️"}
+                </button>
+              </nav>
+              <button
+                type="button"
+                onClick={openSettings}
+                className="hidden rounded-full border border-slate-200 p-2 text-slate-700 transition hover:border-primary hover:text-primary md:hidden"
+                aria-label="Abrir configurações"
+              >
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
+                  <path
+                    fillRule="evenodd"
+                    clipRule="evenodd"
+                    d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zm9-3.5a2.5 2.5 0 0 1-2.438 2.496l-.196.013-.133-.02-1.615-.414-.402 1.46.643.643c.193.193.193.506 0 .7l-1.414 1.414a.5.5 0 0 1-.707 0l-.643-.643-1.46.402.414 1.615c.021.084.023.17.013.255A2.5 2.5 0 0 1 12 21.5a2.5 2.5 0 0 1-2.496-2.438l-.013-.196.02-.133.414-1.615-1.46-.402-.643.643a.5.5 0 0 1-.707 0L5.5 16.334a.5.5 0 0 1 0-.707l.643-.643-1.46-.402-.414 1.615a2.5 2.5 0 0 1-4.985-.266l-.013-.196A2.5 2.5 0 0 1 2.5 12c0-1.246.9-2.28 2.094-2.458l.196-.033.133.02 1.615.414.402-1.46-.643-.643a.5.5 0 0 1 0-.707L5.5 5.358a.5.5 0 0 1 .707 0l.643.643 1.46-.402-.414-1.615a2.5 2.5 0 0 1 4.985.266l.013.196-.02.133-.414 1.615 1.46.402.643-.643a.5.5 0 0 1 .707 0l1.414 1.414a.5.5 0 0 1 0 .707l-.643.643 1.46.402.414-1.615c.021-.084.023-.17.013-.255A2.5 2.5 0 0 1 21.5 12z"
+                  />
+                </svg>
+              </button>
             </div>
           </div>
-          <div className="flex flex-1 justify-end items-center md:gap-4">
-            <nav className="hidden items-center gap-4 md:flex">
-              <NavLink to="/" end className={linkClasses}>
-                Dashboard
-              </NavLink>
-              <NavLink to="/entries" className={linkClasses}>
-                Lancamentos
-              </NavLink>
-              <NavLink to="/categories" className={linkClasses}>
-                Categorias
-              </NavLink>
-              <NavLink to="/planning" className={linkClasses}>
-                Planejamento
-              </NavLink>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-100"
-              >
-                Logout
-              </button>
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className="rounded-full border border-slate-200 px-3 py-1.5 text-sm text-slate-700 transition hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-100"
-                aria-label="Alternar tema"
-              >
-                {theme === "dark" ? "🌙" : "☀️"}
-              </button>
-            </nav>
-            <button
-              type="button"
-              onClick={openSettings}
-              className="hidden rounded-full border border-slate-200 p-2 text-slate-700 transition hover:border-primary hover:text-primary md:hidden"
-              aria-label="Abrir configurações"
-            >
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
-                <path
-                  fillRule="evenodd"
-                  clipRule="evenodd"
-                  d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zm9-3.5a2.5 2.5 0 0 1-2.438 2.496l-.196.013-.133-.02-1.615-.414-.402 1.46.643.643c.193.193.193.506 0 .7l-1.414 1.414a.5.5 0 0 1-.707 0l-.643-.643-1.46.402.414 1.615c.021.084.023.17.013.255A2.5 2.5 0 0 1 12 21.5a2.5 2.5 0 0 1-2.496-2.438l-.013-.196.02-.133.414-1.615-1.46-.402-.643.643a.5.5 0 0 1-.707 0L5.5 16.334a.5.5 0 0 1 0-.707l.643-.643-1.46-.402-.414 1.615a2.5 2.5 0 0 1-4.985-.266l-.013-.196A2.5 2.5 0 0 1 2.5 12c0-1.246.9-2.28 2.094-2.458l.196-.033.133.02 1.615.414.402-1.46-.643-.643a.5.5 0 0 1 0-.707L5.5 5.358a.5.5 0 0 1 .707 0l.643.643 1.46-.402-.414-1.615a2.5 2.5 0 0 1 4.985.266l.013.196-.02.133-.414 1.615 1.46.402.643-.643a.5.5 0 0 1 .707 0l1.414 1.414a.5.5 0 0 1 0 .707l-.643.643 1.46.402.414-1.615c.021-.084.023-.17.013-.255A2.5 2.5 0 0 1 21.5 12z"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </header>
+        </header>
+      )}
       <main className={`${hideTabBar ? "pb-6" : "app-main"} mx-auto max-w-6xl px-4 py-6 md:pb-6`}>
         <Outlet />
       </main>
