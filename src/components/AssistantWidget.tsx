@@ -120,6 +120,8 @@ const AssistantWidget = ({ onStateChange }: AssistantWidgetProps) => {
     toastMessage,
     currentStage,
     lastUiHint,
+    setCurrentStage,
+    setLastUiHint,
   } = useAssistantChat();
 
   const orderedMessages = useMemo(() => {

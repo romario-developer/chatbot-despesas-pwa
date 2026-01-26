@@ -247,5 +247,7 @@ export const useAssistantChat = ({ onSavedStage }: UseAssistantChatOptions = {})
     suggestedActions,
     currentStage,
     lastUiHint,
+    setCurrentStage,
+    setLastUiHint,
   };
 };
