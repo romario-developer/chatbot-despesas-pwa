@@ -218,13 +218,23 @@ const AssistantPage = () => {
     whiteSpace: "pre-wrap",
   };
 
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.body.classList.add("assistant-no-x");
+    return () => {
+      document.body.classList.remove("assistant-no-x");
+    };
+  }, []);
+
   return (
     <div
       ref={rootRef}
-      className="fixed inset-0 flex flex-col bg-slate-950 text-slate-50"
+      className="fixed inset-0 flex w-full flex-col overflow-x-hidden bg-slate-950 text-slate-50"
       style={{
         height: "100dvh",
         minHeight: "calc(var(--vh, 1vh) * 100)",
+        width: "100%",
+        maxWidth: "100%",
       }}
     >
       <header className="flex items-center justify-between border-b border-slate-800 px-4 py-3">

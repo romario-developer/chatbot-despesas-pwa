@@ -19,6 +19,7 @@
 html,
 body {
   height: 100%;
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -36,6 +37,10 @@ body {
 body.chat-lock-scroll {
   /* Lock body scroll when the assistant is mounted so only the chat scrolls. */
   overflow: hidden;
+}
+
+body.assistant-no-x {
+  overflow-x: hidden;
 }
 
 .assistant-message {
