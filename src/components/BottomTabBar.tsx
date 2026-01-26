@@ -4,6 +4,8 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { ASSISTANT_OPEN_EVENT } from "../constants/assistantEvents";
 import AssistantIcon from "./AssistantIcon";
 import usePrefersReducedMotion from "../hooks/usePrefersReducedMotion";
+import { useAuth } from "../contexts/AuthContext";
+import { useTheme } from "../contexts/ThemeContext";
 
 type TabItem = {
   label: string;
@@ -57,6 +59,8 @@ const tabBarStyle: CSSProperties & { "--tabbar-height": string } = {
 };
 
 const BottomTabBar = () => {
+  const { toggleTheme, theme } = useTheme();
+  const { logout } = useAuth();
   const openAssistant = useCallback(() => {
     if (typeof window === "undefined") return;
     window.dispatchEvent(new CustomEvent(ASSISTANT_OPEN_EVENT));
@@ -69,6 +73,7 @@ const BottomTabBar = () => {
     return window.matchMedia("(max-width: 767px)").matches;
   });
   const assistantActive = useMemo(() => location.pathname.startsWith("/assistant"), [location]);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof document === "undefined") return undefined;
@@ -97,6 +102,10 @@ const BottomTabBar = () => {
       html.style.setProperty("--tabbar-height", "0px");
     };
   }, []);
+
+  useEffect(() => {
+    setIsMoreMenuOpen(false);
+  }, [location.pathname]);
 
   const renderTab = (tab: TabItem) => (
     <NavLink
@@ -156,8 +165,56 @@ const BottomTabBar = () => {
             <AssistantIcon className="h-8 w-8 text-white" />
           </button>
         </div>
-        <div className="flex flex-1 items-center justify-end gap-1">{tabs.slice(2).map(renderTab)}</div>
+        <div className="flex flex-1 items-center justify-end gap-1">
+          {tabs.slice(2).map(renderTab)}
+          <button
+            type="button"
+            aria-label="Mais"
+            onClick={() => setIsMoreMenuOpen((prev) => !prev)}
+            className="flex flex-col items-center justify-center rounded-2xl px-2 py-2 text-xs font-semibold text-slate-500 transition hover:text-primary"
+          >
+            <span className="text-lg leading-none">⋯</span>
+            <span>Mais</span>
+          </button>
+        </div>
       </div>
+      {isMoreMenuOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-[69] bg-black/30"
+            onClick={() => setIsMoreMenuOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="fixed inset-x-3 bottom-[var(--tabbar-height,64px)] z-[70] rounded-2xl border border-slate-200 bg-white p-4 shadow-lg dark:border-slate-800 dark:bg-slate-900">
+            <button
+              type="button"
+              onClick={() => {
+                toggleTheme();
+                setIsMoreMenuOpen(false);
+              }}
+              className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 transition hover:border-primary hover:text-primary dark:border-slate-800 dark:text-slate-100"
+            >
+              <span>{theme === "dark" ? "Modo claro" : "Modo escuro"}</span>
+              <span className="text-lg" aria-hidden="true">
+                ⛅
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                logout();
+                setIsMoreMenuOpen(false);
+              }}
+              className="mt-3 flex w-full items-center justify-between rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-rose-600 transition hover:bg-red-100 hover:text-rose-700 dark:border-rose-200/40 dark:bg-rose-900/30"
+            >
+              <span>Sair</span>
+              <span className="text-lg" aria-hidden="true">
+                ↗
+              </span>
+            </button>
+          </div>
+        </>
+      )}
     </nav>
   );
 };
