@@ -30,7 +30,7 @@
 ## Infra e UX
 - [x] PWA com service worker, prompt de update e gatilho `pwa:need-refresh` (`src/main.tsx`, `src/components/AppLayout.tsx`, `vite.config.ts`)
 - [x] Cache da API em NetworkOnly (`vite.config.ts`)
-- [x] Healthcheck da API com banner de erro (`src/components/ApiHealthCheck.tsx`)
+- [x] Warmup da API com banner de conexão (`src/components/AppInit.tsx`)
 - [x] Toasts de feedback global (`src/components/Toast.tsx`)
 - [x] Month picker reutilizavel (`src/components/MonthPicker.tsx`)
 - [x] Atualizacao automatica de dados (intervalo, foco, online, evento) para dashboard e lancamentos (`src/pages/DashboardPage.tsx`, `src/pages/EntriesPage.tsx`, `src/utils/entriesEvents.ts`)

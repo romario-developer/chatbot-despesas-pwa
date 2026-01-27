@@ -350,3 +350,148 @@ export const apiRequest = async <T>(config: ApiRequestConfig): Promise<T> => {
     throw error;
   }
 };
+
+type ApiReadyPhase = "idle" | "connecting" | "ready" | "failed";
+
+export type ApiReadyState = {
+  status: ApiReadyPhase;
+  attempts: number;
+  readyVersion: number;
+  lastError: Error | null;
+};
+
+export type WaitForApiReadyOptions = {
+  /**
+   * Force a fresh health-check run even if the API is already ready or already warming up.
+   */
+  force?: boolean;
+  /**
+   * Maximum number of attempts to query /api/health.
+   */
+  maxAttempts?: number;
+  /**
+   * Custom timeout for the health request.
+   */
+  timeoutMs?: number;
+  /**
+   * Custom backoff delays used between retries (values represent milliseconds).
+   */
+  backoffDelays?: number[];
+};
+
+const HEALTH_ENDPOINT = "/api/health";
+const HEALTH_TIMEOUT_MS = 5_000;
+const HEALTH_ATTEMPTS = 5;
+const HEALTH_BACKOFF_DELAYS = [500, 1000, 2000, 4000];
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+let apiReadyState: ApiReadyState = {
+  status: "idle",
+  attempts: 0,
+  readyVersion: 0,
+  lastError: null,
+};
+let apiReadyPromise: Promise<void> | null = null;
+const apiReadyListeners = new Set<() => void>();
+
+const notifyApiReadyState = () => {
+  apiReadyListeners.forEach((listener) => {
+    try {
+      listener();
+    } catch {
+      // swallow listener errors to avoid breaking the warmup loop
+    }
+  });
+};
+
+const updateApiReadyState = (next: ApiReadyState) => {
+  apiReadyState = next;
+  notifyApiReadyState();
+};
+
+export const getApiReadyState = () => apiReadyState;
+
+export const subscribeToApiReadyState = (listener: () => void) => {
+  apiReadyListeners.add(listener);
+  return () => {
+    apiReadyListeners.delete(listener);
+  };
+};
+
+export const waitForApiReady = async (options: WaitForApiReadyOptions = {}) => {
+  if (!options.force) {
+    if (apiReadyState.status === "ready") {
+      return;
+    }
+    if (apiReadyPromise) {
+      return apiReadyPromise;
+    }
+  } else {
+    apiReadyPromise = null;
+  }
+
+  const attempts = options.maxAttempts ?? HEALTH_ATTEMPTS;
+  const backoff = options.backoffDelays ?? HEALTH_BACKOFF_DELAYS;
+  const timeout = options.timeoutMs ?? HEALTH_TIMEOUT_MS;
+
+  const runHealthCheck = async () => {
+    let lastError: Error | null = null;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      if (attempt > 1) {
+        const delay =
+          backoff[
+            Math.min(attempt - 2, backoff.length - 1)
+          ] ?? backoff[backoff.length - 1];
+        await sleep(delay);
+      }
+      updateApiReadyState({
+        status: "connecting",
+        attempts: attempt,
+        readyVersion: apiReadyState.readyVersion,
+        lastError,
+      });
+
+      try {
+        await apiRequest({
+          url: HEALTH_ENDPOINT,
+          method: "GET",
+          timeout,
+          dashboardDebug: { label: "health-startup" },
+        });
+        updateApiReadyState({
+          status: "ready",
+          attempts: attempt,
+          readyVersion: apiReadyState.readyVersion + 1,
+          lastError: null,
+        });
+        return;
+      } catch (error) {
+        lastError = error as Error;
+        updateApiReadyState({
+          status: "connecting",
+          attempts: attempt,
+          readyVersion: apiReadyState.readyVersion,
+          lastError,
+        });
+      }
+    }
+    if (shouldLogApi && lastError) {
+      // eslint-disable-next-line no-console
+      console.warn("[api] health check retry error:", lastError);
+    }
+    updateApiReadyState({
+      status: "failed",
+      attempts,
+      readyVersion: apiReadyState.readyVersion,
+      lastError,
+    });
+    throw lastError ?? new Error("Health check falhou");
+  };
+
+  apiReadyPromise = runHealthCheck().finally(() => {
+    apiReadyPromise = null;
+  });
+
+  return apiReadyPromise;
+};

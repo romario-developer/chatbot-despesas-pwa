@@ -1,6 +1,7 @@
 import axios from "axios";
 
 const rawBaseUrl = (import.meta.env.VITE_API_URL ?? "").trim();
+export const rawApiUrl = rawBaseUrl;
 const DEBUG_API = String(import.meta.env.VITE_DEBUG_API).toLowerCase() === "true";
 export const shouldLogApi = Boolean(import.meta.env?.DEV || DEBUG_API);
 

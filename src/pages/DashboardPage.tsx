@@ -20,6 +20,8 @@ import { cardBase, cardHover, subtleText } from "../styles/dashboardTokens";
 import { buildTag } from "../constants/build";
 import type { DashboardSummary, Entry } from "../types";
 import DashboardCardsList from "../components/DashboardCardsList";
+import { waitForApiReady } from "../api/client";
+import { useApiReadyState } from "../hooks/useApiReadyState";
 
 const CATEGORY_FALLBACK_COLORS = [
   "#0ea5e9",
@@ -84,17 +86,28 @@ const DashboardPage = () => {
   const [isMonthPanelOpen, setIsMonthPanelOpen] = useState(false);
   const buildVersion = import.meta.env.VITE_APP_VERSION || buildTag;
   const showBuildTag = !import.meta.env.VITE_APP_VERSION;
+  const { readyVersion } = useApiReadyState();
 
   const loadDashboard = useCallback(
     async ({ silent }: { silent?: boolean } = {}) => {
-      if (!silent) {
-        setSummaryLoading(true);
-        setEntriesLoading(true);
-        setSummaryError(null);
-        setEntriesError(null);
-      }
+    if (!silent) {
+      setSummaryLoading(true);
+      setEntriesLoading(true);
+      setSummaryError(null);
+      setEntriesError(null);
+    }
 
-      const range = monthToRange(month);
+    try {
+      await waitForApiReady();
+    } catch {
+      if (!silent) {
+        setSummaryLoading(false);
+        setEntriesLoading(false);
+      }
+      return;
+    }
+
+    const range = monthToRange(month);
       logDashboardDebug("loading month", month, range);
       const [summaryResult, entriesResult] = await Promise.allSettled([
         getDashboardSummary(month),
@@ -159,7 +172,7 @@ const DashboardPage = () => {
 
   useEffect(() => {
     loadDashboard();
-  }, [loadDashboard]);
+  }, [loadDashboard, readyVersion]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

@@ -1,6 +1,6 @@
 import { Suspense, lazy } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import ApiHealthCheck from "../components/ApiHealthCheck";
+import AppInit from "../components/AppInit";
 import AppLayout from "../components/AppLayout";
 import ProtectedRoute from "../components/ProtectedRoute";
 import { AuthProvider } from "../contexts/AuthContext";
@@ -21,7 +21,7 @@ const SignupPage = lazy(() => import("../pages/SignupPage"));
 const AppRouter = () => (
   <BrowserRouter>
     <AuthProvider>
-      <ApiHealthCheck />
+      <AppInit />
       <Suspense fallback={<div className="p-6">Carregando.</div>}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
