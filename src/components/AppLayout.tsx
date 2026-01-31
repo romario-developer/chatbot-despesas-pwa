@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { createPortal } from "react-dom";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Menu, User, Wallet } from "lucide-react";
+import { Settings, Wallet } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
 import AssistantWidget from "./AssistantWidget";
@@ -40,7 +40,6 @@ const AppLayout = () => {
     return window.innerWidth < 768;
   });
   const gearRef = useRef<HTMLButtonElement | null>(null);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 8, right: 16 });
   const location = useLocation();
   const navigate = useNavigate();
   const { exportBackup, importBackup, isExporting, isImporting } = useBackupActions();
@@ -114,20 +113,6 @@ const AppLayout = () => {
     };
   }, []);
 
-  useLayoutEffect(() => {
-    if (!settingsOpen || typeof window === "undefined") return;
-    const rect = gearRef.current?.getBoundingClientRect();
-    if (!rect) {
-      setDropdownPosition({ top: 8, right: 16 });
-      return;
-    }
-    const baseTop = rect.bottom + 8;
-    const maxTop = window.innerHeight - 220;
-    const safeTop = Math.max(8, Math.min(baseTop, maxTop));
-    const right = Math.max(12, window.innerWidth - rect.right);
-    setDropdownPosition({ top: safeTop, right });
-  }, [settingsOpen]);
-
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       {isAssistantRoute ? (
@@ -162,10 +147,10 @@ const AppLayout = () => {
         </header>
       ) : (
         <header className="sticky top-0 z-20 border-b border-slate-200/60 bg-white/90 backdrop-blur dark:border-slate-800/70 dark:bg-slate-950/75">
-          <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:text-white">
-                <Wallet className="h-5 w-5 text-primary" />
+            <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:text-white">
+                  <Wallet className="h-5 w-5 text-primary" />
               </div>
               <div className="flex flex-col leading-tight">
                 <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
@@ -186,22 +171,17 @@ const AppLayout = () => {
                 </NavLink>
               ))}
             </nav>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setSettingsOpen((prev) => !prev)}
-                ref={gearRef}
-                className="rounded-2xl border border-slate-200 bg-white/80 px-3 py-2 text-slate-700 transition hover:border-primary hover:text-primary dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100 dark:hover:border-primary"
-                aria-label="Abrir menu principal"
-              >
-                {isMobileView ? (
-                  <Menu className="h-5 w-5" />
-                ) : (
-                  <User className="h-5 w-5" />
-                )}
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSettingsOpen((prev) => !prev)}
+                  className="rounded-2xl border border-slate-200 bg-white/80 px-3 py-2 text-slate-700 transition hover:border-primary hover:text-primary dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100 dark:hover:border-primary"
+                  aria-label="Abrir menu principal"
+                >
+                  <Settings className="h-5 w-5" />
+                </button>
+              </div>
             </div>
-          </div>
         </header>
       )}
       <main className={`${hideTabBar ? "pb-6" : "app-main"} mx-auto max-w-6xl px-4 py-6 md:pb-6`}>
@@ -217,27 +197,18 @@ const AppLayout = () => {
               onClick={closeSettings}
               aria-label="Fechar menu"
             />
-            <div
-              className={[
-                "relative z-[999] rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-lg backdrop-blur dark:border-slate-800/30 dark:bg-slate-950/95",
-                isMobileView
-                  ? "fixed inset-3 overflow-y-auto"
-                  : "absolute min-w-[280px] max-w-sm",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              style={
-                isMobileView
-                  ? undefined
-                  : {
-                      position: "fixed",
-                      top: dropdownPosition.top,
-                      right: dropdownPosition.right,
-                    }
-              }
-            >
-              <div className="space-y-6">
-                <section className="space-y-3">
+            <div className="fixed inset-0 z-[999] flex items-end justify-center px-3 pb-6 md:items-start md:justify-end md:px-4">
+              <div
+                className={[
+                  "w-full rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-lg backdrop-blur dark:border-slate-800/30 dark:bg-slate-950/95 md:absolute",
+                  isMobileView
+                    ? "max-h-[80vh] overflow-y-auto md:hidden"
+                    : "min-w-[280px] max-w-sm",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                <div className="space-y-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
                     Configurações
                   </p>
@@ -303,7 +274,7 @@ const AppLayout = () => {
                       <span aria-hidden="true">↗</span>
                     </button>
                   </div>
-                </section>
+                </div>
               </div>
             </div>
           </>,
