@@ -26,14 +26,6 @@ const desktopLinkClasses = ({ isActive }: { isActive: boolean }) =>
       : "text-slate-600/80 hover:text-primary dark:text-slate-300 dark:hover:text-primary",
   ].join(" ");
 
-const menuLinkClasses = ({ isActive }: { isActive: boolean }) =>
-  [
-    "block rounded-2xl px-3 py-3 text-sm font-semibold transition",
-    isActive
-      ? "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white"
-      : "text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900/50 hover:text-primary",
-  ].join(" ");
-
 type ToastState = {
   type: "success" | "error";
   message: string;
@@ -245,24 +237,6 @@ const AppLayout = () => {
               }
             >
               <div className="space-y-6">
-                <section className="space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
-                    Navegação
-                  </p>
-                  <div className="space-y-2">
-                    {NAV_LINKS.map((link) => (
-                      <NavLink
-                        key={link.to}
-                        to={link.to}
-                        end={Boolean(link.end)}
-                        className={menuLinkClasses}
-                        onClick={closeSettings}
-                      >
-                        {link.label}
-                      </NavLink>
-                    ))}
-                  </div>
-                </section>
                 <section className="space-y-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
                     Configurações
