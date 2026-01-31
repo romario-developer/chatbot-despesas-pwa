@@ -146,6 +146,9 @@ const AppLayout = () => {
                 <NavLink to="/planning" className={linkClasses}>
                   Planejamento
                 </NavLink>
+                <NavLink to="/backup" className={linkClasses}>
+                  Backup
+                </NavLink>
                 <button
                   type="button"
                   onClick={handleLogout}

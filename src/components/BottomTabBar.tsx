@@ -205,6 +205,19 @@ const BottomTabBar = () => {
             <button
               type="button"
               onClick={() => {
+                navigate("/backup");
+                setIsMoreMenuOpen(false);
+              }}
+              className="mt-3 flex w-full items-center justify-between rounded-lg border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 transition hover:border-primary hover:text-primary dark:border-slate-800 dark:text-slate-100"
+            >
+              <span>Backup</span>
+              <span aria-hidden="true" className="text-lg">
+                ↗
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
                 logout();
                 setIsMoreMenuOpen(false);
               }}
