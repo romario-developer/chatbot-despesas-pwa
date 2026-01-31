@@ -41,6 +41,10 @@ const AppLayout = () => {
     closeSettings();
     logout();
   };
+  const handleBackupFromSheet = () => {
+    closeSettings();
+    navigate("/backup");
+  };
 
   const prefersReducedMotion = usePrefersReducedMotion();
   const isAssistantRoute = location.pathname.startsWith("/assistant");
@@ -217,6 +221,14 @@ const AppLayout = () => {
                 >
                   Alternar tema
                   <span>{theme === "dark" ? "🌙" : "☀️"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBackupFromSheet}
+                  className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-100"
+                >
+                  Backup
+                  <span aria-hidden="true">↗</span>
                 </button>
                 <button
                   type="button"
