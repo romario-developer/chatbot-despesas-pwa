@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { createPortal } from "react-dom";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Settings } from "lucide-react";
+import { Settings, Moon, Sun } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
 import AssistantWidget from "./AssistantWidget";
@@ -241,8 +241,19 @@ const AppLayout = () => {
                       }}
                       className="flex w-full items-center justify-between rounded-2xl border border-[var(--border-muted)] bg-[var(--card-bg)] px-4 py-3 text-sm font-semibold text-[var(--text-primary)] transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
                     >
-                      Alternar tema
-                      <span>{theme === "dark" ? "🌙" : "☀️"}</span>
+                      <span className="flex items-center gap-2">
+                        {theme === "dark" ? (
+                          <>
+                            <Sun className="h-4 w-4" />
+                            Modo claro
+                          </>
+                        ) : (
+                          <>
+                            <Moon className="h-4 w-4" />
+                            Modo escuro
+                          </>
+                        )}
+                      </span>
                     </button>
                     <div className="rounded-2xl border border-[var(--border-muted)] bg-[var(--card-bg)] p-3 text-sm text-[var(--text-muted)] shadow-[0_10px_25px_rgba(15,23,42,0.08)]">
                       <p className="font-semibold text-[var(--text-primary)]">Backup</p>

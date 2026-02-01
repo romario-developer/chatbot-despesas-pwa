@@ -122,6 +122,34 @@ body.assistant-no-x {
   color: var(--text-primary);
 }
 
+.dark [class*="bg-white"] {
+  background-color: var(--surface) !important;
+}
+
+.dark [class*="bg-white/"] {
+  background-color: var(--surface) !important;
+}
+
+.dark [class*="bg-slate-50"] {
+  background-color: var(--surface-2) !important;
+}
+
+.dark [class*="border-slate-200"] {
+  border-color: var(--border) !important;
+}
+
+.dark [class*="text-slate-900"] {
+  color: var(--text-primary) !important;
+}
+
+.dark [class*="text-slate-600"] {
+  color: var(--text-muted) !important;
+}
+
+.dark .shadow-sm {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+}
+
 .no-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
