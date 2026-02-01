@@ -3,9 +3,11 @@ import MonthPicker, {
   MonthPickerFieldTrigger,
   monthPickerFieldButtonClassName,
 } from "../components/MonthPicker";
+import MoneyInput from "../components/MoneyInput";
 import Toast from "../components/Toast";
 import { getPlanning, savePlanning } from "../api/planning";
-import { formatBRL, parseCurrencyInput } from "../utils/format";
+import { formatBRL } from "../utils/format";
+import { formatCentsToBRL } from "../utils/money";
 import {
   formatMonthLabel,
   getCurrentMonthInTimeZone,
@@ -47,25 +49,25 @@ const PlanningPage = () => {
     fixedBills: [],
   });
   const [isLoading, setIsLoading] = useState(true);
-  const [salaryInput, setSalaryInput] = useState("");
+  const [salaryCents, setSalaryCents] = useState(0);
   const [extraForm, setExtraForm] = useState<{
     id?: string;
     date: string;
     description: string;
-    amount: string;
+    amountCents: number;
   }>({
     date: `${currentMonthValue}-01`,
     description: "",
-    amount: "",
+    amountCents: 0,
   });
   const [billForm, setBillForm] = useState<{
     id?: string;
     name: string;
-    amount: string;
+    amountCents: number;
     dueDay: string;
   }>({
     name: "",
-    amount: "",
+    amountCents: 0,
     dueDay: "1",
   });
   const [errors, setErrors] = useState<{ salary?: string; extra?: string; bill?: string }>({});
@@ -103,7 +105,8 @@ const PlanningPage = () => {
 
   useEffect(() => {
     const value = planning.salaryByMonth?.[monthKey] ?? 0;
-    setSalaryInput(value ? String(value) : "");
+    const safeValue = Number.isFinite(value) ? value : 0;
+    setSalaryCents(Math.round(safeValue * 100));
     setExtraForm((prev) => ({
       ...prev,
       date: `${monthKey}-01`,
@@ -130,16 +133,16 @@ const PlanningPage = () => {
   }, 0);
 
   const handleSaveSalary = async () => {
-    const parsed = parseCurrencyInput(salaryInput || "0");
-    if (Number.isNaN(parsed)) {
-      setErrors((prev) => ({ ...prev, salary: "Valor invalido" }));
+    const salaryValue = Number.isFinite(salaryCents) ? salaryCents / 100 : 0;
+    if (salaryValue < 0) {
+      setErrors((prev) => ({ ...prev, salary: "Valor inválido" }));
       return;
     }
     const next: Planning = {
       ...planning,
       salaryByMonth: {
         ...planning.salaryByMonth,
-        [monthKey]: Number.isFinite(parsed) ? parsed : 0,
+        [monthKey]: salaryValue,
       },
     };
 
@@ -147,10 +150,10 @@ const PlanningPage = () => {
 
     try {
       await savePlanning(next);
-      setToast({ message: "Salario salvo", type: "success" });
+      setToast({ message: "Salário salvo", type: "success" });
       setErrors((prev) => ({ ...prev, salary: undefined }));
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro ao salvar salario";
+      const message = err instanceof Error ? err.message : "Erro ao salvar salário";
       setToast({ message, type: "error" });
     }
   };
@@ -160,17 +163,21 @@ const PlanningPage = () => {
       id: undefined,
       date: `${monthKey}-01`,
       description: "",
-      amount: "",
+      amountCents: 0,
     });
     setErrors((prev) => ({ ...prev, extra: undefined }));
   };
 
   const handleSubmitExtra = async () => {
-    const parsedAmount = parseCurrencyInput(extraForm.amount);
+    const amountValueCents = Number.isFinite(extraForm.amountCents) ? extraForm.amountCents : 0;
+    const amountValue = amountValueCents / 100;
     const description = extraForm.description.trim();
     const date = extraForm.date || `${monthKey}-01`;
-    if (!description || !date || Number.isNaN(parsedAmount)) {
-      setErrors((prev) => ({ ...prev, extra: "Preencha descricao, data e valor valido" }));
+    if (!description || !date || amountValue <= 0) {
+      setErrors((prev) => ({
+        ...prev,
+        extra: "Preencha descrição, data e valor válido",
+      }));
       return;
     }
 
@@ -187,7 +194,7 @@ const PlanningPage = () => {
                 description,
                 label: item.label ?? description,
                 date,
-                amount: Number.isFinite(parsedAmount) ? parsedAmount : 0,
+                amount: amountValue,
               }
             : item,
         )
@@ -198,7 +205,7 @@ const PlanningPage = () => {
             description,
             label: description,
             date,
-            amount: Number.isFinite(parsedAmount) ? parsedAmount : 0,
+            amount: amountValue,
           },
         ];
 
@@ -231,7 +238,7 @@ const PlanningPage = () => {
       id: extra.id,
       date: extra.date ?? `${monthKey}-01`,
       description: extra.description ?? extra.label ?? "",
-      amount: String(extra.amount ?? ""),
+      amountCents: Math.round(Number(extra.amount ?? 0) * 100),
     });
   };
 
@@ -264,24 +271,24 @@ const PlanningPage = () => {
     setBillForm({
       id: undefined,
       name: "",
-      amount: "",
+      amountCents: 0,
       dueDay: "1",
     });
     setErrors((prev) => ({ ...prev, bill: undefined }));
   };
 
   const handleSubmitBill = async () => {
-    const parsedAmount = parseCurrencyInput(billForm.amount);
+    const amountValue = Number.isFinite(billForm.amountCents) ? billForm.amountCents / 100 : 0;
     const dueDay = Number(billForm.dueDay);
     const name = billForm.name.trim();
     if (
       !name ||
-      Number.isNaN(parsedAmount) ||
+      amountValue <= 0 ||
       Number.isNaN(dueDay) ||
       dueDay < 1 ||
       dueDay > 31
     ) {
-      setErrors((prev) => ({ ...prev, bill: "Preencha nome, valor e dia valido (1-31)" }));
+      setErrors((prev) => ({ ...prev, bill: "Preencha nome, valor e dia válido (1-31)" }));
       return;
     }
 
@@ -293,7 +300,7 @@ const PlanningPage = () => {
                 id: bill.id,
                 name,
                 label: bill.label ?? name,
-                amount: Number.isFinite(parsedAmount) ? parsedAmount : 0,
+                amount: amountValue,
                 dueDay,
               }
             : bill,
@@ -304,7 +311,7 @@ const PlanningPage = () => {
             id: billForm.id ?? createId(),
             name,
             label: name,
-            amount: Number.isFinite(parsedAmount) ? parsedAmount : 0,
+            amount: amountValue,
             dueDay,
           },
         ];
@@ -330,7 +337,7 @@ const PlanningPage = () => {
     setBillForm({
       id: bill.id,
       name: bill.name ?? bill.label ?? "",
-      amount: String(bill.amount ?? ""),
+      amountCents: Math.round(Number(bill.amount ?? 0) * 100),
       dueDay: bill.dueDay ? String(bill.dueDay) : "1",
     });
   };
@@ -387,13 +394,11 @@ const PlanningPage = () => {
         <h3 className="text-lg font-semibold text-slate-900">Salario do mes</h3>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
           <div className="flex-1">
-            <input
-              type="text"
-              inputMode="decimal"
-              value={salaryInput}
-              onChange={(e) => setSalaryInput(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-              placeholder="0,00"
+            <MoneyInput
+              valueCents={salaryCents}
+              onChangeCents={setSalaryCents}
+              placeholder="R$ 0,00"
+              className="w-full"
             />
             {errors.salary && <p className="mt-1 text-xs text-red-600">{errors.salary}</p>}
             <p className="mt-1 text-xs text-slate-500">
@@ -444,13 +449,13 @@ const PlanningPage = () => {
           </label>
           <label className="w-full flex flex-col gap-2 text-sm font-medium text-slate-700">
             Valor
-            <input
-              type="text"
-              inputMode="decimal"
-              value={extraForm.amount}
-              onChange={(e) => setExtraForm((prev) => ({ ...prev, amount: e.target.value }))}
-              className="block w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-              placeholder="0,00"
+            <MoneyInput
+              valueCents={extraForm.amountCents}
+              onChangeCents={(amountCents) =>
+                setExtraForm((prev) => ({ ...prev, amountCents }))
+              }
+              placeholder="R$ 0,00"
+              className="w-full"
             />
           </label>
         </div>
@@ -484,7 +489,7 @@ const PlanningPage = () => {
                   </p>
                   <p className="text-xs text-slate-600">
                     {(extra.date ?? `${monthKey}-01`).slice(0, 10)} ·{" "}
-                    {formatBRL(Number.isFinite(Number(extra.amount)) ? Number(extra.amount) : 0)}
+                    {formatCentsToBRL(Math.round((Number(extra.amount ?? 0) || 0) * 100))}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 text-xs font-semibold">
@@ -536,13 +541,11 @@ const PlanningPage = () => {
           </label>
           <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
             Valor
-            <input
-              type="text"
-              inputMode="decimal"
-              value={billForm.amount}
-              onChange={(e) => setBillForm((prev) => ({ ...prev, amount: e.target.value }))}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-              placeholder="0,00"
+            <MoneyInput
+              valueCents={billForm.amountCents}
+              onChangeCents={(amountCents) => setBillForm((prev) => ({ ...prev, amountCents }))}
+              placeholder="R$ 0,00"
+              className="w-full"
             />
           </label>
           <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
@@ -587,9 +590,7 @@ const PlanningPage = () => {
                       {bill.name ?? bill.label ?? "Conta"}
                     </p>
                     <p className="text-xs text-slate-600">
-                      {formatBRL(
-                        Number.isFinite(Number(bill.amount)) ? Number(bill.amount) : 0,
-                      )}{" "}
+                      {formatCentsToBRL(Math.round(Number(bill.amount ?? 0) * 100))}{" "}
                       {bill.dueDay ? `- Vence dia ${bill.dueDay}` : ""}
                     </p>
                   </div>
