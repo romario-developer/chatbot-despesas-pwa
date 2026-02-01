@@ -282,7 +282,7 @@ const DashboardPage = () => {
           <div className="relative">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.4em] text-[var(--text-muted)]">Mês</p>
+                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.4em] text-[var(--text-muted)]">MÊS</p>
                 <button
                   type="button"
                   onClick={handleMonthToggle}
@@ -403,7 +403,7 @@ const DashboardPage = () => {
                   </ResponsiveContainer>
                 </div>
               ) : (
-                <div className="text-sm text-[var(--text-muted)]">Sem dados neste mes.</div>
+                    <div className="text-sm text-[var(--text-muted)]">Sem dados neste mês.</div>
               )}
             </div>
 
@@ -429,7 +429,7 @@ const DashboardPage = () => {
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-[var(--text-muted)]">Sem categorias para este mes.</p>
+                  <p className="text-sm text-[var(--text-muted)]">Sem categorias para este mês.</p>
                 )}
               </div>
             </div>
@@ -477,7 +477,10 @@ const DashboardPage = () => {
                 ))}
               </ul>
             ) : (
-              <p className={subtleText}>Nenhum Lancamento encontrado para este mes.</p>
+              <div className="space-y-1">
+                <p className={subtleText}>Nenhum lançamento encontrado para este mês.</p>
+                <p className="text-xs text-[var(--text-muted)]">Adicione lançamentos para visualizar este resumo.</p>
+              </div>
             )}
           </DashboardSection>
 
