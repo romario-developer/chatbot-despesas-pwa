@@ -7,8 +7,6 @@ import type { CardInvoice, CreditCard } from "../types";
 
 const MAX_VISIBLE_CARDS = 3;
 
-const formatIndicatorLabel = (isOpen: boolean) => (isOpen ? "Em aberto" : "Tudo pago");
-
 type DashboardCardsListProps = {
   month?: string;
 };
@@ -95,9 +93,10 @@ const DashboardCardsList = ({ month }: DashboardCardsListProps) => {
     return null;
   };
 
-  const indicatorOpenStyle =
-    "rounded-full border border-[var(--danger-border)] bg-[var(--danger-bg)] text-[var(--danger-text)]";
-  const indicatorClosedStyle = "rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700";
+  const statusLabel = (isOpen: boolean) =>
+    isOpen ? "Não pago" : "Pago";
+  const statusColor = (isOpen: boolean) =>
+    isOpen ? "text-[var(--danger)]" : "text-[var(--success)]";
 
   return (
     <section className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm sm:p-5">
@@ -143,7 +142,6 @@ const DashboardCardsList = ({ month }: DashboardCardsListProps) => {
             const remaining = invoice?.remaining ?? 0;
             const isOpen = remaining > 0;
             const datesLine = renderDatesLine(invoice);
-            const indicatorStyle = isOpen ? indicatorOpenStyle : indicatorClosedStyle;
             return (
               <button
                 key={card.id}
@@ -185,10 +183,8 @@ const DashboardCardsList = ({ month }: DashboardCardsListProps) => {
                   <p className="text-sm font-bold text-[var(--text-primary)]">
                     {formatBRL(Math.max(remaining, 0))}
                   </p>
-                  <span
-                    className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.3em] ${indicatorStyle}`}
-                  >
-                    {formatIndicatorLabel(isOpen)}
+                  <span className={`text-[0.65rem] uppercase tracking-[0.3em] ${statusColor(isOpen)}`}>
+                    {statusLabel(isOpen)}
                   </span>
                 </div>
                 <svg
