@@ -10,6 +10,7 @@ import BottomTabBar from "./BottomTabBar";
 import ServiceWorkerUpdate from "./ServiceWorkerUpdate";
 import Toast from "./Toast";
 import { useBackupActions } from "../hooks/useBackupActions";
+import { buildTag } from "../constants/build";
 
 const NAV_LINKS = [
   { to: "/", label: "Dashboard", end: true },
@@ -90,6 +91,7 @@ const AppLayout = () => {
   [importBackup, isImporting],
   );
 
+  const appVersion = import.meta.env.VITE_APP_VERSION || buildTag;
   const handleClearAppCache = useCallback(async () => {
     if (typeof window === "undefined") return;
     const confirmed = window.confirm(
@@ -328,6 +330,12 @@ const AppLayout = () => {
                       Limpar cache do app
                       <span className="text-xs text-[var(--text-muted)]">(suporte)</span>
                     </button>
+                    <p
+                      className="mt-2 text-xs text-[var(--text-muted)]"
+                      title="Versão disponível para debug"
+                    >
+                      Versão: {appVersion}
+                    </p>
                     <button
                       type="button"
                       onClick={handleLogoutFromSheet}
