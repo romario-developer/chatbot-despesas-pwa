@@ -54,6 +54,21 @@ const logSyncDebug = (...args: unknown[]) => {
   console.debug("[sync]", ...args);
 };
 
+// Heuristic to detect whether the dashboard API is returning cents (e.g. 12_000) or reais (e.g. 120.5).
+// Large integer values are treated as cents to avoid the 100x inflation bug.
+const DASHBOARD_CENT_THRESHOLD = 1000;
+
+const isLikelyDashboardValueInCents = (value: number) =>
+  Number.isFinite(value) && Number.isInteger(value) && Math.abs(value) >= DASHBOARD_CENT_THRESHOLD;
+
+const normalizeDashboardValue = (value: number) => {
+  if (!Number.isFinite(value)) return 0;
+  if (isLikelyDashboardValueInCents(value)) {
+    return value / 100;
+  }
+  return value;
+};
+
 const DashboardPage = () => {
   const navigate = useNavigate();
   const currentMonth = useMemo(
@@ -241,11 +256,14 @@ const DashboardPage = () => {
   const categoryData = useMemo(() => {
     const list = Array.isArray(summary?.byCategory) ? summary?.byCategory : [];
     return list
-      .map((item, index) => ({
-        category: item.category || "Sem categoria",
-        total: Number(item.total) || 0,
-        color: item.color || CATEGORY_FALLBACK_COLORS[index % CATEGORY_FALLBACK_COLORS.length],
-      }))
+      .map((item, index) => {
+        const rawTotal = Number(item.total) || 0;
+        return {
+          category: item.category || "Sem categoria",
+          total: normalizeDashboardValue(rawTotal),
+          color: item.color || CATEGORY_FALLBACK_COLORS[index % CATEGORY_FALLBACK_COLORS.length],
+        };
+      })
       .filter((item) => item.total > 0);
   }, [summary]);
 
@@ -253,7 +271,10 @@ const DashboardPage = () => {
   const incomeTotal = summary?.incomeTotal ?? 0;
   const cashExpenses = summary?.expenseCashTotal ?? 0;
   const creditExpenses = summary?.expenseCreditTotal ?? 0;
-  const renderSummaryValue = (value: number) => (summary ? formatBRL(value) : "--");
+  const renderSummaryValue = (value: number) =>
+    summary ? formatBRL(normalizeDashboardValue(value)) : "--";
+  const summaryValueClassName =
+    "max-w-full overflow-hidden text-ellipsis whitespace-nowrap leading-tight text-2xl font-semibold sm:text-3xl md:text-4xl";
   const handleMonthToggle = () => {
     setIsMonthPanelOpen((prev) => !prev);
   };
@@ -336,11 +357,13 @@ const DashboardPage = () => {
             <div
               className={`${cardBase} ${cardHover} flex min-h-[104px] flex-col justify-between gap-3 px-4 py-4 sm:px-5 sm:py-5 sm:min-h-[140px]`}
             >
-              <div>
+              <div className="min-w-0">
                 <p className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-[var(--text-muted)]">
                   Saldo em conta
                 </p>
-                <p className="text-3xl font-semibold text-[var(--text-primary)] sm:text-4xl">
+                <p
+                  className={`${summaryValueClassName} text-[var(--text-primary)]`}
+                >
                   {renderSummaryValue(balance)}
                 </p>
               </div>
@@ -348,11 +371,13 @@ const DashboardPage = () => {
             <div
               className={`${cardBase} ${cardHover} flex min-h-[104px] flex-col justify-between gap-3 px-4 py-4 sm:px-5 sm:py-5 sm:min-h-[140px]`}
             >
-              <div>
+              <div className="min-w-0">
                 <p className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-[var(--text-muted)]">
                   Receitas
                 </p>
-                <p className="text-3xl font-semibold text-[var(--success)] sm:text-4xl">
+                <p
+                  className={`${summaryValueClassName} text-[var(--success)]`}
+                >
                   {renderSummaryValue(incomeTotal)}
                 </p>
               </div>
@@ -360,11 +385,13 @@ const DashboardPage = () => {
             <div
               className={`${cardBase} ${cardHover} col-span-2 flex min-h-[104px] flex-col justify-between gap-3 px-4 py-4 sm:col-span-1 sm:px-5 sm:py-5 sm:min-h-[140px]`}
             >
-              <div>
+              <div className="min-w-0">
                 <p className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-[var(--text-muted)]">
                   Gastos (Caixa)
                 </p>
-                <p className="text-3xl font-semibold text-[var(--danger)] sm:text-4xl">
+                <p
+                  className={`${summaryValueClassName} text-[var(--danger)]`}
+                >
                   {renderSummaryValue(cashExpenses)}
                 </p>
               </div>
