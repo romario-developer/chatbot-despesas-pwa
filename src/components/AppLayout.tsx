@@ -129,7 +129,7 @@ const AppLayout = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[var(--page-bg)] text-[var(--page-text)] transition-colors duration-200">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] transition-colors duration-200">
       {isAssistantRoute ? (
         <header className="sticky top-0 z-10 border-b border-[var(--border-muted)] bg-[var(--header-bg)] pt-[env(safe-area-inset-top)]">
           <div className="mx-auto flex max-w-5xl items-center px-4 py-3">
@@ -161,10 +161,10 @@ const AppLayout = () => {
           </div>
         </header>
       ) : (
-        <header className="sticky top-0 z-20 border-b border-[var(--border-muted)] bg-[var(--header-bg)] backdrop-blur">
+        <header className="sticky top-0 z-20 border-b border-[var(--border)] bg-[var(--header-bg)] backdrop-blur">
           <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-6 px-4 py-3">
             <NavLink to="/" className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--page-bg)] p-1 transition">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-1 transition">
                 <img src="/logo.png" alt="Gestão Financeira" className="h-8 w-auto object-contain" />
               </div>
               <div className="flex flex-col leading-tight">
