@@ -169,7 +169,7 @@ const AppLayout = () => {
                 </div>
                 <div className="flex flex-col leading-tight">
                   <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
-                    Gestão Financeira
+                    Financio
                   </span>
                   <span className="text-base font-semibold text-slate-900 dark:text-white">Gestão Financeira</span>
                 </div>
