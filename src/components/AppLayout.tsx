@@ -58,6 +58,7 @@ const AppLayout = () => {
   const handleMenuExport = useCallback(async () => {
     if (isExporting) return;
     setMenuToast(null);
+    closeSettings();
     try {
       const message = await exportBackup();
       setMenuToast({ type: "success", message });
@@ -74,6 +75,7 @@ const AppLayout = () => {
       event.target.value = "";
       if (!file || isImporting) return;
       setMenuToast(null);
+      closeSettings();
       try {
         const message = await importBackup(file);
         setMenuToast({ type: "success", message });
@@ -85,8 +87,21 @@ const AppLayout = () => {
         setMenuToast({ type: "error", message });
       }
     },
-    [importBackup, isImporting],
+  [importBackup, isImporting],
   );
+
+  useEffect(() => {
+    if (!settingsOpen) return undefined;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeSettings();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [settingsOpen]);
 
   const isAssistantRoute = location.pathname.startsWith("/assistant");
   const isMobileNavigation = isMobileView && !isAssistantRoute;
