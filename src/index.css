@@ -25,6 +25,8 @@
   --danger: #ef4444;
   --warning: #f59e0b;
   --info: #3b82f6;
+  --card-bg: var(--surface);
+  --card-border: var(--border);
 }
 
 [data-theme="light"] {
@@ -48,6 +50,8 @@
   --danger: #ef4444;
   --warning: #f59e0b;
   --info: #3b82f6;
+  --card-bg: var(--surface);
+  --card-border: var(--border);
 }
 
 html,
@@ -61,6 +65,7 @@ body {
   background-color: var(--bg);
   color: var(--text);
   overflow-x: hidden;
+  transition: background-color 150ms ease, color 150ms ease;
 }
 
 #root {
@@ -102,6 +107,12 @@ body.assistant-no-x {
     transform: none;
     opacity: 1;
   }
+  body,
+  .card,
+  .settings-panel,
+  .logo-shell {
+    transition: none !important;
+  }
 }
 
 .card {
@@ -117,6 +128,7 @@ body.assistant-no-x {
   border: 1px solid var(--border-muted);
   box-shadow: 0 30px 60px rgba(15, 23, 42, 0.3);
   color: var(--text-primary);
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
 
 .dark [class*="bg-white"] {
@@ -145,6 +157,12 @@ body.assistant-no-x {
 
 .dark .shadow-sm {
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+}
+
+.card,
+.logo-shell,
+.settings-panel {
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
 
 .no-scrollbar {
