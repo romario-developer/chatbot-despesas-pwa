@@ -2,8 +2,8 @@ import { useCallback, useState } from "react";
 import { exportUserBackup, importUserBackup } from "../api/backup";
 import type { UserBackup } from "../api/backup";
 
-const sanitizeFileNameSegment = (value?: string) => {
-  const cleaned = (value ?? "").trim();
+const sanitizeFileNameSegment = (value?: unknown) => {
+  const cleaned = String(value ?? "").trim();
   if (!cleaned) return "usuario";
   return cleaned.replace(/[^a-zA-Z0-9_-]/g, "_");
 };
@@ -52,7 +52,9 @@ const readBackupFile = async (file: File): Promise<UserBackup> => {
 
   const meta = (parsed as UserBackup).meta;
   const hasMetaUserId =
-    meta && typeof meta === "object" && typeof meta.userId === "string" && meta.userId.trim();
+    meta &&
+    typeof meta === "object" &&
+    String((meta as { userId?: unknown }).userId ?? "").trim();
   if (!hasMetaUserId) {
     throw new Error("O backup precisa conter meta.userId.");
   }
