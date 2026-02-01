@@ -216,7 +216,10 @@ const AppLayout = () => {
               onClick={closeSettings}
               aria-label="Fechar configurações"
             />
-            <div className="fixed inset-0 z-[999] flex items-end justify-center px-3 pb-6 md:items-start md:justify-end md:px-4">
+            <div
+              className="fixed inset-0 z-[999] flex items-end justify-center px-3 pb-6 md:items-start md:justify-end md:px-4"
+              onClick={closeSettings}
+            >
               <div
                 className={[
                   "settings-panel p-4 md:absolute",
