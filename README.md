@@ -1,4 +1,4 @@
-# Despesas PWA
+# Gestão Financeira
 
 PWA em React + TypeScript + Tailwind consumindo a API de despesas.
 

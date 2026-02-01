@@ -1,10 +1,10 @@
 {
-  "name": "Chatbot Despesas",
-  "short_name": "Despesas",
+  "name": "Gestão Financeira",
+  "short_name": "Gestão Financeira",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#16A34A",
-  "theme_color": "#16A34A",
+  "background_color": "#34A853",
+  "theme_color": "#34A853",
   "icons": [
     {
       "src": "/icon-192.png",

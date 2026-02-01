@@ -167,12 +167,12 @@ const AppLayout = () => {
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:text-white">
                   <Wallet className="h-5 w-5 text-primary" />
               </div>
-              <div className="flex flex-col leading-tight">
-                <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
-                  Despesas
-                </span>
-                <span className="text-base font-semibold text-slate-900 dark:text-white">PWA</span>
-              </div>
+                <div className="flex flex-col leading-tight">
+                  <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
+                    Gestão Financeira
+                  </span>
+                  <span className="text-base font-semibold text-slate-900 dark:text-white">Gestão Financeira</span>
+                </div>
             </div>
             <nav className="hidden flex-1 justify-center gap-6 md:flex">
               {NAV_LINKS.map((link) => (

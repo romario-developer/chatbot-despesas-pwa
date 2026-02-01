@@ -18,8 +18,8 @@ export default defineConfig({
         "icons/icon-512-maskable.png",
       ],
       manifest: {
-        name: "Finanças",
-        short_name: "Finanças",
+        name: "Gestão Financeira",
+        short_name: "Gestão Financeira",
         start_url: "/",
         display: "standalone",
         theme_color: "#34A853",
