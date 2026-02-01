@@ -22,8 +22,8 @@ const desktopLinkClasses = ({ isActive }: { isActive: boolean }) =>
   [
     "px-3 py-2 text-sm font-semibold transition",
     isActive
-      ? "text-primary"
-      : "text-slate-600/80 hover:text-primary dark:text-slate-300 dark:hover:text-primary",
+      ? "text-[var(--primary)]"
+      : "text-[var(--text-muted)] hover:text-[var(--primary)]",
   ].join(" ");
 
 type ToastState = {
@@ -129,25 +129,25 @@ const AppLayout = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="min-h-screen bg-[var(--page-bg)] text-[var(--page-text)] transition-colors duration-200">
       {isAssistantRoute ? (
-        <header className="sticky top-0 z-10 border-b border-slate-200 bg-white pt-[env(safe-area-inset-top)] dark:border-slate-800 dark:bg-slate-950">
+        <header className="sticky top-0 z-10 border-b border-[var(--border-muted)] bg-[var(--header-bg)] pt-[env(safe-area-inset-top)]">
           <div className="mx-auto flex max-w-5xl items-center px-4 py-3">
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="text-sm font-semibold text-slate-700 transition hover:text-slate-900 dark:text-slate-100 dark:hover:text-white"
+              className="text-sm font-semibold text-[var(--text-primary)] transition hover:text-[var(--primary)]"
             >
               Voltar
             </button>
             <div className="flex flex-1 items-center justify-center">
-              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Assistente</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">Assistente</p>
             </div>
             <button
               type="button"
               onClick={openSettings}
               ref={gearRef}
-              className="md:hidden rounded-full border border-slate-200 p-2 text-slate-700 transition hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-100 dark:hover:text-white"
+              className="md:hidden rounded-full border border-[var(--border-muted)] p-2 text-[var(--text-primary)] transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
               aria-label="Abrir configurações"
             >
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
@@ -161,20 +161,23 @@ const AppLayout = () => {
           </div>
         </header>
       ) : (
-        <header className="sticky top-0 z-20 border-b border-slate-200/60 bg-white/90 backdrop-blur dark:border-slate-800/70 dark:bg-slate-950/75">
-            <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
-                  <img src="/logo.png" alt="Gestão Financeira" className="h-8 w-auto object-contain" />
-                </div>
-                <div className="flex flex-col leading-tight">
-                  <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
-                    Financio
-                  </span>
-                  <span className="text-base font-semibold text-slate-900 dark:text-white">Gestão Financeira</span>
-                </div>
+        <header className="sticky top-0 z-20 border-b border-[var(--border-muted)] bg-[var(--header-bg)] backdrop-blur">
+          <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-6 px-4 py-3">
+            <NavLink to="/" className="flex items-center gap-3">
+              <div className="logo-shell flex h-10 w-10 items-center justify-center rounded-2xl shadow-sm">
+                <img src="/logo.png" alt="Gestão Financeira" className="h-8 w-auto object-contain" />
               </div>
-            <nav className="hidden flex-1 justify-center gap-6 md:flex">
+              <div className="flex flex-col leading-tight">
+                <span className="text-[0.65rem] font-semibold tracking-[0.3em] text-[var(--text-muted)]">
+                  Financio
+                </span>
+                <span className="text-base font-semibold text-[var(--text-primary)]">Gestão Financeira</span>
+              </div>
+            </NavLink>
+            <nav
+              className="hidden flex-1 items-center justify-center gap-6 md:flex"
+              aria-label="Navegação principal"
+            >
               {NAV_LINKS.map((link) => (
                 <NavLink
                   key={link.to}
@@ -186,17 +189,18 @@ const AppLayout = () => {
                 </NavLink>
               ))}
             </nav>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setSettingsOpen((prev) => !prev)}
-                  className="rounded-2xl border border-slate-200 bg-white/80 px-3 py-2 text-slate-700 transition hover:border-primary hover:text-primary dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100 dark:hover:border-primary"
-                  aria-label="Abrir menu principal"
-                >
-                  <Settings className="h-5 w-5" />
-                </button>
-              </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setSettingsOpen((prev) => !prev)}
+                className="rounded-2xl border border-[var(--border-muted)] bg-[var(--settings-bg)] px-3 py-2 text-[var(--text-muted)] transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                aria-label="Abrir menu de configurações"
+                aria-expanded={settingsOpen}
+              >
+                <Settings className="h-5 w-5" />
+              </button>
             </div>
+          </div>
         </header>
       )}
       <main className={`${hideTabBar ? "pb-6" : "app-main"} mx-auto max-w-6xl px-4 py-6 md:pb-6`}>
@@ -210,21 +214,22 @@ const AppLayout = () => {
               type="button"
               className="fixed inset-0 z-[998] bg-black/30 backdrop-blur-sm"
               onClick={closeSettings}
-              aria-label="Fechar menu"
+              aria-label="Fechar configurações"
             />
             <div className="fixed inset-0 z-[999] flex items-end justify-center px-3 pb-6 md:items-start md:justify-end md:px-4">
               <div
                 className={[
-                  "w-full rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-lg backdrop-blur dark:border-slate-800/30 dark:bg-slate-950/95 md:absolute",
+                  "settings-panel p-4 md:absolute",
                   isMobileView
                     ? "max-h-[80vh] overflow-y-auto md:hidden"
-                    : "min-w-[280px] max-w-sm",
+                    : "min-w-[320px] max-w-sm",
                 ]
                   .filter(Boolean)
                   .join(" ")}
+                onClick={(event) => event.stopPropagation()}
               >
-                <div className="space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
+                <div className="space-y-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--text-muted)]">
                     Configurações
                   </p>
                   <div className="space-y-3">
@@ -234,19 +239,19 @@ const AppLayout = () => {
                         toggleTheme();
                         closeSettings();
                       }}
-                      className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-primary hover:text-primary dark:border-slate-800 dark:text-slate-100"
+                      className="flex w-full items-center justify-between rounded-2xl border border-[var(--border-muted)] bg-[var(--card-bg)] px-4 py-3 text-sm font-semibold text-[var(--text-primary)] transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
                     >
                       Alternar tema
                       <span>{theme === "dark" ? "🌙" : "☀️"}</span>
                     </button>
-                    <div className="space-y-2 rounded-2xl border border-slate-200/70 bg-slate-50/70 p-3 text-sm text-slate-700 dark:border-slate-800/60 dark:bg-slate-900/60 dark:text-slate-200">
-                      <p className="font-semibold text-slate-900 dark:text-white">Backup</p>
-                      <div className="space-y-2">
+                    <div className="rounded-2xl border border-[var(--border-muted)] bg-[var(--card-bg)] p-3 text-sm text-[var(--text-muted)] shadow-[0_10px_25px_rgba(15,23,42,0.08)]">
+                      <p className="font-semibold text-[var(--text-primary)]">Backup</p>
+                      <div className="mt-2 space-y-2">
                         <button
                           type="button"
                           onClick={handleMenuExport}
                           disabled={isExporting}
-                          className="flex w-full items-center justify-between rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-800 dark:text-slate-100"
+                          className="flex w-full items-center justify-between rounded-xl border border-[var(--border-muted)] bg-[var(--card-bg)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-70"
                         >
                           Exportar backup
                           <span aria-hidden="true">↓</span>
@@ -255,7 +260,7 @@ const AppLayout = () => {
                           type="button"
                           onClick={() => menuFileInputRef.current?.click()}
                           disabled={isImporting}
-                          className="flex w-full items-center justify-between rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-800 dark:text-slate-100"
+                          className="flex w-full items-center justify-between rounded-xl border border-[var(--border-muted)] bg-[var(--card-bg)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-70"
                         >
                           Importar backup
                           <span aria-hidden="true">↑</span>
@@ -267,23 +272,17 @@ const AppLayout = () => {
                           className="hidden"
                           onChange={handleMenuFileChange}
                         />
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                        <p className="text-xs text-[var(--text-muted)]">
                           Importar backup pode sobrescrever dados atuais. Validação mínima:{" "}
-                          <span className="font-semibold text-slate-700 dark:text-slate-100">
-                            meta.userId
-                          </span>{" "}
-                          e{" "}
-                          <span className="font-semibold text-slate-700 dark:text-slate-100">
-                            data
-                          </span>
-                          .
+                          <span className="font-semibold text-[var(--text-primary)]">meta.userId</span> e{" "}
+                          <span className="font-semibold text-[var(--text-primary)]">data</span>.
                         </p>
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={handleLogoutFromSheet}
-                      className="flex w-full items-center justify-between rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:border-rose-200 hover:bg-rose-100 dark:border-rose-200/40 dark:bg-rose-900/30 dark:text-rose-200"
+                      className="flex w-full items-center justify-between rounded-2xl border border-[var(--danger-border)] bg-[var(--danger-bg)] px-4 py-3 text-sm font-semibold text-[var(--danger-text)] transition hover:opacity-90"
                     >
                       Logout
                       <span aria-hidden="true">↗</span>

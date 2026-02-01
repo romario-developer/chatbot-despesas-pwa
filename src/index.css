@@ -9,11 +9,43 @@
 }
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
+  --page-bg: #f9fafb;
+  --page-text: #111827;
+  --text-primary: #111827;
+  --text-muted: #6b7280;
+  --border-muted: #e5e7eb;
+  --card-bg: #ffffff;
+  --card-border: #e5e7eb;
+  --card-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+  --header-bg: rgba(255, 255, 255, 0.9);
+  --settings-bg: rgba(255, 255, 255, 0.95);
+  --logo-bg: #0b1220;
+  --primary: #22c55e;
+  --danger-bg: rgba(239, 68, 68, 0.12);
+  --danger-border: rgba(239, 68, 68, 0.35);
+  --danger-text: #b91c1c;
 }
 
 [data-theme="light"] {
   color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
+  --page-bg: #0b1220;
+  --page-text: #e5e7eb;
+  --text-primary: #e5e7eb;
+  --text-muted: #9ca3af;
+  --border-muted: #1f2937;
+  --card-bg: #111827;
+  --card-border: #1f2937;
+  --card-shadow: 0 20px 45px rgba(0, 0, 0, 0.7);
+  --header-bg: rgba(7, 12, 23, 0.85);
+  --settings-bg: rgba(15, 23, 42, 0.95);
+  --danger-bg: rgba(239, 68, 68, 0.25);
+  --danger-border: rgba(239, 68, 68, 0.5);
+  --danger-text: #fecdd3;
 }
 
 html,
@@ -23,15 +55,14 @@ body {
 }
 
 body {
-  @apply min-h-screen bg-slate-950 text-slate-50 overflow-x-hidden;
-}
-
-[data-theme="light"] body {
-  @apply bg-slate-50 text-slate-900;
+  @apply min-h-screen;
+  background-color: var(--page-bg);
+  color: var(--page-text);
+  overflow-x: hidden;
 }
 
 #root {
-  @apply min-h-screen;
+  min-height: 100%;
 }
 
 body.chat-lock-scroll {
@@ -72,11 +103,23 @@ body.assistant-no-x {
 }
 
 .card {
-  @apply bg-white shadow-md rounded-xl border border-slate-200;
+  border-radius: 1rem;
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow);
 }
 
-[data-theme="dark"] .card {
-  @apply border-slate-700 bg-slate-900 shadow-slate-900/40;
+.logo-shell {
+  background-color: var(--logo-bg);
+  border: 1px solid var(--border-muted);
+}
+
+.settings-panel {
+  background-color: var(--settings-bg);
+  border-radius: 1.25rem;
+  border: 1px solid var(--border-muted);
+  box-shadow: 0 30px 60px rgba(15, 23, 42, 0.3);
+  color: var(--text-primary);
 }
 
 .no-scrollbar {
