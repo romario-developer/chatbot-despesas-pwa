@@ -107,7 +107,7 @@ const DashboardCardsList = ({ month }: DashboardCardsListProps) => {
           <button
             type="button"
             onClick={handleSeeAll}
-            className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--text-muted)] transition hover:text-[var(--primary)]"
+            className="text-[0.65rem] font-semibold uppercase tracking-[0.4em] text-[var(--text-muted)] transition hover:text-[var(--primary)]"
           >
             Ver todos
           </button>
@@ -128,11 +128,12 @@ const DashboardCardsList = ({ month }: DashboardCardsListProps) => {
           </div>
         ) : !cards.length ? (
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-4 text-sm text-[var(--text-muted)]">
-            <p>Nenhum cartão cadastrado ainda.</p>
+            <p className="font-semibold text-[var(--text-primary)]">Nenhum cartão cadastrado ainda.</p>
+            <p className="text-xs text-[var(--text-muted)]">Adicione um cartão para monitorar faturas e limites.</p>
             <button
               type="button"
               onClick={handleAddCard}
-              className="mt-2 inline-flex items-center rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-[var(--text-muted)] transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
+              className="mt-3 inline-flex items-center rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-[var(--text-muted)] transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
             >
               Cadastrar cartão
             </button>

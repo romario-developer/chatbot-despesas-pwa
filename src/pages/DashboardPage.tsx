@@ -282,18 +282,18 @@ const DashboardPage = () => {
           <div className="relative">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase text-[var(--text-muted)]">Mes</p>
+                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.4em] text-[var(--text-muted)]">Mês</p>
                 <button
                   type="button"
                   onClick={handleMonthToggle}
-                  className="group mt-1 inline-flex items-center gap-2 text-left"
+                  className="group mt-1 inline-flex items-center gap-3 text-left"
                   aria-expanded={isMonthPanelOpen}
                   aria-controls="dashboard-month-panel"
                 >
-                  <span className="text-2xl font-semibold text-[var(--text-primary)]">
+                  <span className="text-3xl font-semibold text-[var(--text-primary)]">
                     {monthLabel}
                   </span>
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] shadow-[0_8px_20px_rgba(15,23,42,0.1)] transition group-hover:border-primary group-hover:text-[var(--primary)]">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] shadow-[0_12px_20px_rgba(15,23,42,0.15)] transition group-hover:border-[var(--primary)] group-hover:text-[var(--primary)]">
                     <svg
                       viewBox="0 0 20 20"
                       fill="currentColor"
@@ -312,7 +312,7 @@ const DashboardPage = () => {
                 </button>
               </div>
               <div className="text-sm text-[var(--text-muted)]">
-                Resumo financeiro do mes selecionado.
+                Resumo financeiro do mês selecionado.
               </div>
             </div>
 
@@ -334,37 +334,37 @@ const DashboardPage = () => {
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div
-            className={`${cardBase} ${cardHover} flex min-h-[104px] flex-col justify-between gap-2 px-4 py-3 sm:px-5 sm:py-4 sm:min-h-[140px]`}
-          >
-            <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)] sm:text-xs">
+              className={`${cardBase} ${cardHover} flex min-h-[104px] flex-col justify-between gap-3 px-4 py-4 sm:px-5 sm:py-5 sm:min-h-[140px]`}
+            >
+              <div>
+                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-[var(--text-muted)]">
                   Saldo em conta
                 </p>
-                <p className="text-lg font-semibold text-[var(--text-primary)] sm:text-2xl">
+                <p className="text-3xl font-semibold text-[var(--text-primary)] sm:text-4xl">
                   {renderSummaryValue(balance)}
                 </p>
               </div>
             </div>
             <div
-              className={`${cardBase} ${cardHover} flex min-h-[104px] flex-col justify-between gap-2 px-4 py-3 sm:px-5 sm:py-4 sm:min-h-[140px]`}
+              className={`${cardBase} ${cardHover} flex min-h-[104px] flex-col justify-between gap-3 px-4 py-4 sm:px-5 sm:py-5 sm:min-h-[140px]`}
             >
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)] sm:text-xs">
+                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-[var(--text-muted)]">
                   Receitas
                 </p>
-                <p className="text-lg font-semibold text-emerald-500 sm:text-2xl">
+                <p className="text-3xl font-semibold text-[var(--success)] sm:text-4xl">
                   {renderSummaryValue(incomeTotal)}
                 </p>
               </div>
             </div>
             <div
-              className={`${cardBase} ${cardHover} col-span-2 flex min-h-[104px] flex-col justify-between gap-2 px-4 py-3 sm:col-span-1 sm:px-5 sm:py-4 sm:min-h-[140px]`}
+              className={`${cardBase} ${cardHover} col-span-2 flex min-h-[104px] flex-col justify-between gap-3 px-4 py-4 sm:col-span-1 sm:px-5 sm:py-5 sm:min-h-[140px]`}
             >
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)] sm:text-xs">
+                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-[var(--text-muted)]">
                   Gastos (Caixa)
                 </p>
-                <p className="text-lg font-semibold text-rose-500 sm:text-2xl">
+                <p className="text-3xl font-semibold text-[var(--danger)] sm:text-4xl">
                   {renderSummaryValue(cashExpenses)}
                 </p>
               </div>
