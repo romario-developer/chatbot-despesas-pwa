@@ -165,7 +165,7 @@ const AppLayout = () => {
             <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
-                  <img src="/icons/icon-192.png" alt="Gestão Financeira" className="h-7 w-7" />
+                  <img src="/logo.png" alt="Gestão Financeira" className="h-8 w-auto object-contain" />
                 </div>
                 <div className="flex flex-col leading-tight">
                   <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
