@@ -277,12 +277,12 @@ const DashboardPage = () => {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-3xl bg-gradient-to-br from-white via-slate-50 to-teal-50/40 p-4 sm:p-6">
+      <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-4 sm:p-6 shadow-[0_20px_45px_rgba(15,23,42,0.25)]">
         <div className="space-y-6">
           <div className="relative">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase text-slate-500">Mes</p>
+                <p className="text-xs font-semibold uppercase text-[var(--text-muted)]">Mes</p>
                 <button
                   type="button"
                   onClick={handleMonthToggle}
@@ -290,10 +290,10 @@ const DashboardPage = () => {
                   aria-expanded={isMonthPanelOpen}
                   aria-controls="dashboard-month-panel"
                 >
-                  <span className="text-2xl font-semibold text-slate-900">
+                  <span className="text-2xl font-semibold text-[var(--text-primary)]">
                     {monthLabel}
                   </span>
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition group-hover:border-purple-300 group-hover:text-purple-600">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] shadow-[0_8px_20px_rgba(15,23,42,0.1)] transition group-hover:border-primary group-hover:text-[var(--primary)]">
                     <svg
                       viewBox="0 0 20 20"
                       fill="currentColor"
@@ -311,7 +311,7 @@ const DashboardPage = () => {
                   </span>
                 </button>
               </div>
-              <div className="text-sm text-slate-600">
+              <div className="text-sm text-[var(--text-muted)]">
                 Resumo financeiro do mes selecionado.
               </div>
             </div>
@@ -334,13 +334,13 @@ const DashboardPage = () => {
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div
-              className={`${cardBase} ${cardHover} flex min-h-[104px] flex-col justify-between gap-2 px-4 py-3 sm:px-5 sm:py-4 sm:min-h-[140px]`}
-            >
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 sm:text-xs">
+            className={`${cardBase} ${cardHover} flex min-h-[104px] flex-col justify-between gap-2 px-4 py-3 sm:px-5 sm:py-4 sm:min-h-[140px]`}
+          >
+            <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)] sm:text-xs">
                   Saldo em conta
                 </p>
-                <p className="text-lg font-semibold text-slate-900 sm:text-2xl">
+                <p className="text-lg font-semibold text-[var(--text-primary)] sm:text-2xl">
                   {renderSummaryValue(balance)}
                 </p>
               </div>
@@ -349,10 +349,10 @@ const DashboardPage = () => {
               className={`${cardBase} ${cardHover} flex min-h-[104px] flex-col justify-between gap-2 px-4 py-3 sm:px-5 sm:py-4 sm:min-h-[140px]`}
             >
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 sm:text-xs">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)] sm:text-xs">
                   Receitas
                 </p>
-                <p className="text-lg font-semibold text-emerald-700 sm:text-2xl">
+                <p className="text-lg font-semibold text-emerald-500 sm:text-2xl">
                   {renderSummaryValue(incomeTotal)}
                 </p>
               </div>
@@ -361,10 +361,10 @@ const DashboardPage = () => {
               className={`${cardBase} ${cardHover} col-span-2 flex min-h-[104px] flex-col justify-between gap-2 px-4 py-3 sm:col-span-1 sm:px-5 sm:py-4 sm:min-h-[140px]`}
             >
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 sm:text-xs">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)] sm:text-xs">
                   Gastos (Caixa)
                 </p>
-                <p className="text-lg font-semibold text-rose-600 sm:text-2xl">
+                <p className="text-lg font-semibold text-rose-500 sm:text-2xl">
                   {renderSummaryValue(cashExpenses)}
                 </p>
               </div>
@@ -375,10 +375,10 @@ const DashboardPage = () => {
           <div className="grid gap-4 lg:grid-cols-3">
             <div className={`${cardBase} ${cardHover} lg:col-span-2`}>
               <div className="mb-3 flex items-center justify-between">
-                <h4 className="text-base font-semibold text-slate-900">Por categoria</h4>
+                <h4 className="text-base font-semibold text-[var(--text-primary)]">Por categoria</h4>
               </div>
               {summaryLoading && !summary ? (
-                <div className="text-sm text-slate-500">Carregando grafico...</div>
+                <div className="text-sm text-[var(--text-muted)]">Carregando grafico...</div>
               ) : categoryData.length ? (
                 <div className="h-[220px] min-h-[220px] w-full">
                   <ResponsiveContainer width="100%" height={220}>
@@ -403,18 +403,18 @@ const DashboardPage = () => {
                   </ResponsiveContainer>
                 </div>
               ) : (
-                <div className="text-sm text-slate-500">Sem dados neste mes.</div>
+                <div className="text-sm text-[var(--text-muted)]">Sem dados neste mes.</div>
               )}
             </div>
 
             <div className={`${cardBase} ${cardHover}`}>
-              <h4 className="text-base font-semibold text-slate-900">Categorias</h4>
+              <h4 className="text-base font-semibold text-[var(--text-primary)]">Categorias</h4>
               <div className="mt-3 space-y-2">
                 {categoryData.length ? (
                   categoryData.map((item) => (
                     <div
                       key={item.category}
-                      className="flex items-center justify-between text-sm text-slate-700"
+                      className="flex items-center justify-between text-sm text-[var(--text-muted)]"
                     >
                       <div className="flex items-center gap-2">
                         <span
@@ -423,13 +423,13 @@ const DashboardPage = () => {
                         />
                         <span>{item.category}</span>
                       </div>
-                      <span className="font-semibold text-slate-900">
+                      <span className="font-semibold text-[var(--text-primary)]">
                         {formatBRL(item.total)}
                       </span>
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-slate-500">Sem categorias para este mes.</p>
+                  <p className="text-sm text-[var(--text-muted)]">Sem categorias para este mes.</p>
                 )}
               </div>
             </div>
@@ -443,34 +443,34 @@ const DashboardPage = () => {
             {entriesLoading ? (
               <p className={subtleText}>Carregando lancamentos...</p>
             ) : entriesError ? (
-              <div className="rounded-lg border border-rose-100 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+              <div className="rounded-lg border border-[var(--danger-border)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger-text)]">
                 <p>{entriesError}</p>
                 <button
                   type="button"
                   onClick={handleRetryEntries}
-                  className="mt-2 inline-flex items-center rounded bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-rose-700 transition hover:bg-rose-100"
+                  className="mt-2 inline-flex items-center rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] transition hover:opacity-90"
                 >
                   Tentar novamente
                 </button>
               </div>
             ) : latestEntries.length ? (
-              <ul className="divide-y divide-slate-100/80">
+              <ul className="divide-y divide-[var(--border)]">
                 {latestEntries.map((entry) => (
                   <li key={entry.id} className="flex items-start justify-between py-3">
                     <div>
-                      <p className="text-sm font-medium text-slate-900">
+                      <p className="text-sm font-medium text-[var(--text-primary)]">
                         {entry.description}
                       </p>
-                      <p className="text-xs text-slate-600">
+                      <p className="text-xs text-[var(--text-muted)]">
                         {formatDate(entry.date)} - {entry.category}
                         {entry.categoryInferred && (
-                          <span className="ml-2 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-500">
+                          <span className="ml-2 inline-flex rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--text-muted)]">
                             auto
                           </span>
                         )}
                       </p>
                     </div>
-                    <p className="text-sm font-semibold text-slate-900">
+                    <p className="text-sm font-semibold text-[var(--text-primary)]">
                       {formatBRL(entry.amount)}
                     </p>
                   </li>
@@ -482,7 +482,7 @@ const DashboardPage = () => {
           </DashboardSection>
 
           {showBuildTag && (
-            <div className="text-[11px] text-slate-400">build: {buildVersion}</div>
+          <div className="text-[11px] text-[var(--text-muted)]">build: {buildVersion}</div>
           )}
         </div>
       </div>

@@ -14,9 +14,12 @@
   --page-text: #111827;
   --text-primary: #111827;
   --text-muted: #6b7280;
+  --border: #e5e7eb;
   --border-muted: #e5e7eb;
-  --card-bg: #ffffff;
-  --card-border: #e5e7eb;
+  --surface: #ffffff;
+  --surface-2: #f3f4f6;
+  --card-bg: var(--surface);
+  --card-border: var(--border);
   --card-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
   --header-bg: rgba(255, 255, 255, 0.9);
   --settings-bg: rgba(255, 255, 255, 0.95);
@@ -38,8 +41,11 @@
   --text-primary: #e5e7eb;
   --text-muted: #9ca3af;
   --border-muted: #1f2937;
-  --card-bg: #111827;
-  --card-border: #1f2937;
+  --border: #1f2937;
+  --surface: #111827;
+  --surface-2: #0f172a;
+  --card-bg: var(--surface);
+  --card-border: var(--border);
   --card-shadow: 0 20px 45px rgba(0, 0, 0, 0.7);
   --header-bg: rgba(7, 12, 23, 0.85);
   --settings-bg: rgba(15, 23, 42, 0.95);
@@ -107,11 +113,6 @@ body.assistant-no-x {
   background-color: var(--card-bg);
   border: 1px solid var(--card-border);
   box-shadow: var(--card-shadow);
-}
-
-.logo-shell {
-  background-color: var(--logo-bg);
-  border: 1px solid var(--border-muted);
 }
 
 .settings-panel {
