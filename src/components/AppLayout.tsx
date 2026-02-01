@@ -90,6 +90,33 @@ const AppLayout = () => {
   [importBackup, isImporting],
   );
 
+  const handleClearAppCache = useCallback(async () => {
+    if (typeof window === "undefined") return;
+    const confirmed = window.confirm(
+      "Limpar o cache do app pode deslogar você e apagar dados locais. Deseja continuar?",
+    );
+    if (!confirmed) return;
+    setMenuToast(null);
+    try {
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+      if ("caches" in window) {
+        const cacheKeys = await caches.keys();
+        await Promise.all(cacheKeys.map((key) => caches.delete(key)));
+      }
+      if ("serviceWorker" in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((reg) => reg.unregister()));
+      }
+      setMenuToast({ type: "success", message: "Cache limpo. O app será recarregado." });
+      window.location.reload();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Não foi possível limpar o cache do app.";
+      setMenuToast({ type: "error", message });
+    }
+  }, []);
+
   useEffect(() => {
     if (!settingsOpen) return undefined;
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -293,6 +320,14 @@ const AppLayout = () => {
                         </p>
                       </div>
                     </div>
+                    <button
+                      type="button"
+                      onClick={handleClearAppCache}
+                      className="flex w-full items-center justify-between rounded-2xl border border-[var(--border)] bg-transparent px-4 py-3 text-sm font-semibold text-[var(--text-muted)] transition hover:border-[var(--danger)] hover:text-[var(--danger)]"
+                    >
+                      Limpar cache do app
+                      <span className="text-xs text-[var(--text-muted)]">(suporte)</span>
+                    </button>
                     <button
                       type="button"
                       onClick={handleLogoutFromSheet}
