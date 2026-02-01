@@ -576,7 +576,7 @@ const AssistantWidget = ({ onStateChange }: AssistantWidgetProps) => {
                         formRef.current?.requestSubmit();
                       }
                     }}
-                    placeholder="Digite uma despesa… (ex: mercado 50)"
+                    placeholder="Ex: mercado 50 • salário 3500 • entrada extra 300 freelance • conta fixa 120 internet"
                     className="flex-1 min-h-[44px] max-h-[96px] resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                     style={{ maxHeight: "min(96px, calc(var(--vh, 1vh) * 25))" }}
                   />

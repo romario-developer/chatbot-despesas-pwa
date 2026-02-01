@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { postAssistantMessage, type AssistantAction, type AssistantCard } from "../api/assistant";
-import { getCurrentMonthInTimeZone } from "../utils/months";
+import { formatMonthLabel, getCurrentMonthInTimeZone } from "../utils/months";
+import { formatBRL } from "../utils/format";
 
 const PAYMENT_KEYWORDS = ["pix", "débito", "debito", "crédito", "credito", "dinheiro"];
 const ADJUST_KEYWORDS = ["desfazer", "trocar", "ajustar"];
@@ -178,16 +179,47 @@ export const useAssistantChat = ({ onSavedStage }: UseAssistantChatOptions = {})
         const stage = response.state?.stage ?? null;
         const uiHint = response.uiHint ?? null;
         const isSavedStage = stage === "saved" || uiHint?.kind === "saved";
+        const planningHint = uiHint?.planning;
+        const isPlanningAction = uiHint?.kind === "planning" && planningHint;
+        const formatPlanningAmount = (value?: number | string) => {
+          const amount = Number(value ?? 0);
+          return Number.isFinite(amount) ? formatBRL(amount) : "R$ 0,00";
+        };
+        const planningMessage =
+          isPlanningAction && planningHint
+            ? (() => {
+                const monthLabel = planningHint.month
+                  ? formatMonthLabel(planningHint.month)
+                  : formatMonthLabel(month);
+                const amountText = formatPlanningAmount(planningHint.amount);
+                const label = planningHint.label?.trim();
+                switch (planningHint.action) {
+                  case "set_salary":
+                    return `Salário de ${monthLabel} definido: ${amountText}`;
+                  case "add_extra_income":
+                    return `Entrada extra em ${monthLabel}: ${amountText}${
+                      label ? ` (${label})` : ""
+                    }`;
+                  case "add_fixed_bill":
+                    return `Conta fixa adicionada: ${label ?? "sem nome"} — ${amountText}`;
+                  default:
+                    return response.assistantMessage;
+                }
+              })()
+            : response.assistantMessage;
         const assistantMessage: AssistantMessage = {
           id: `assistant-${Date.now()}`,
           from: "assistant",
-          text: response.assistantMessage,
+          text: planningMessage,
           cards: safeCards,
         };
         setCurrentStage(stage);
         setLastUiHint(uiHint);
         setAssistantCards(safeCards);
         setSuggestedActions(safeSuggestedActions);
+        if (isPlanningAction && typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("planning-updated"));
+        }
         const toastSummary =
           uiHint?.summary ?? summarizeAssistantText(response.assistantMessage) ?? "Registrado";
         if (isSavedStage) {

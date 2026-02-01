@@ -25,6 +25,19 @@ export type AssistantAction = {
   prompt?: string;
 };
 
+export type PlanningUiHint = {
+  action: "set_salary" | "add_extra_income" | "add_fixed_bill";
+  amount?: number | string;
+  label?: string;
+  month?: string;
+};
+
+export type AssistantUiHint = {
+  kind?: string;
+  summary?: string;
+  planning?: PlanningUiHint;
+};
+
 export type AssistantResponse = {
   assistantMessage: string;
   conversationId?: string;
@@ -33,10 +46,7 @@ export type AssistantResponse = {
   state?: {
     stage?: string;
   };
-  uiHint?: {
-    kind?: string;
-    summary?: string;
-  };
+  uiHint?: AssistantUiHint;
 };
 
 export type AssistantRequest = {

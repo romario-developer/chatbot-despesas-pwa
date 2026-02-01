@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import MonthPicker, {
   MonthPickerFieldTrigger,
   monthPickerFieldButtonClassName,
@@ -73,22 +73,33 @@ const PlanningPage = () => {
 
   const monthKey = useMemo(() => getMonthKey(month), [month]);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        setIsLoading(true);
-        const data = await getPlanning();
-        setPlanning(data ?? DEFAULT_PLANNING);
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Erro ao carregar planejamento";
-        setToast({ message, type: "error" });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    load();
+  const loadPlanning = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const data = await getPlanning();
+      setPlanning(data ?? DEFAULT_PLANNING);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao carregar planejamento";
+      setToast({ message, type: "error" });
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadPlanning();
+  }, [loadPlanning]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const handler = () => {
+      loadPlanning();
+    };
+    window.addEventListener("planning-updated", handler);
+    return () => {
+      window.removeEventListener("planning-updated", handler);
+    };
+  }, [loadPlanning]);
 
   useEffect(() => {
     const value = planning.salaryByMonth?.[monthKey] ?? 0;
