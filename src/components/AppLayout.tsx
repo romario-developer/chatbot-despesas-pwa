@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { createPortal } from "react-dom";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Settings, Wallet } from "lucide-react";
+import { Settings } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
 import AssistantWidget from "./AssistantWidget";
@@ -164,16 +164,16 @@ const AppLayout = () => {
         <header className="sticky top-0 z-20 border-b border-slate-200/60 bg-white/90 backdrop-blur dark:border-slate-800/70 dark:bg-slate-950/75">
             <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:text-white">
-                  <Wallet className="h-5 w-5 text-primary" />
-              </div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+                  <img src="/icons/icon-192.png" alt="Gestão Financeira" className="h-7 w-7" />
+                </div>
                 <div className="flex flex-col leading-tight">
                   <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
                     Gestão Financeira
                   </span>
                   <span className="text-base font-semibold text-slate-900 dark:text-white">Gestão Financeira</span>
                 </div>
-            </div>
+              </div>
             <nav className="hidden flex-1 justify-center gap-6 md:flex">
               {NAV_LINKS.map((link) => (
                 <NavLink
