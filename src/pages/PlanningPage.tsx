@@ -438,10 +438,24 @@ const PlanningPage = () => {
       <div className="card space-y-3 p-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-slate-900">Entradas extras</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-slate-900">
+                {extraForm.id ? "Editar entrada extra" : "Entradas extras"}
+              </h3>
+              {extraForm.id && (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                  Editando
+                </span>
+              )}
+            </div>
             <p className="text-sm text-slate-600">
               Total no mes: {formatCentsToBRL(extrasTotal)}
             </p>
+            {extraForm.id && (
+              <p className="text-xs text-slate-500">
+                Valor atual: {formatCentsToBRL(extraForm.amountCents)}
+              </p>
+            )}
           </div>
         </div>
 
@@ -541,10 +555,24 @@ const PlanningPage = () => {
       <div className="card space-y-3 p-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-slate-900">Contas fixas</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-slate-900">
+                {billForm.id ? "Editar conta fixa" : "Contas fixas"}
+              </h3>
+              {billForm.id && (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                  Editando
+                </span>
+              )}
+            </div>
             <p className="text-sm text-slate-600">
               Total previsto: {formatCentsToBRL(fixedTotal)}
             </p>
+            {billForm.id && (
+              <p className="text-xs text-slate-500">
+                Valor atual: {formatCentsToBRL(billForm.amountCents)}
+              </p>
+            )}
           </div>
         </div>
 
