@@ -1,18 +1,19 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import MonthPicker, {
   MonthPickerFieldTrigger,
   monthPickerFieldButtonClassName,
 } from "../components/MonthPicker";
 import MoneyInput from "../components/MoneyInput";
 import Toast from "../components/Toast";
-import { getPlanning, savePlanning } from "../api/planning";
+import { savePlanning } from "../api/planning";
 import { formatCentsToBRL } from "../utils/money";
 import {
   formatMonthLabel,
   getCurrentMonthInTimeZone,
   getDefaultMonthRange,
 } from "../utils/months";
-import { DEFAULT_PLANNING, type Planning, type PlanningBill, type PlanningExtra } from "../types";
+import { type Planning, type PlanningBill, type PlanningExtra } from "../types";
+import { usePlanning } from "../hooks/usePlanning";
 
 const currentMonth = () => getCurrentMonthInTimeZone("America/Bahia");
 
@@ -52,7 +53,7 @@ const PlanningPage = () => {
     extrasByMonth: {},
     fixedBills: [],
   });
-  const [isLoading, setIsLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [salaryCents, setSalaryCents] = useState(0);
   const [extraForm, setExtraForm] = useState<{
     id?: string;
@@ -78,34 +79,42 @@ const PlanningPage = () => {
   const [toast, setToast] = useState<ToastState>(null);
 
   const monthKey = useMemo(() => getMonthKey(month), [month]);
-
-  const loadPlanning = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const data = await getPlanning();
-      setPlanning(data ?? DEFAULT_PLANNING);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro ao carregar planejamento";
-      setToast({ message, type: "error" });
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const {
+    planning: remotePlanning,
+    isLoading: planningLoading,
+    error: planningError,
+    refetch: refetchPlanning,
+  } = usePlanning(monthKey);
 
   useEffect(() => {
-    loadPlanning();
-  }, [loadPlanning]);
+    if (remotePlanning) {
+      setPlanning(remotePlanning);
+    }
+  }, [remotePlanning]);
+
+  useEffect(() => {
+    if (!planningLoading) {
+      setInitialLoading(false);
+    }
+  }, [planningLoading]);
+
+  useEffect(() => {
+    if (!planningError) return;
+    const message =
+      planningError instanceof Error ? planningError.message : "Erro ao carregar planejamento";
+    setToast({ message, type: "error" });
+  }, [planningError]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
     const handler = () => {
-      loadPlanning();
+      void refetchPlanning({ silent: true });
     };
     window.addEventListener("planning-updated", handler);
     return () => {
       window.removeEventListener("planning-updated", handler);
     };
-  }, [loadPlanning]);
+  }, [refetchPlanning]);
 
   useEffect(() => {
     const value = planning.salaryByMonth?.[monthKey] ?? 0;
@@ -357,7 +366,7 @@ const PlanningPage = () => {
     }
   };
 
-  if (isLoading) {
+  if (initialLoading) {
     return <div className="card p-4 text-sm text-slate-600">Carregando planejamento...</div>;
   }
 

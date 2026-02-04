@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { deleteEntry, listEntries } from "../api/entries";
+import { deleteEntry } from "../api/entries";
 import MonthChipsBar from "../components/MonthChipsBar";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Toast from "../components/Toast";
@@ -12,7 +12,6 @@ import {
   getCurrentMonthInTimeZone,
   getDefaultMonthRange,
 } from "../utils/months";
-import { monthToRange } from "../utils/dateRange";
 import {
   formatPaymentMethodLabel,
   isPaymentMethodCredit,
@@ -20,6 +19,7 @@ import {
 import { formatEntryInstallmentLabel } from "../utils/installments";
 import { listCardsCached } from "../services/cardsService";
 import type { CreditCard, Entry } from "../types";
+import { useEntries } from "../hooks/useEntries";
 
 const currentMonth = () => getCurrentMonthInTimeZone("America/Bahia");
 
@@ -38,17 +38,20 @@ const EntriesPage = () => {
   );
   const [month, setMonth] = useState(currentMonthValue);
   const [cards, setCards] = useState<CreditCard[]>([]);
-  const [entries, setEntries] = useState<Entry[] | unknown>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [entriesPollingEnabled, setEntriesPollingEnabled] = useState(true);
+  const {
+    data: entriesData,
+    isLoading: entriesLoading,
+    error: entriesError,
+    refetch: refetchEntries,
+  } = useEntries(month, { pollIntervalMs: entriesPollingEnabled ? 20_000 : 0 });
+  const safeEntries = Array.isArray(entriesData) ? entriesData : [];
   const [entryToDelete, setEntryToDelete] = useState<Entry | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(
     null,
   );
   const [isMonthPanelOpen, setIsMonthPanelOpen] = useState(false);
-  const selectedMonthRange = useMemo(() => monthToRange(month), [month]);
   const monthLabel = useMemo(() => formatMonthLabel(month), [month]);
   const monthOptions = useMemo(
     () =>
@@ -69,6 +72,37 @@ const EntriesPage = () => {
       navigate(location.pathname + location.search, { replace: true });
     }
   }, [location, navigate]);
+
+  useEffect(() => {
+    const refresh = () => {
+      if (!entriesPollingEnabled) return;
+      void refetchEntries({ silent: true });
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        refresh();
+      }
+    };
+
+    window.addEventListener(ENTRIES_CHANGED, refresh);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      window.removeEventListener(ENTRIES_CHANGED, refresh);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [entriesPollingEnabled, refetchEntries]);
+
+  useEffect(() => {
+    if (!entriesError) {
+      setEntriesPollingEnabled(true);
+      return;
+    }
+    const status = (entriesError as (Error & { status?: number }))?.status;
+    if (typeof status === "number" && status >= 500) {
+      setEntriesPollingEnabled(false);
+    }
+  }, [entriesError]);
 
   useEffect(() => {
     let isActive = true;
@@ -92,80 +126,7 @@ const EntriesPage = () => {
     };
   }, []);
 
-  const loadEntries = useCallback(
-    async ({ silent }: { silent?: boolean } = {}) => {
-      if (!silent) {
-        setIsLoading(true);
-      }
-      setError(null);
 
-      try {
-    const data = await listEntries({
-      from: selectedMonthRange.from,
-      to: selectedMonthRange.to,
-    });
-
-        const safeData = Array.isArray(data) ? data : [];
-        const sorted = [...safeData].sort(
-          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-        );
-
-        setEntries(sorted);
-        setError(null);
-      } catch (err) {
-        const errorWithStatus = err as Error & { status?: number };
-        const status = errorWithStatus?.status;
-        const isServerError = typeof status === "number" && status >= 500;
-        const message = isServerError
-          ? "Erro ao carregar lançamentos"
-          : err instanceof Error
-          ? err.message
-          : "Erro ao carregar os lancamentos.";
-        if (isServerError) {
-          setEntriesPollingEnabled(false);
-        }
-        if (!silent) {
-          setError(message);
-          setEntries([]);
-        }
-      } finally {
-        if (!silent) {
-          setIsLoading(false);
-        }
-      }
-    },
-    [selectedMonthRange],
-  );
-
-  useEffect(() => {
-    loadEntries();
-  }, [loadEntries]);
-
-  useEffect(() => {
-    const refresh = () => {
-      if (!entriesPollingEnabled) return;
-      loadEntries({ silent: true });
-    };
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        refresh();
-      }
-    };
-
-    window.addEventListener("focus", refresh);
-    window.addEventListener("online", refresh);
-    window.addEventListener(ENTRIES_CHANGED, refresh);
-    document.addEventListener("visibilitychange", handleVisibility);
-
-    return () => {
-      window.removeEventListener("focus", refresh);
-      window.removeEventListener("online", refresh);
-      window.removeEventListener(ENTRIES_CHANGED, refresh);
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, [loadEntries, entriesPollingEnabled]);
-
-  const safeEntries = Array.isArray(entries) ? entries : [];
   const cardsById = useMemo(
     () => new Map(cards.map((card) => [card.id, card])),
     [cards],
@@ -228,11 +189,8 @@ const EntriesPage = () => {
     setIsDeleting(true);
     try {
       await deleteEntry(entryToDelete.id);
-      setEntries((prev: Entry[] | unknown) => {
-        const current = Array.isArray(prev) ? prev : [];
-        return current.filter((item) => item.id !== entryToDelete.id);
-      });
       notifyEntriesChanged();
+      void refetchEntries();
       setToast({ message: "Lancamento removido", type: "success" });
     } catch (err) {
       const message =
@@ -246,8 +204,8 @@ const EntriesPage = () => {
 
   const handleRetryEntries = useCallback(() => {
     setEntriesPollingEnabled(true);
-    loadEntries();
-  }, [loadEntries]);
+    void refetchEntries();
+  }, [refetchEntries]);
 
   const handleEditEntry = (entryId: string) => {
     navigate(`/entries/${entryId}/edit`);
@@ -311,13 +269,13 @@ const EntriesPage = () => {
           </p>
         </div>
 
-        {isLoading && (
+        {entriesLoading && (
           <p className="mt-3 text-sm text-slate-600">Carregando lancamentos...</p>
         )}
 
-        {error && (
+        {entriesError && (
           <div className="mt-3 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-700">
-            <p>{error}</p>
+            <p>{entriesError.message}</p>
             <button
               type="button"
               onClick={handleRetryEntries}
@@ -328,7 +286,7 @@ const EntriesPage = () => {
           </div>
         )}
 
-        {!isLoading && !error && (
+        {!entriesLoading && !entriesError && (
           <>
       <div className="mt-4 space-y-1 md:hidden">
               {safeEntries.length ? (

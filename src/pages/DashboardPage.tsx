@@ -4,9 +4,6 @@ import { useNavigate } from "react-router-dom";
 import Toast from "../components/Toast";
 import DashboardSection from "../components/ui/DashboardSection";
 import MonthChipsBar from "../components/MonthChipsBar";
-import { listEntries } from "../api/entries";
-import { getDashboardSummary } from "../api/dashboard";
-import { monthToRange } from "../utils/dateRange";
 import { formatBRL, formatDate } from "../utils/format";
 import { formatCentsToBRL } from "../utils/money";
 import { ENTRIES_CHANGED, ENTRY_CREATED } from "../utils/entriesEvents";
@@ -19,10 +16,10 @@ import {
 } from "../utils/months";
 import { cardBase, cardHover, subtleText } from "../styles/dashboardTokens";
 import { buildTag } from "../constants/build";
-import type { DashboardSummary, Entry } from "../types";
 import DashboardCardsList from "../components/DashboardCardsList";
-import { waitForApiReady } from "../api/client";
 import { useApiReadyState } from "../hooks/useApiReadyState";
+import { useDashboardSummary } from "../hooks/useDashboardSummary";
+import { useEntries } from "../hooks/useEntries";
 
 const CATEGORY_FALLBACK_COLORS = [
   "#0ea5e9",
@@ -73,107 +70,33 @@ const DashboardPage = () => {
       ? stored
       : currentMonth;
   });
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [summaryLoading, setSummaryLoading] = useState(false);
-  const [summaryError, setSummaryError] = useState<string | null>(null);
-  const [latestEntries, setLatestEntries] = useState<Entry[]>([]);
-  const [entriesCount, setEntriesCount] = useState(0);
-  const [entriesLoading, setEntriesLoading] = useState(false);
-  const [entriesError, setEntriesError] = useState<string | null>(null);
   const [entriesPollingEnabled, setEntriesPollingEnabled] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(
     null,
   );
   const [isMonthPanelOpen, setIsMonthPanelOpen] = useState(false);
+  const {
+    data: summaryData,
+    isLoading: summaryLoading,
+    error: summaryError,
+    refetch: refetchSummary,
+  } = useDashboardSummary(month);
+  const {
+    data: entriesData,
+    isLoading: entriesLoading,
+    error: entriesError,
+    refetch: refetchEntries,
+  } = useEntries(month, { pollIntervalMs: entriesPollingEnabled ? 20_000 : 0 });
+  const safeEntries = Array.isArray(entriesData) ? entriesData : [];
+  const latestEntriesList = useMemo(() => {
+    return [...safeEntries]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 6);
+  }, [safeEntries]);
+  const entriesCount = safeEntries.length;
   const buildVersion = import.meta.env.VITE_APP_VERSION || buildTag;
   const showBuildTag = !import.meta.env.VITE_APP_VERSION;
   const { readyVersion } = useApiReadyState();
-
-  const loadDashboard = useCallback(
-    async ({ silent }: { silent?: boolean } = {}) => {
-    if (!silent) {
-      setSummaryLoading(true);
-      setEntriesLoading(true);
-      setSummaryError(null);
-      setEntriesError(null);
-    }
-
-    try {
-      await waitForApiReady();
-    } catch {
-      if (!silent) {
-        setSummaryLoading(false);
-        setEntriesLoading(false);
-      }
-      return;
-    }
-
-    const range = monthToRange(month);
-    logDashboardDebug("loading month", month, range);
-    const [summaryResult, entriesResult] = await Promise.allSettled([
-        getDashboardSummary(month),
-        listEntries(
-          { from: range.from, to: range.to },
-          { dashboardDebugLabel: "dashboard-entries" },
-        ),
-      ]);
-
-      if (summaryResult.status === "fulfilled") {
-        setSummary(summaryResult.value);
-        setSummaryError(null);
-      } else {
-        const message =
-          summaryResult.reason instanceof Error
-            ? summaryResult.reason.message
-            : "Erro ao carregar resumo.";
-        setSummary(null);
-        setSummaryError(message);
-        if (!silent) {
-          setToast({ message, type: "error" });
-        }
-      }
-
-      if (entriesResult.status === "fulfilled") {
-        const normalizedEntries = Array.isArray(entriesResult.value)
-          ? entriesResult.value
-          : [];
-        const sortedEntries = [...normalizedEntries].sort(
-          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-        );
-        setLatestEntries(sortedEntries.slice(0, 6));
-        setEntriesCount(normalizedEntries.length);
-        setEntriesError(null);
-        setEntriesPollingEnabled(true);
-      } else {
-        const reason = entriesResult.reason as Error & { status?: number };
-        const status = reason?.status;
-        const isServerError = typeof status === "number" && status >= 500;
-        if (isServerError) {
-          setEntriesPollingEnabled(false);
-        }
-        const message =
-          isServerError
-            ? "Erro ao carregar lancamentos"
-            : entriesResult.reason instanceof Error
-            ? entriesResult.reason.message
-            : "Erro ao carregar lancamentos.";
-        setLatestEntries([]);
-        setEntriesCount(0);
-        setEntriesError(message);
-        if (!silent) {
-          setToast({ message, type: "error" });
-        }
-      }
-
-      setSummaryLoading(false);
-      setEntriesLoading(false);
-    },
-    [month],
-  );
-
-  useEffect(() => {
-    loadDashboard();
-  }, [loadDashboard, readyVersion]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -184,10 +107,31 @@ const DashboardPage = () => {
     logDashboardDebug("month selected", month);
   }, [month]);
 
+  useEffect(() => {
+    if (!summaryError) return;
+    setToast({ message: summaryError.message, type: "error" });
+  }, [summaryError]);
+
+  useEffect(() => {
+    if (!entriesError) {
+      setEntriesPollingEnabled(true);
+      return;
+    }
+    const status = (entriesError as (Error & { status?: number }))?.status;
+    if (typeof status === "number" && status >= 500) {
+      setEntriesPollingEnabled(false);
+    }
+  }, [entriesError]);
+
   const refreshDashboard = useCallback(() => {
     if (!entriesPollingEnabled) return;
-    loadDashboard({ silent: true });
-  }, [entriesPollingEnabled, loadDashboard]);
+    void refetchSummary({ silent: true });
+    void refetchEntries({ silent: true });
+  }, [entriesPollingEnabled, refetchEntries, refetchSummary]);
+
+  useEffect(() => {
+    refreshDashboard();
+  }, [readyVersion, refreshDashboard]);
 
   useEffect(() => {
     const handleVisibility = () => {
@@ -195,32 +139,32 @@ const DashboardPage = () => {
         refreshDashboard();
       }
     };
+    const refreshOnEvent = () => refreshDashboard();
 
-    window.addEventListener("focus", refreshDashboard);
-    window.addEventListener("online", refreshDashboard);
-    window.addEventListener(ENTRIES_CHANGED, refreshDashboard);
+    window.addEventListener("focus", refreshOnEvent);
+    window.addEventListener("online", refreshOnEvent);
+    window.addEventListener(ENTRIES_CHANGED, refreshOnEvent);
     document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
-      window.removeEventListener("focus", refreshDashboard);
-      window.removeEventListener("online", refreshDashboard);
-      window.removeEventListener(ENTRIES_CHANGED, refreshDashboard);
+      window.removeEventListener("focus", refreshOnEvent);
+      window.removeEventListener("online", refreshOnEvent);
+      window.removeEventListener(ENTRIES_CHANGED, refreshOnEvent);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [refreshDashboard]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") return undefined;
     const handleEntryCreated = () => {
       logSyncDebug("entry:created received - refreshing dashboard");
-      loadDashboard({ silent: true });
+      refreshDashboard();
     };
-
     window.addEventListener(ENTRY_CREATED, handleEntryCreated);
     return () => {
       window.removeEventListener(ENTRY_CREATED, handleEntryCreated);
     };
-  }, [loadDashboard]);
+  }, [refreshDashboard]);
 
   useEffect(() => {
     const isLocalHost =
@@ -240,7 +184,7 @@ const DashboardPage = () => {
   );
 
   const categoryData = useMemo(() => {
-    const list = Array.isArray(summary?.byCategory) ? summary?.byCategory : [];
+    const list = Array.isArray(summaryData?.byCategory) ? summaryData.byCategory : [];
     return list
       .map((item, index) => ({
         category: item.category || "Sem categoria",
@@ -248,14 +192,14 @@ const DashboardPage = () => {
         color: item.color || CATEGORY_FALLBACK_COLORS[index % CATEGORY_FALLBACK_COLORS.length],
       }))
       .filter((item) => item.total > 0);
-  }, [summary]);
+  }, [summaryData]);
 
-  const balance = summary?.balance ?? 0;
-  const incomeTotal = summary?.incomeTotal ?? 0;
-  const cashExpenses = summary?.expenseCashTotal ?? 0;
-  const creditExpenses = summary?.expenseCreditTotal ?? 0;
+  const balance = summaryData?.balance ?? 0;
+  const incomeTotal = summaryData?.incomeTotal ?? 0;
+  const cashExpenses = summaryData?.expenseCashTotal ?? 0;
+  const creditExpenses = summaryData?.expenseCreditTotal ?? 0;
   const renderSummaryValue = (value: number) =>
-    summary ? formatCentsToBRL(value) : "--";
+    summaryData ? formatCentsToBRL(value) : "--";
   const summaryValueClassName =
     "max-w-full overflow-hidden text-ellipsis whitespace-nowrap leading-tight text-2xl font-semibold sm:text-3xl md:text-4xl";
   const handleMonthToggle = () => {
@@ -263,21 +207,21 @@ const DashboardPage = () => {
   };
 
   useEffect(() => {
-    if (!summary) return;
+    if (!summaryData) return;
     logDashboardDebug("totals", {
-      month: summary.month,
+      month: summaryData.month,
       balance,
       incomeTotal,
       expenseCash: cashExpenses,
       expenseCredit: creditExpenses,
       entriesCount,
     });
-  }, [summary, balance, incomeTotal, cashExpenses, creditExpenses, entriesCount]);
+  }, [summaryData, balance, incomeTotal, cashExpenses, creditExpenses, entriesCount]);
 
   const handleRetryEntries = useCallback(() => {
     setEntriesPollingEnabled(true);
-    loadDashboard();
-  }, [loadDashboard]);
+    void refetchEntries();
+  }, [refetchEntries]);
 
   return (
     <div className="space-y-4">
@@ -332,7 +276,7 @@ const DashboardPage = () => {
 
           {summaryError && (
             <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-              {summaryError}
+              {summaryError.message}
             </div>
           )}
 
@@ -387,7 +331,7 @@ const DashboardPage = () => {
               <div className="mb-3 flex items-center justify-between">
                 <h4 className="text-base font-semibold text-[var(--text-primary)]">Por categoria</h4>
               </div>
-              {summaryLoading && !summary ? (
+              {summaryLoading && !summaryData ? (
                 <div className="text-sm text-[var(--text-muted)]">Carregando grafico...</div>
               ) : categoryData.length ? (
                 <div className="h-[220px] min-h-[220px] w-full">
@@ -454,7 +398,7 @@ const DashboardPage = () => {
               <p className={subtleText}>Carregando lancamentos...</p>
             ) : entriesError ? (
               <div className="rounded-lg border border-[var(--danger-border)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger-text)]">
-                <p>{entriesError}</p>
+                <p>{entriesError.message}</p>
                 <button
                   type="button"
                   onClick={handleRetryEntries}
@@ -463,9 +407,9 @@ const DashboardPage = () => {
                   Tentar novamente
                 </button>
               </div>
-            ) : latestEntries.length ? (
+            ) : latestEntriesList.length ? (
               <ul className="divide-y divide-[var(--border)]">
-                {latestEntries.map((entry) => (
+                {latestEntriesList.map((entry) => (
                   <li key={entry.id} className="flex items-start justify-between py-3">
                     <div>
                       <p className="text-sm font-medium text-[var(--text-primary)]">

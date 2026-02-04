@@ -1,13 +1,23 @@
+import { getCurrentMonthInTimeZone } from "./months";
+import { invalidateCachesForMonth } from "../services/cacheKeys";
+
 const ENTRIES_CHANGED_EVENT = "entries:changed";
 const ENTRY_CREATED_EVENT = "entry:created";
 
-export const notifyEntriesChanged = () => {
+const ensureMonth = (month?: string) =>
+  month ?? getCurrentMonthInTimeZone("America/Bahia");
+
+export const notifyEntriesChanged = (month?: string) => {
   if (typeof window === "undefined") return;
+  const targetMonth = ensureMonth(month);
+  invalidateCachesForMonth(targetMonth);
   window.dispatchEvent(new Event(ENTRIES_CHANGED_EVENT));
 };
 
-export const notifyEntryCreated = () => {
+export const notifyEntryCreated = (month?: string) => {
   if (typeof window === "undefined") return;
+  const targetMonth = ensureMonth(month);
+  invalidateCachesForMonth(targetMonth);
   window.dispatchEvent(new Event(ENTRY_CREATED_EVENT));
 };
 
