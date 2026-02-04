@@ -8,6 +8,7 @@ import { listEntries } from "../api/entries";
 import { getDashboardSummary } from "../api/dashboard";
 import { monthToRange } from "../utils/dateRange";
 import { formatBRL, formatDate } from "../utils/format";
+import { formatCentsToBRL } from "../utils/money";
 import { ENTRIES_CHANGED, ENTRY_CREATED } from "../utils/entriesEvents";
 import {
   buildMonthList,
@@ -52,21 +53,6 @@ const logSyncDebug = (...args: unknown[]) => {
   if (!isSyncDebugEnabled()) return;
   // eslint-disable-next-line no-console
   console.debug("[sync]", ...args);
-};
-
-// Heuristic to detect whether the dashboard API is returning cents (e.g. 12_000) or reais (e.g. 120.5).
-// Large integer values are treated as cents to avoid the 100x inflation bug.
-const DASHBOARD_CENT_THRESHOLD = 1000;
-
-const isLikelyDashboardValueInCents = (value: number) =>
-  Number.isFinite(value) && Number.isInteger(value) && Math.abs(value) >= DASHBOARD_CENT_THRESHOLD;
-
-const normalizeDashboardValue = (value: number) => {
-  if (!Number.isFinite(value)) return 0;
-  if (isLikelyDashboardValueInCents(value)) {
-    return value / 100;
-  }
-  return value;
 };
 
 const DashboardPage = () => {
@@ -123,8 +109,8 @@ const DashboardPage = () => {
     }
 
     const range = monthToRange(month);
-      logDashboardDebug("loading month", month, range);
-      const [summaryResult, entriesResult] = await Promise.allSettled([
+    logDashboardDebug("loading month", month, range);
+    const [summaryResult, entriesResult] = await Promise.allSettled([
         getDashboardSummary(month),
         listEntries(
           { from: range.from, to: range.to },
@@ -218,10 +204,10 @@ const DashboardPage = () => {
     return () => {
       window.removeEventListener("focus", refreshDashboard);
       window.removeEventListener("online", refreshDashboard);
-    window.removeEventListener(ENTRIES_CHANGED, refreshDashboard);
-    document.removeEventListener("visibilitychange", handleVisibility);
-  };
-}, [refreshDashboard]);
+      window.removeEventListener(ENTRIES_CHANGED, refreshDashboard);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [refreshDashboard]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -256,14 +242,11 @@ const DashboardPage = () => {
   const categoryData = useMemo(() => {
     const list = Array.isArray(summary?.byCategory) ? summary?.byCategory : [];
     return list
-      .map((item, index) => {
-        const rawTotal = Number(item.total) || 0;
-        return {
-          category: item.category || "Sem categoria",
-          total: normalizeDashboardValue(rawTotal),
-          color: item.color || CATEGORY_FALLBACK_COLORS[index % CATEGORY_FALLBACK_COLORS.length],
-        };
-      })
+      .map((item, index) => ({
+        category: item.category || "Sem categoria",
+        total: Number(item.total) || 0,
+        color: item.color || CATEGORY_FALLBACK_COLORS[index % CATEGORY_FALLBACK_COLORS.length],
+      }))
       .filter((item) => item.total > 0);
   }, [summary]);
 
@@ -272,7 +255,7 @@ const DashboardPage = () => {
   const cashExpenses = summary?.expenseCashTotal ?? 0;
   const creditExpenses = summary?.expenseCreditTotal ?? 0;
   const renderSummaryValue = (value: number) =>
-    summary ? formatBRL(normalizeDashboardValue(value)) : "--";
+    summary ? formatCentsToBRL(value) : "--";
   const summaryValueClassName =
     "max-w-full overflow-hidden text-ellipsis whitespace-nowrap leading-tight text-2xl font-semibold sm:text-3xl md:text-4xl";
   const handleMonthToggle = () => {
@@ -425,7 +408,7 @@ const DashboardPage = () => {
                           />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(v: unknown) => formatBRL(Number(v) || 0)} />
+                    <Tooltip formatter={(v: unknown) => formatCentsToBRL(Number(v) || 0)} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -451,7 +434,7 @@ const DashboardPage = () => {
                         <span>{item.category}</span>
                       </div>
                       <span className="font-semibold text-[var(--text-primary)]">
-                        {formatBRL(item.total)}
+                        {formatCentsToBRL(item.total)}
                       </span>
                     </div>
                   ))

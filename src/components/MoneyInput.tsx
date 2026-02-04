@@ -1,5 +1,5 @@
 import type { ChangeEvent, InputHTMLAttributes } from "react";
-import { formatCentsToBRL } from "../utils/money";
+import { formatCentsToBRL, parseBRLToCents } from "../utils/money";
 
 type MoneyInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange"> & {
   valueCents: number;
@@ -17,8 +17,7 @@ const MoneyInput = ({
   const displayValue = formatCentsToBRL(valueCents);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const digits = event.target.value.replace(/\D/g, "");
-    const cents = digits ? Number(digits) : 0;
+    const cents = parseBRLToCents(event.target.value);
     onChangeCents(Math.max(cents, 0));
   };
 

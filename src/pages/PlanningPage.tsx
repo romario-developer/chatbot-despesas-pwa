@@ -6,7 +6,6 @@ import MonthPicker, {
 import MoneyInput from "../components/MoneyInput";
 import Toast from "../components/Toast";
 import { getPlanning, savePlanning } from "../api/planning";
-import { formatBRL } from "../utils/format";
 import { formatCentsToBRL } from "../utils/money";
 import {
   formatMonthLabel,
@@ -32,6 +31,11 @@ const getMonthKey = (value: string | Date) => {
     return value.slice(0, 7);
   }
   return new Date().toISOString().slice(0, 7);
+};
+
+const toCents = (value: unknown) => {
+  const num = Number(value);
+  return Number.isFinite(num) ? Math.round(num) : 0;
 };
 
 type ToastState = { message: string; type: "success" | "error" } | null;
@@ -105,15 +109,14 @@ const PlanningPage = () => {
 
   useEffect(() => {
     const value = planning.salaryByMonth?.[monthKey] ?? 0;
-    const safeValue = Number.isFinite(value) ? value : 0;
-    setSalaryCents(Math.round(safeValue * 100));
+    setSalaryCents(toCents(value));
     setExtraForm((prev) => ({
       ...prev,
       date: `${monthKey}-01`,
     }));
   }, [monthKey, planning.salaryByMonth]);
 
-  const salaryValue = planning.salaryByMonth?.[monthKey] ?? 0;
+  const salaryValue = toCents(planning.salaryByMonth?.[monthKey] ?? 0);
 
   const monthExtras = useMemo(() => {
     const list = planning.extrasByMonth?.[monthKey];
@@ -122,18 +125,11 @@ const PlanningPage = () => {
 
   const fixedBills = Array.isArray(planning.fixedBills) ? planning.fixedBills : [];
 
-  const extrasTotal = monthExtras.reduce((sum, item) => {
-    const amount = Number(item?.amount);
-    return sum + (Number.isFinite(amount) ? amount : 0);
-  }, 0);
-
-  const fixedTotal = fixedBills.reduce((sum, bill) => {
-    const amount = Number(bill?.amount);
-    return sum + (Number.isFinite(amount) ? amount : 0);
-  }, 0);
+  const extrasTotal = monthExtras.reduce((sum, item) => sum + toCents(item.amount), 0);
+  const fixedTotal = fixedBills.reduce((sum, bill) => sum + toCents(bill.amount), 0);
 
   const handleSaveSalary = async () => {
-    const salaryValue = Number.isFinite(salaryCents) ? salaryCents / 100 : 0;
+    const salaryValue = Number.isFinite(salaryCents) ? salaryCents : 0;
     if (salaryValue < 0) {
       setErrors((prev) => ({ ...prev, salary: "Valor inválido" }));
       return;
@@ -169,11 +165,10 @@ const PlanningPage = () => {
   };
 
   const handleSubmitExtra = async () => {
-    const amountValueCents = Number.isFinite(extraForm.amountCents) ? extraForm.amountCents : 0;
-    const amountValue = amountValueCents / 100;
+    const amountValueCents = toCents(extraForm.amountCents);
     const description = extraForm.description.trim();
     const date = extraForm.date || `${monthKey}-01`;
-    if (!description || !date || amountValue <= 0) {
+    if (!description || !date || amountValueCents <= 0) {
       setErrors((prev) => ({
         ...prev,
         extra: "Preencha descrição, data e valor válido",
@@ -187,17 +182,17 @@ const PlanningPage = () => {
 
     const nextList: PlanningExtra[] = extraForm.id
       ? currentList.map((item) =>
-          item.id === extraForm.id
+              item.id === extraForm.id
             ? {
                 ...item,
                 id: item.id,
                 description,
                 label: item.label ?? description,
                 date,
-                amount: amountValue,
+                amount: amountValueCents,
               }
             : item,
-        )
+          )
       : [
           ...currentList,
           {
@@ -205,7 +200,7 @@ const PlanningPage = () => {
             description,
             label: description,
             date,
-            amount: amountValue,
+            amount: amountValueCents,
           },
         ];
 
@@ -238,7 +233,7 @@ const PlanningPage = () => {
       id: extra.id,
       date: extra.date ?? `${monthKey}-01`,
       description: extra.description ?? extra.label ?? "",
-      amountCents: Math.round(Number(extra.amount ?? 0) * 100),
+      amountCents: toCents(extra.amount),
     });
   };
 
@@ -278,12 +273,12 @@ const PlanningPage = () => {
   };
 
   const handleSubmitBill = async () => {
-    const amountValue = Number.isFinite(billForm.amountCents) ? billForm.amountCents / 100 : 0;
+    const amountValueCents = toCents(billForm.amountCents);
     const dueDay = Number(billForm.dueDay);
     const name = billForm.name.trim();
     if (
       !name ||
-      amountValue <= 0 ||
+      amountValueCents <= 0 ||
       Number.isNaN(dueDay) ||
       dueDay < 1 ||
       dueDay > 31
@@ -300,7 +295,7 @@ const PlanningPage = () => {
                 id: bill.id,
                 name,
                 label: bill.label ?? name,
-                amount: amountValue,
+                amount: amountValueCents,
                 dueDay,
               }
             : bill,
@@ -311,7 +306,7 @@ const PlanningPage = () => {
             id: billForm.id ?? createId(),
             name,
             label: name,
-            amount: amountValue,
+            amount: amountValueCents,
             dueDay,
           },
         ];
@@ -337,7 +332,7 @@ const PlanningPage = () => {
     setBillForm({
       id: bill.id,
       name: bill.name ?? bill.label ?? "",
-      amountCents: Math.round(Number(bill.amount ?? 0) * 100),
+      amountCents: toCents(bill.amount),
       dueDay: bill.dueDay ? String(bill.dueDay) : "1",
     });
   };
@@ -402,7 +397,7 @@ const PlanningPage = () => {
             />
             {errors.salary && <p className="mt-1 text-xs text-red-600">{errors.salary}</p>}
             <p className="mt-1 text-xs text-slate-500">
-              Atual: {formatBRL(salaryValue || 0)}
+              Atual: {formatCentsToBRL(salaryValue || 0)}
             </p>
           </div>
           <button
@@ -420,7 +415,7 @@ const PlanningPage = () => {
           <div>
             <h3 className="text-lg font-semibold text-slate-900">Entradas extras</h3>
             <p className="text-sm text-slate-600">
-              Total no mes: {formatBRL(extrasTotal)}
+              Total no mes: {formatCentsToBRL(extrasTotal)}
             </p>
           </div>
         </div>
@@ -489,7 +484,7 @@ const PlanningPage = () => {
                   </p>
                   <p className="text-xs text-slate-600">
                     {(extra.date ?? `${monthKey}-01`).slice(0, 10)} ·{" "}
-                    {formatCentsToBRL(Math.round((Number(extra.amount ?? 0) || 0) * 100))}
+                    {formatCentsToBRL(toCents(extra.amount))}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 text-xs font-semibold">
@@ -523,7 +518,7 @@ const PlanningPage = () => {
           <div>
             <h3 className="text-lg font-semibold text-slate-900">Contas fixas</h3>
             <p className="text-sm text-slate-600">
-              Total previsto: {formatBRL(fixedTotal)}
+              Total previsto: {formatCentsToBRL(fixedTotal)}
             </p>
           </div>
         </div>
@@ -590,7 +585,7 @@ const PlanningPage = () => {
                       {bill.name ?? bill.label ?? "Conta"}
                     </p>
                     <p className="text-xs text-slate-600">
-                      {formatCentsToBRL(Math.round(Number(bill.amount ?? 0) * 100))}{" "}
+                    {formatCentsToBRL(toCents(bill.amount))}{" "}
                       {bill.dueDay ? `- Vence dia ${bill.dueDay}` : ""}
                     </p>
                   </div>
