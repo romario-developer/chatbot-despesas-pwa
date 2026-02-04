@@ -14,6 +14,7 @@ import {
 } from "../utils/months";
 import { type Planning, type PlanningBill, type PlanningExtra } from "../types";
 import { usePlanning } from "../hooks/usePlanning";
+import { DATA_CHANGED_EVENT, type DataChangedDetail } from "../utils/dataBus";
 
 const currentMonth = () => getCurrentMonthInTimeZone("America/Bahia");
 
@@ -115,6 +116,21 @@ const PlanningPage = () => {
       window.removeEventListener("planning-updated", handler);
     };
   }, [refetchPlanning]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const handleDataChanged = (event: Event) => {
+      const detail = (event as CustomEvent<DataChangedDetail>).detail;
+      const matchesMonth = !detail.month || detail.month === monthKey;
+      if (matchesMonth && (detail.scope === "all" || detail.scope === "planning")) {
+        void refetchPlanning({ silent: true });
+      }
+    };
+    window.addEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+    return () => {
+      window.removeEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+    };
+  }, [monthKey, refetchPlanning]);
 
   useEffect(() => {
     const value = planning.salaryByMonth?.[monthKey] ?? 0;

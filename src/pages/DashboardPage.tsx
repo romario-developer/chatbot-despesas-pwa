@@ -6,6 +6,7 @@ import DashboardSection from "../components/ui/DashboardSection";
 import MonthChipsBar from "../components/MonthChipsBar";
 import { formatBRL, formatDate } from "../utils/format";
 import { formatCentsToBRL } from "../utils/money";
+import { DATA_CHANGED_EVENT, type DataChangedDetail } from "../utils/dataBus";
 import { ENTRIES_CHANGED, ENTRY_CREATED } from "../utils/entriesEvents";
 import {
   buildMonthList,
@@ -106,6 +107,27 @@ const DashboardPage = () => {
   useEffect(() => {
     logDashboardDebug("month selected", month);
   }, [month]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const handleDataChanged = (event: Event) => {
+      const detail = (event as CustomEvent<DataChangedDetail>).detail;
+      const matchesMonth = !detail.month || detail.month === month;
+      const shouldRefetchSummary = detail.scope === "all" || detail.scope === "dashboard";
+      const shouldRefetchEntries =
+        matchesMonth && (detail.scope === "all" || detail.scope === "entries");
+      if (shouldRefetchSummary) {
+        void refetchSummary({ silent: true });
+      }
+      if (shouldRefetchEntries) {
+        void refetchEntries({ silent: true });
+      }
+    };
+    window.addEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+    return () => {
+      window.removeEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+    };
+  }, [month, refetchEntries, refetchSummary]);
 
   useEffect(() => {
     if (!summaryError) return;

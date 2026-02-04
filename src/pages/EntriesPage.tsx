@@ -5,6 +5,7 @@ import MonthChipsBar from "../components/MonthChipsBar";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Toast from "../components/Toast";
 import { ENTRIES_CHANGED, notifyEntriesChanged } from "../utils/entriesEvents";
+import { DATA_CHANGED_EVENT, type DataChangedDetail } from "../utils/dataBus";
 import { formatCurrency, formatDate } from "../utils/format";
 import {
   buildMonthList,
@@ -83,15 +84,28 @@ const EntriesPage = () => {
         refresh();
       }
     };
+    const handleDataChanged = (event: Event) => {
+      const detail = (event as CustomEvent<DataChangedDetail>).detail;
+      const matchesMonth = !detail.month || detail.month === month;
+      if (matchesMonth && (detail.scope === "all" || detail.scope === "entries")) {
+        refresh();
+      }
+    };
 
+    window.addEventListener("focus", refresh);
+    window.addEventListener("online", refresh);
+    window.addEventListener(DATA_CHANGED_EVENT, handleDataChanged);
     window.addEventListener(ENTRIES_CHANGED, refresh);
     document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("online", refresh);
+      window.removeEventListener(DATA_CHANGED_EVENT, handleDataChanged);
       window.removeEventListener(ENTRIES_CHANGED, refresh);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [entriesPollingEnabled, refetchEntries]);
+  }, [entriesPollingEnabled, refetchEntries, month]);
 
   useEffect(() => {
     if (!entriesError) {

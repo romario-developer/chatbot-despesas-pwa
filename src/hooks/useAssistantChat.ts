@@ -2,8 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { postAssistantMessage, type AssistantAction, type AssistantCard } from "../api/assistant";
 import { formatMonthLabel, getCurrentMonthInTimeZone } from "../utils/months";
 import { formatBRL } from "../utils/format";
-import { invalidateCachesForMonth, invalidateCardsSummary } from "../services/cacheKeys";
-import { notifyEntriesChanged } from "../utils/entriesEvents";
+import { emitDataChanged } from "../utils/dataBus";
 
 const PAYMENT_KEYWORDS = ["pix", "débito", "debito", "crédito", "credito", "dinheiro"];
 const ADJUST_KEYWORDS = ["desfazer", "trocar", "ajustar"];
@@ -210,13 +209,10 @@ export const useAssistantChat = ({ onSavedStage }: UseAssistantChatOptions = {})
               })()
             : response.assistantMessage;
         const actionMonth = planningHint?.month ?? month;
-        const refreshCaches = () => {
-          invalidateCachesForMonth(actionMonth);
-          invalidateCardsSummary();
-          notifyEntriesChanged(actionMonth);
-        };
+        const notifyDataChanged = () =>
+          emitDataChanged({ scope: "all", month: actionMonth });
         if (isSavedStage || isPlanningAction) {
-          refreshCaches();
+          notifyDataChanged();
         }
         const assistantMessage: AssistantMessage = {
           id: `assistant-${Date.now()}`,
