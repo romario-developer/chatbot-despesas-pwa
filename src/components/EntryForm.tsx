@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { FormEvent } from "react";
 import type {
   Category,
   CreditCard,
@@ -8,7 +9,7 @@ import type {
 } from "../types";
 import { createCategory, listCategories } from "../api/categories";
 import { listCardsCached } from "../services/cardsService";
-import { formatBRL } from "../utils/format";
+import MoneyInput from "./MoneyInput";
 import {
   formatPaymentMethodLabel,
   isPaymentMethodCredit,
@@ -32,26 +33,17 @@ const resolveEntryPaymentMethod = (entry?: Partial<Entry>): PaymentMethod => {
   return "CASH";
 };
 
-const toInitialAmountDigits = (value?: number) =>
-  value !== undefined ? String(Math.round(Math.abs(value) * 100)) : "";
-
-const formatFromCents = (digits: string) => {
-  if (!digits) return "";
-  const cents = Number(digits);
-  if (Number.isNaN(cents)) return "";
-  return formatBRL(cents / 100);
-};
-
 const formatCardLabel = (card: CreditCard) =>
   card.brand ? `${card.name} \u2022 ${card.brand}` : card.name;
 
 const EntryForm = ({ initialValues, onSubmit, onCancel }: EntryFormProps) => {
   const [description, setDescription] = useState(initialValues?.description ?? "");
-  const [amount, setAmount] = useState(() =>
-    initialValues?.amount !== undefined ? formatBRL(initialValues.amount) : "",
-  );
-  const [amountDigits, setAmountDigits] = useState(() =>
-    toInitialAmountDigits(initialValues?.amount),
+  const toInitialCents = (value?: number) => {
+    const safe = Number.isFinite(value ?? NaN) ? (value as number) : 0;
+    return Math.round(safe * 100);
+  };
+  const [amountCents, setAmountCents] = useState(() =>
+    toInitialCents(initialValues?.amount),
   );
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
@@ -97,22 +89,9 @@ const EntryForm = ({ initialValues, onSubmit, onCancel }: EntryFormProps) => {
     }
   }, []);
 
-  const handleAmountInput = (value: string) => {
-    const digits = value.replace(/\D/g, "");
-    setAmountDigits(digits);
-    if (!digits) {
-      setAmount("");
-      return;
-    }
-    setAmount(formatFromCents(digits));
-  };
-
   useEffect(() => {
     setDescription(initialValues?.description ?? "");
-    setAmount(
-      initialValues?.amount !== undefined ? formatBRL(initialValues.amount) : "",
-    );
-    setAmountDigits(toInitialAmountDigits(initialValues?.amount));
+    setAmountCents(toInitialCents(initialValues?.amount));
     setSelectedCategoryId(initialValues?.categoryId ?? "");
     setCategorySearch("");
     setDate(initialValues?.date?.slice(0, 10) ?? new Date().toISOString().slice(0, 10));
@@ -181,10 +160,8 @@ const EntryForm = ({ initialValues, onSubmit, onCancel }: EntryFormProps) => {
       nextErrors.cardId = "Cartao obrigatorio para pagamentos no credito";
     }
 
-    const hasDigits = Boolean(amountDigits.trim());
-    const parsedCents = Number(amountDigits || "0");
-    const parsedAmount = hasDigits ? parsedCents / 100 : NaN;
-    if (!hasDigits || Number.isNaN(parsedAmount)) {
+    const parsedAmount = amountCents / 100;
+    if (amountCents <= 0 || Number.isNaN(parsedAmount)) {
       nextErrors.amount = "Valor invalido";
     } else if (parsedAmount === 0) {
       nextErrors.amount = "Valor deve ser diferente de zero";
@@ -210,7 +187,7 @@ const EntryForm = ({ initialValues, onSubmit, onCancel }: EntryFormProps) => {
     };
   };
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setApiError(null);
     const payload = validate();
@@ -297,15 +274,13 @@ const EntryForm = ({ initialValues, onSubmit, onCancel }: EntryFormProps) => {
       <div>
         <label className="block text-sm font-medium text-slate-700">
           Valor
-          <input
-            type="text"
-            inputMode="decimal"
-            value={amount}
-            onChange={(e) => handleAmountInput(e.target.value)}
-            className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+          <MoneyInput
+            valueCents={amountCents}
+            onChangeCents={setAmountCents}
+            className="mt-2 w-full"
             placeholder="0,00"
-            required
             disabled={isInstallmentEntry}
+            required
           />
         </label>
         {errors.amount && (
