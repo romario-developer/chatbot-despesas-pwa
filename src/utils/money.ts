@@ -1,13 +1,10 @@
-const currencyFormatter = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-  minimumFractionDigits: 2,
-});
-
-export const formatCentsToBRL = (cents: number) => {
+export function formatCentsToBRL(cents: number): string {
   const safe = Number.isFinite(cents) ? cents : 0;
-  return currencyFormatter.format(safe / 100);
-};
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(safe / 100);
+}
 
 export const parseBRLToCents = (value: string) => {
   if (!value) return 0;
