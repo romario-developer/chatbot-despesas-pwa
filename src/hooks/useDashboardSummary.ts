@@ -36,7 +36,10 @@ export const useDashboardSummary = (month: string) => {
       method: "GET",
       dashboardDebug: { label: "dashboard-summary" },
     });
-    return normalizeDashboardSummary(raw);
+    console.log("[summary-raw]", raw);
+    const normalized = normalizeDashboardSummary(raw);
+    console.log("[summary-normalized]", normalized);
+    return normalized;
   }, [month]);
   return useLiveQuery(fetcher, {
     cacheKey: dashboardSummaryKey(month),
