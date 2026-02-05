@@ -253,6 +253,21 @@ const DashboardPage = () => {
     entriesCount,
   ]);
 
+  useEffect(() => {
+    if (!summaryData) return;
+    logDashboardDebug("summary payload", {
+      balance: summaryData.balance,
+      balanceCents: summaryData.balanceCents,
+      incomeTotal: summaryData.incomeTotal,
+      incomeTotalCents: summaryData.incomeTotalCents,
+      expenseCashTotal: summaryData.expenseCashTotal,
+      expenseCashTotalCents: summaryData.expenseCashTotalCents,
+      expenseCreditTotal: summaryData.expenseCreditTotal,
+      expenseCreditTotalCents: summaryData.expenseCreditTotalCents,
+      expensesCount: entriesCount,
+    });
+  }, [summaryData, entriesCount]);
+
   const handleRetryEntries = useCallback(() => {
     setEntriesPollingEnabled(true);
     void refetchEntries();

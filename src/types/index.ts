@@ -104,6 +104,7 @@ export type EntriesResponse = Entry[];
 export interface EntryPayload {
   description: string;
   amount: number;
+  amountCents?: number;
   category?: string;
   categoryId?: string | null;
   date: string;

@@ -178,6 +178,7 @@ const EntryForm = ({ initialValues, onSubmit, onCancel }: EntryFormProps) => {
     return {
       description: description.trim(),
       amount: parsedAmount,
+      amountCents,
       category: categoryById?.name ?? initialValues?.category ?? "",
       categoryId: selectedCategoryId || null,
       date,
