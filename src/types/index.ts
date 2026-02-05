@@ -62,10 +62,25 @@ export type DashboardCategory = {
 export type DashboardSummary = {
   month: string;
   balance: number;
+  balanceCents?: number;
   incomeTotal: number;
+  incomeTotalCents?: number;
   expenseCashTotal: number;
+  expenseCashTotalCents?: number;
   expenseCreditTotal: number;
+  expenseCreditTotalCents?: number;
   expenseTotal: number;
+  expenseTotalCents?: number;
+  salary?: number;
+  salaryCents?: number;
+  extras?: number;
+  extrasCents?: number;
+  receitas?: number;
+  receitasCents?: number;
+  gastosCaixa?: number;
+  gastosCaixaCents?: number;
+  gastosCredito?: number;
+  gastosCreditoCents?: number;
   byCategory: DashboardCategory[];
 };
 

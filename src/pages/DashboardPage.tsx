@@ -216,12 +216,12 @@ const DashboardPage = () => {
       .filter((item) => item.total > 0);
   }, [summaryData]);
 
-  const balance = summaryData?.balance ?? 0;
-  const incomeTotal = summaryData?.incomeTotal ?? 0;
-  const cashExpenses = summaryData?.expenseCashTotal ?? 0;
-  const creditExpenses = summaryData?.expenseCreditTotal ?? 0;
-  const renderSummaryValue = (value: number) =>
-    summaryData ? formatCentsToBRL(value) : "--";
+  const balanceCents = summaryData?.balanceCents ?? 0;
+  const incomeTotalCents = summaryData?.incomeTotalCents ?? 0;
+  const cashExpensesCents = summaryData?.expenseCashTotalCents ?? 0;
+  const creditExpensesCents = summaryData?.expenseCreditTotalCents ?? 0;
+  const renderSummaryValue = (valueCents: number) =>
+    summaryData ? formatCentsToBRL(valueCents) : "--";
   const summaryValueClassName =
     "max-w-full overflow-hidden text-ellipsis whitespace-nowrap leading-tight text-2xl font-semibold sm:text-3xl md:text-4xl";
   const handleMonthToggle = () => {
@@ -232,13 +232,20 @@ const DashboardPage = () => {
     if (!summaryData) return;
     logDashboardDebug("totals", {
       month: summaryData.month,
-      balance,
-      incomeTotal,
-      expenseCash: cashExpenses,
-      expenseCredit: creditExpenses,
+      balance: balanceCents,
+      incomeTotal: incomeTotalCents,
+      expenseCash: cashExpensesCents,
+      expenseCredit: creditExpensesCents,
       entriesCount,
     });
-  }, [summaryData, balance, incomeTotal, cashExpenses, creditExpenses, entriesCount]);
+  }, [
+    summaryData,
+    balanceCents,
+    incomeTotalCents,
+    cashExpensesCents,
+    creditExpensesCents,
+    entriesCount,
+  ]);
 
   const handleRetryEntries = useCallback(() => {
     setEntriesPollingEnabled(true);
@@ -313,7 +320,7 @@ const DashboardPage = () => {
                 <p
                   className={`${summaryValueClassName} text-[var(--text-primary)]`}
                 >
-                  {renderSummaryValue(balance)}
+                  {renderSummaryValue(balanceCents)}
                 </p>
               </div>
             </div>
@@ -327,7 +334,7 @@ const DashboardPage = () => {
                 <p
                   className={`${summaryValueClassName} text-[var(--success)]`}
                 >
-                  {renderSummaryValue(incomeTotal)}
+                  {renderSummaryValue(incomeTotalCents)}
                 </p>
               </div>
             </div>
@@ -341,7 +348,7 @@ const DashboardPage = () => {
                 <p
                   className={`${summaryValueClassName} text-[var(--danger)]`}
                 >
-                  {renderSummaryValue(cashExpenses)}
+                  {renderSummaryValue(cashExpensesCents)}
                 </p>
               </div>
             </div>
