@@ -3,27 +3,47 @@ import { apiRequest, waitForApiReady } from "../api/client";
 import { dashboardSummaryKey } from "../services/cacheKeys";
 import { useLiveQuery } from "./useLiveQuery";
 
-const normalizeNumber = (v: unknown) =>
-  Number.isFinite(Number(v)) ? Number(v) : 0;
+const asNumber = (v: unknown) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
 
-export function normalizeDashboardSummary(data: any) {
+const asInt = (v: unknown) => {
+  const n = asNumber(v);
+  return Number.isInteger(n) ? n : Math.round(n);
+};
+
+export function normalizeDashboardSummary(raw: any) {
+  const month = typeof raw?.month === "string" ? raw.month : "";
+
+  const balanceCents = asInt(raw?.balanceCents ?? raw?.balance);
+  const incomeTotalCents = asInt(raw?.incomeTotalCents ?? raw?.incomeTotal);
+  const expenseTotalCents = asInt(raw?.expenseTotalCents ?? raw?.expenseTotal);
+
+  const expenseCashTotalCents =
+    raw?.gastosCaixaCents != null
+      ? asInt(raw.gastosCaixaCents)
+      : expenseTotalCents;
+
+  const expenseCreditTotalCents =
+    raw?.gastosCreditoCents != null ? asInt(raw.gastosCreditoCents) : 0;
+
+  const byCategory = Array.isArray(raw?.byCategory)
+    ? raw.byCategory.map((item: any) => ({
+        category: item.categoryName ?? item.category ?? "Sem categoria",
+        color: item.color,
+        totalCents: asInt(item.totalCents ?? item.total),
+      }))
+    : [];
+
   return {
-    month: data?.month,
-
-    balanceCents: normalizeNumber(data?.balance),
-    incomeTotalCents: normalizeNumber(data?.incomeTotal),
-    expenseTotalCents: normalizeNumber(data?.expenseTotal),
-
-    expenseCashTotalCents: normalizeNumber(data?.expenseTotal),
-    expenseCreditTotalCents: 0,
-
-    byCategory: Array.isArray(data?.byCategory)
-      ? data.byCategory.map((item: any) => ({
-          category: item.categoryName ?? "Sem categoria",
-          color: item.color,
-          totalCents: normalizeNumber(item?.totalCents ?? item?.total),
-        }))
-      : [],
+    month,
+    balanceCents,
+    incomeTotalCents,
+    expenseTotalCents,
+    expenseCashTotalCents,
+    expenseCreditTotalCents,
+    byCategory,
   };
 }
 
