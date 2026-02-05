@@ -208,12 +208,18 @@ const DashboardPage = () => {
   const categoryData = useMemo(() => {
     const list = Array.isArray(summaryData?.byCategory) ? summaryData.byCategory : [];
     return list
-      .map((item, index) => ({
-        category: item.category || "Sem categoria",
-        total: Number(item.total) || 0,
-        color: item.color || CATEGORY_FALLBACK_COLORS[index % CATEGORY_FALLBACK_COLORS.length],
-      }))
-      .filter((item) => item.total > 0);
+      .map((item, index) => {
+        const totalCents =
+          typeof (item as any).totalCents === "number"
+            ? (item as any).totalCents
+            : Number((item as any).total) || 0; // fallback p/ legado
+        return {
+          category: item.category || "Sem categoria",
+          totalCents,
+          color: item.color || CATEGORY_FALLBACK_COLORS[index % CATEGORY_FALLBACK_COLORS.length],
+        };
+      })
+      .filter((item) => item.totalCents > 0);
   }, [summaryData]);
 
   const balanceCents = summaryData?.balanceCents ?? 0;
@@ -368,7 +374,7 @@ const DashboardPage = () => {
                     <PieChart>
                       <Pie
                         data={categoryData}
-                        dataKey="total"
+                        dataKey="totalCents"
                         nameKey="category"
                         innerRadius={60}
                         outerRadius={95}
@@ -407,7 +413,7 @@ const DashboardPage = () => {
                         <span>{item.category}</span>
                       </div>
                       <span className="font-semibold text-[var(--text-primary)]">
-                        {formatCentsToBRL(item.total)}
+                        {formatCentsToBRL(item.totalCents)}
                       </span>
                     </div>
                   ))
