@@ -238,10 +238,11 @@ const DashboardPage = () => {
     if (!summaryData) return;
     logDashboardDebug("totals", {
       month: summaryData.month,
-      balance: balanceCents,
-      incomeTotal: incomeTotalCents,
-      expenseCash: cashExpensesCents,
-      expenseCredit: creditExpensesCents,
+      balanceCents,
+      incomeTotalCents,
+      expenseTotalCents: summaryData.expenseTotalCents,
+      expenseCashTotalCents: cashExpensesCents,
+      expenseCreditTotalCents: creditExpensesCents,
       entriesCount,
     });
   }, [
@@ -256,15 +257,14 @@ const DashboardPage = () => {
   useEffect(() => {
     if (!summaryData) return;
     logDashboardDebug("summary payload", {
-      balance: summaryData.balance,
+      month: summaryData.month,
       balanceCents: summaryData.balanceCents,
-      incomeTotal: summaryData.incomeTotal,
       incomeTotalCents: summaryData.incomeTotalCents,
-      expenseCashTotal: summaryData.expenseCashTotal,
+      expenseTotalCents: summaryData.expenseTotalCents,
       expenseCashTotalCents: summaryData.expenseCashTotalCents,
-      expenseCreditTotal: summaryData.expenseCreditTotal,
       expenseCreditTotalCents: summaryData.expenseCreditTotalCents,
-      expensesCount: entriesCount,
+      entriesCount,
+      categories: summaryData.byCategory?.length ?? 0,
     });
   }, [summaryData, entriesCount]);
 
