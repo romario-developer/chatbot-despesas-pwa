@@ -49,7 +49,10 @@ const resolveCents = (options: { cents?: unknown; reais?: unknown }) => {
     return normalizeNumber(options.cents);
   }
   if (options.reais !== undefined && options.reais !== null) {
-    return Math.round(normalizeNumber(options.reais) * 100);
+    // Se o valor for muito grande (ex: > 100.000), provavelmente já está em centavos.
+    // No entanto, para ser consistente com a correção do backend, vamos assumir que
+    // os campos 'balance', 'incomeTotal', etc, agora retornam centavos.
+    return normalizeNumber(options.reais);
   }
   return 0;
 };
