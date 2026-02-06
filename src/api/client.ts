@@ -1,6 +1,6 @@
-import { AxiosHeaders } from "axios";
+import axios, { AxiosHeaders } from "axios";
 import type { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
-import { api, apiBaseURL, apiHadApiSuffix, shouldLogApi } from "../services/api";
+import { apiBaseURL, apiHadApiSuffix, shouldLogApi } from "../services/api";
 
 const AUTH_TOKEN_KEY = "auth_token";
 const LEGACY_AUTH_TOKEN_KEY = "despesas_token";
@@ -11,6 +11,11 @@ const LOGIN_MESSAGE_KEY = "despesas_login_message";
 const FAILURE_WINDOW_MS = 30_000;
 const FAILURE_LIMIT = 5;
 const BLOCK_DURATION_MS = 60_000;
+
+export const api = axios.create({
+  baseURL: apiBaseURL,
+  timeout: 15000,
+});
 const failureTracker = new Map<
   string,
   {
@@ -142,7 +147,6 @@ const redirectToLogin = () => {
     window.location.replace("/login");
   }
 };
-
 const parseErrorMessage = (error: AxiosError<ApiErrorResponse>) => {
   const responseData = error.response?.data;
   if (responseData && typeof responseData === "object") {

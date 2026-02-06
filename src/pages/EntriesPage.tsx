@@ -4,7 +4,7 @@ import { deleteEntry } from "../api/entries";
 import MonthChipsBar from "../components/MonthChipsBar";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Toast from "../components/Toast";
-import { ENTRIES_CHANGED, notifyEntriesChanged } from "../utils/entriesEvents";
+import { notifyEntriesChanged } from "../utils/entriesEvents";
 import { DATA_CHANGED_EVENT, type DataChangedDetail } from "../utils/dataBus";
 import { formatCurrency, formatDate } from "../utils/format";
 import {
@@ -20,7 +20,7 @@ import {
 import { formatEntryInstallmentLabel } from "../utils/installments";
 import { listCardsCached } from "../services/cardsService";
 import type { CreditCard, Entry } from "../types";
-import { useEntries } from "../hooks/useEntries";
+import { useEntries } from "../hooks/queries";
 
 const currentMonth = () => getCurrentMonthInTimeZone("America/Bahia");
 
@@ -77,7 +77,7 @@ const EntriesPage = () => {
   useEffect(() => {
     const refresh = () => {
       if (!entriesPollingEnabled) return;
-      void refetchEntries({ silent: true });
+      void refetchEntries();
     };
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
@@ -95,14 +95,12 @@ const EntriesPage = () => {
     window.addEventListener("focus", refresh);
     window.addEventListener("online", refresh);
     window.addEventListener(DATA_CHANGED_EVENT, handleDataChanged);
-    window.addEventListener(ENTRIES_CHANGED, refresh);
     document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
       window.removeEventListener("focus", refresh);
       window.removeEventListener("online", refresh);
       window.removeEventListener(DATA_CHANGED_EVENT, handleDataChanged);
-      window.removeEventListener(ENTRIES_CHANGED, refresh);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [entriesPollingEnabled, refetchEntries, month]);
@@ -150,6 +148,8 @@ const EntriesPage = () => {
     () => safeEntries.reduce((sum, entry) => sum + entry.amount, 0),
     [safeEntries],
   );
+  const hasEntries = safeEntries.length > 0;
+  const isInitialLoading = entriesLoading && !hasEntries;
 
   const formatCardLabel = (card: CreditCard) =>
     card.brand ? `${card.name} • ${card.brand}` : card.name;
@@ -227,6 +227,45 @@ const EntriesPage = () => {
     navigate(`/entries/${entryId}/edit`);
   };
 
+  const skeletonEntries = Array.from({ length: 3 }).map((_, index) => (
+    <div
+      key={`mobile-skeleton-${index}`}
+      className="border-b border-[var(--border)] bg-[var(--surface)] px-4 py-3 last:border-b-0 animate-pulse"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="h-4 w-32 rounded-full bg-slate-700/40 dark:bg-slate-600/40" />
+        <div className="h-4 w-24 rounded-full bg-slate-700/40 dark:bg-slate-600/40" />
+      </div>
+      <div className="mt-2 flex flex-col gap-2 text-xs">
+        <div className="h-3 w-40 rounded-full bg-slate-700/40 dark:bg-slate-600/40" />
+        <div className="h-3 w-24 rounded-full bg-slate-700/40 dark:bg-slate-600/40" />
+      </div>
+    </div>
+  ));
+
+  const skeletonTableRows = Array.from({ length: 3 }).map((_, index) => (
+    <tr key={`table-skeleton-${index}`} className="divide-y divide-[var(--border)] animate-pulse">
+      <td className="px-4 py-4">
+        <div className="h-3 w-36 rounded-full bg-slate-700/40 dark:bg-slate-600/40" />
+      </td>
+      <td className="px-4 py-4">
+        <div className="h-3 w-24 rounded-full bg-slate-700/40 dark:bg-slate-600/40" />
+      </td>
+      <td className="px-4 py-4">
+        <div className="h-3 w-28 rounded-full bg-slate-700/40 dark:bg-slate-600/40" />
+      </td>
+      <td className="px-4 py-4">
+        <div className="h-3 w-20 rounded-full bg-slate-700/40 dark:bg-slate-600/40" />
+      </td>
+      <td className="px-4 py-4">
+        <div className="h-3 w-16 rounded-full bg-slate-700/40 dark:bg-slate-600/40" />
+      </td>
+      <td className="px-4 py-4">
+        <div className="h-3 w-16 rounded-full bg-slate-700/40 dark:bg-slate-600/40" />
+      </td>
+    </tr>
+  ));
+
   const handleDeleteClick = (entry: Entry) => {
     setEntryToDelete(entry);
   };
@@ -285,10 +324,6 @@ const EntriesPage = () => {
           </p>
         </div>
 
-        {entriesLoading && (
-        <p className="mt-3 text-sm text-[var(--muted)]">Carregando lancamentos...</p>
-        )}
-
         {entriesError && (
             <div className="mt-3 rounded-lg border border-[rgba(239,68,68,0.4)] bg-[rgba(239,68,68,0.12)] px-3 py-2 text-sm text-rose-200">
               <p>{entriesError.message}</p>
@@ -302,142 +337,174 @@ const EntriesPage = () => {
             </div>
         )}
 
-        {!entriesLoading && !entriesError && (
+        {!entriesError && (
           <>
-      <div className="mt-4 space-y-1 md:hidden">
-              {safeEntries.length ? (
-                safeEntries.map((entry) => {
-                  const descriptionLabel = `${entry.description}${formatInstallmentLabel(entry)}`;
-                  return (
-          <div
-            key={entry.id}
-            className="border-b border-[var(--border)] bg-[var(--surface)] px-4 py-3 last:border-b-0"
-          >
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-[var(--text)]">{descriptionLabel}</p>
-              <p className="text-sm font-semibold text-[var(--text)]">
-                {formatCurrency(entry.amount)}
-              </p>
-            </div>
-            <div className="mt-2 flex flex-col gap-1 text-xs text-[var(--muted)] sm:flex-row sm:items-center sm:justify-between">
-              <span>
-                {formatDate(entry.date)} • {entry.category}
-                {entry.categoryInferred && (
-                  <span className="ml-2 inline-flex rounded-full border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--muted)]">
-                    auto
-                  </span>
-                )}
-              </span>
-              <span className="flex items-center gap-1">
-                {renderPaymentBadge(entry)}
-                {entry.source && (
-                  <span className="text-[10px] font-semibold text-[var(--muted)]">
-                    {entry.source}
-                  </span>
-                )}
-              </span>
-            </div>
-            <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-[var(--muted)]">
-                  <button
-                    type="button"
-                    onClick={() => handleEditEntry(entry.id)}
-                    className="text-[var(--muted)] transition hover:text-[var(--primary)]"
-                  >
-                    ✏️ Editar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteClick(entry)}
-                    className="text-rose-400 transition hover:text-rose-300"
-                  >
-                    🗑️ Excluir
-                  </button>
+            {isInitialLoading ? (
+              <>
+                <div className="mt-4 space-y-1 md:hidden">{skeletonEntries}</div>
+                <div className="mt-4 hidden overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)] md:block">
+                  <table className="min-w-full divide-y divide-[var(--border)] text-sm">
+                    <thead className="bg-[var(--surface-2)] text-left text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                      <tr>
+                        <th className="px-4 py-3">Descricao</th>
+                        <th className="px-4 py-3">Data</th>
+                        <th className="px-4 py-3">Categoria</th>
+                        <th className="px-4 py-3">Origem</th>
+                        <th className="px-4 py-3 text-right">Valor</th>
+                        <th className="px-4 py-3 text-right">Acoes</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--border)]">{skeletonTableRows}</tbody>
+                  </table>
                 </div>
-              </div>
-            );
-          })
-        ) : (
-                <p className="text-sm text-[var(--muted)]">Nenhum lancamento encontrado.</p>
-              )}
-            </div>
-
-            <div className="mt-4 hidden overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)] md:block">
-              <table className="min-w-full divide-y divide-[var(--border)] text-sm">
-                <thead className="bg-[var(--surface-2)] text-left text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-                  <tr>
-                    <th className="px-4 py-3">Descricao</th>
-                    <th className="px-4 py-3">Data</th>
-                    <th className="px-4 py-3">Categoria</th>
-                    <th className="px-4 py-3">Origem</th>
-                    <th className="px-4 py-3 text-right">Valor</th>
-                    <th className="px-4 py-3 text-right">Acoes</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--border)]">
-                  {safeEntries.length ? (
+              </>
+            ) : (
+              <>
+                <div className="mt-4 space-y-1 md:hidden">
+                  {hasEntries ? (
                     safeEntries.map((entry) => {
-                      const descriptionLabel = `${entry.description}${formatInstallmentLabel(entry)}`;
+                      const descriptionLabel = `${entry.description}${formatInstallmentLabel(
+                        entry,
+                      )}`;
                       return (
-                    <tr
-                      key={entry.id}
-                      className="group transition-colors hover:bg-[var(--surface-2)]"
-                    >
-                          <td className="px-4 py-3 font-medium text-[var(--text)]">
-                            <div className="flex flex-col gap-1">
-                              <span>{descriptionLabel}</span>
-                              {renderEntryBadges(entry)}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-[var(--muted)]">
-                            {formatDate(entry.date)}
-                          </td>
-                          <td className="px-4 py-3 text-[var(--muted)]">
-                            <span className="inline-flex items-center gap-2">
-                              <span>{entry.category}</span>
+                        <div
+                          key={entry.id}
+                          className="border-b border-[var(--border)] bg-[var(--surface)] px-4 py-3 last:border-b-0"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-sm font-semibold text-[var(--text)]">
+                              {descriptionLabel}
+                            </p>
+                            <p className="text-sm font-semibold text-[var(--text)]">
+                              {formatCurrency(entry.amount)}
+                            </p>
+                          </div>
+                          <div className="mt-2 flex flex-col gap-1 text-xs text-[var(--muted)] sm:flex-row sm:items-center sm:justify-between">
+                            <span>
+                              {formatDate(entry.date)} • {entry.category}
                               {entry.categoryInferred && (
-                                <span className="inline-flex rounded-full border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--muted)]">
+                                <span className="ml-2 inline-flex rounded-full border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--muted)]">
                                   auto
                                 </span>
                               )}
                             </span>
-                          </td>
-                          <td className="px-4 py-3 text-[var(--muted)]">{entry.source}</td>
-                          <td className="px-4 py-3 text-right font-semibold text-[var(--text)] text-lg">
-                            {formatCurrency(entry.amount)}
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <div className="flex justify-end gap-2 opacity-0 transition group-hover:opacity-100">
-                              <button
-                                type="button"
-                                onClick={() => handleEditEntry(entry.id)}
-                                className="flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-semibold text-[var(--muted)] transition hover:border hover:border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--primary)]"
-                              >
-                                ✏️
-                                <span className="sr-only">Editar</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteClick(entry)}
-                                className="flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-semibold text-rose-400 transition hover:bg-rose-50 hover:text-rose-300"
-                              >
-                                🗑️
-                                <span className="sr-only">Excluir</span>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
+                            <span className="flex items-center gap-1">
+                              {renderPaymentBadge(entry)}
+                              {entry.source && (
+                                <span className="text-[10px] font-semibold text-[var(--muted)]">
+                                  {entry.source}
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                          <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-[var(--muted)]">
+                            <button
+                              type="button"
+                              onClick={() => handleEditEntry(entry.id)}
+                              className="text-[var(--muted)] transition hover:text-[var(--primary)]"
+                            >
+                              ✏️ Editar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteClick(entry)}
+                              className="text-rose-400 transition hover:text-rose-300"
+                            >
+                              🗑️ Excluir
+                            </button>
+                          </div>
+                        </div>
                       );
                     })
                   ) : (
-                    <tr>
-                      <td className="px-4 py-4 text-sm text-[var(--muted)]" colSpan={6}>
-                        Nenhum lancamento encontrado.
-                      </td>
-                    </tr>
+                    <p className="text-sm text-[var(--muted)]">Nenhum lancamento encontrado.</p>
                   )}
-                </tbody>
-              </table>
-            </div>
+                </div>
+
+                <div className="mt-4 hidden overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)] md:block">
+                  <table className="min-w-full divide-y divide-[var(--border)] text-sm">
+                    <thead className="bg-[var(--surface-2)] text-left text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                      <tr>
+                        <th className="px-4 py-3">Descricao</th>
+                        <th className="px-4 py-3">Data</th>
+                        <th className="px-4 py-3">Categoria</th>
+                        <th className="px-4 py-3">Origem</th>
+                        <th className="px-4 py-3 text-right">Valor</th>
+                        <th className="px-4 py-3 text-right">Acoes</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--border)]">
+                      {hasEntries ? (
+                        safeEntries.map((entry) => {
+                          const descriptionLabel = `${entry.description}${formatInstallmentLabel(
+                            entry,
+                          )}`;
+                          return (
+                            <tr
+                              key={entry.id}
+                              className="group transition-colors hover:bg-[var(--surface-2)]"
+                            >
+                              <td className="px-4 py-3 font-medium text-[var(--text)]">
+                                <div className="flex flex-col gap-1">
+                                  <span>{descriptionLabel}</span>
+                                  {renderEntryBadges(entry)}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-[var(--muted)]">
+                                {formatDate(entry.date)}
+                              </td>
+                              <td className="px-4 py-3 text-[var(--muted)]">
+                                <span className="inline-flex items-center gap-2">
+                                  <span>{entry.category}</span>
+                                  {entry.categoryInferred && (
+                                    <span className="inline-flex rounded-full border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--muted)]">
+                                      auto
+                                    </span>
+                                  )}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-[var(--muted)]">{entry.source}</td>
+                              <td className="px-4 py-3 text-right font-semibold text-[var(--text)] text-lg">
+                                {formatCurrency(entry.amount)}
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <div className="flex justify-end gap-2 opacity-0 transition group-hover:opacity-100">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEditEntry(entry.id)}
+                                    className="flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-semibold text-[var(--muted)] transition hover:border hover:border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--primary)]"
+                                  >
+                                    ✏️
+                                    <span className="sr-only">Editar</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteClick(entry)}
+                                    className="flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-semibold text-rose-400 transition hover:bg-rose-50 hover:text-rose-300"
+                                  >
+                                    🗑️
+                                    <span className="sr-only">Excluir</span>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td
+                            className="px-4 py-4 text-sm text-[var(--muted)]"
+                            colSpan={6}
+                          >
+                            Nenhum lancamento encontrado.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </>
         )}
       </div>

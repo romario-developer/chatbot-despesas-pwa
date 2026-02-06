@@ -21,6 +21,7 @@
     "vite-plugin-pwa": "^1.2.0"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.20",
     "axios": "^1.13.2",
     "canvas": "^3.2.1",
     "lucide-react": "^0.563.0",

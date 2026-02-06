@@ -19,8 +19,8 @@ import { cardBase, cardHover, subtleText } from "../styles/dashboardTokens";
 import { buildTag } from "../constants/build";
 import DashboardCardsList from "../components/DashboardCardsList";
 import { useApiReadyState } from "../hooks/useApiReadyState";
-import { useDashboardSummary } from "../hooks/useDashboardSummary";
-import { useEntries } from "../hooks/useEntries";
+import { useDashboard, useEntries } from "../hooks/queries";
+import type { DashboardCategory } from "../types";
 
 const CATEGORY_FALLBACK_COLORS = [
   "#0ea5e9",
@@ -81,7 +81,7 @@ const DashboardPage = () => {
     isLoading: summaryLoading,
     error: summaryError,
     refetch: refetchSummary,
-  } = useDashboardSummary(month);
+  } = useDashboard(month);
   const {
     data: entriesData,
     isLoading: entriesLoading,
@@ -95,6 +95,26 @@ const DashboardPage = () => {
       .slice(0, 6);
   }, [safeEntries]);
   const entriesCount = safeEntries.length;
+  const showSummarySkeleton = summaryLoading && !summaryData;
+  const showEntriesSkeleton = entriesLoading && !latestEntriesList.length;
+  const summarySkeletonCards = Array.from({ length: 3 }).map((_, index) => (
+    <div
+      key={`summary-skeleton-${index}`}
+      className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 animate-pulse"
+    >
+      <div className="h-3 w-24 rounded-full bg-slate-700/40 dark:bg-slate-600/40" />
+      <div className="mt-4 h-10 w-32 rounded-full bg-slate-700/40 dark:bg-slate-600/40" />
+    </div>
+  ));
+  const entriesSkeletonItems = Array.from({ length: 3 }).map((_, index) => (
+    <div
+      key={`entries-skeleton-${index}`}
+      className="flex items-center justify-between rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 animate-pulse"
+    >
+      <div className="h-3 w-36 rounded-full bg-slate-700/40 dark:bg-slate-600/40" />
+      <div className="h-3 w-24 rounded-full bg-slate-700/40 dark:bg-slate-600/40" />
+    </div>
+  ));
   const buildVersion = import.meta.env.VITE_APP_VERSION || buildTag;
   const showBuildTag = !import.meta.env.VITE_APP_VERSION;
   const { readyVersion } = useApiReadyState();
@@ -117,10 +137,10 @@ const DashboardPage = () => {
       const shouldRefetchEntries =
         matchesMonth && (detail.scope === "all" || detail.scope === "entries");
       if (shouldRefetchSummary) {
-        void refetchSummary({ silent: true });
+      void refetchSummary();
       }
       if (shouldRefetchEntries) {
-        void refetchEntries({ silent: true });
+        void refetchEntries();
       }
     };
     window.addEventListener(DATA_CHANGED_EVENT, handleDataChanged);
@@ -147,8 +167,8 @@ const DashboardPage = () => {
 
   const refreshDashboard = useCallback(() => {
     if (!entriesPollingEnabled) return;
-    void refetchSummary({ silent: true });
-    void refetchEntries({ silent: true });
+        void refetchSummary();
+        void refetchEntries();
   }, [entriesPollingEnabled, refetchEntries, refetchSummary]);
 
   useEffect(() => {
@@ -206,20 +226,20 @@ const DashboardPage = () => {
   );
 
   const categoryData = useMemo(() => {
-    const list = Array.isArray(summaryData?.byCategory) ? summaryData.byCategory : [];
+    const list: DashboardCategory[] = Array.isArray(summaryData?.byCategory)
+      ? summaryData.byCategory
+      : [];
     return list
       .map((item, index) => {
         const totalCents =
-          typeof (item as any).totalCents === "number"
-            ? (item as any).totalCents
-            : Number((item as any).total) || 0; // fallback p/ legado
+          typeof item.total === "number" ? item.total : Number(item.total) || 0;
         return {
           category: item.category || "Sem categoria",
           totalCents,
           color: item.color || CATEGORY_FALLBACK_COLORS[index % CATEGORY_FALLBACK_COLORS.length],
         };
       })
-      .filter((item) => item.totalCents > 0);
+      .filter((entry) => entry.totalCents > 0);
   }, [summaryData]);
 
   const balanceCents = summaryData?.balanceCents ?? 0;
@@ -330,50 +350,50 @@ const DashboardPage = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <div
-              className={`${cardBase} ${cardHover} flex min-h-[104px] flex-col justify-between gap-3 px-4 py-4 sm:px-5 sm:py-5 sm:min-h-[140px]`}
-            >
-              <div className="min-w-0">
-                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-[var(--text-muted)]">
-                  Saldo em conta
-                </p>
-                <p
-                  className={`${summaryValueClassName} text-[var(--text-primary)]`}
-                >
-                  {renderSummaryValue(balanceCents)}
-                </p>
+          {showSummarySkeleton ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {summarySkeletonCards}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div
+                className={`${cardBase} ${cardHover} flex min-h-[104px] flex-col justify-between gap-3 px-4 py-4 sm:px-5 sm:py-5 sm:min-h-[140px]`}
+              >
+                <div className="min-w-0">
+                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-[var(--text-muted)]">
+                    Saldo em conta
+                  </p>
+                  <p className={`${summaryValueClassName} text-[var(--text-primary)]`}>
+                    {renderSummaryValue(balanceCents)}
+                  </p>
+                </div>
+              </div>
+              <div
+                className={`${cardBase} ${cardHover} flex min-h-[104px] flex-col justify-between gap-3 px-4 py-4 sm:px-5 sm:py-5 sm:min-h-[140px]`}
+              >
+                <div className="min-w-0">
+                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-[var(--text-muted)]">
+                    Receitas
+                  </p>
+                  <p className={`${summaryValueClassName} text-[var(--success)]`}>
+                    {renderSummaryValue(incomeTotalCents)}
+                  </p>
+                </div>
+              </div>
+              <div
+                className={`${cardBase} ${cardHover} col-span-2 flex min-h-[104px] flex-col justify-between gap-3 px-4 py-4 sm:col-span-1 sm:px-5 sm:py-5 sm:min-h-[140px]`}
+              >
+                <div className="min-w-0">
+                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-[var(--text-muted)]">
+                    Gastos (Caixa)
+                  </p>
+                  <p className={`${summaryValueClassName} text-[var(--danger)]`}>
+                    {renderSummaryValue(cashExpensesCents)}
+                  </p>
+                </div>
               </div>
             </div>
-            <div
-              className={`${cardBase} ${cardHover} flex min-h-[104px] flex-col justify-between gap-3 px-4 py-4 sm:px-5 sm:py-5 sm:min-h-[140px]`}
-            >
-              <div className="min-w-0">
-                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-[var(--text-muted)]">
-                  Receitas
-                </p>
-                <p
-                  className={`${summaryValueClassName} text-[var(--success)]`}
-                >
-                  {renderSummaryValue(incomeTotalCents)}
-                </p>
-              </div>
-            </div>
-            <div
-              className={`${cardBase} ${cardHover} col-span-2 flex min-h-[104px] flex-col justify-between gap-3 px-4 py-4 sm:col-span-1 sm:px-5 sm:py-5 sm:min-h-[140px]`}
-            >
-              <div className="min-w-0">
-                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-[var(--text-muted)]">
-                  Gastos (Caixa)
-                </p>
-                <p
-                  className={`${summaryValueClassName} text-[var(--danger)]`}
-                >
-                  {renderSummaryValue(cashExpensesCents)}
-                </p>
-              </div>
-            </div>
-          </div>
+          )}
           <DashboardCardsList month={month} />
 
           <div className="grid gap-4 lg:grid-cols-3">
@@ -444,8 +464,8 @@ const DashboardPage = () => {
             actionLabel="Ver todos"
             onAction={() => navigate("/entries")}
           >
-            {entriesLoading ? (
-              <p className={subtleText}>Carregando lancamentos...</p>
+            {showEntriesSkeleton ? (
+              <div className="space-y-3">{entriesSkeletonItems}</div>
             ) : entriesError ? (
               <div className="rounded-lg border border-[var(--danger-border)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger-text)]">
                 <p>{entriesError.message}</p>

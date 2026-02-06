@@ -118,6 +118,9 @@ const MoneyInput = ({
     onMouseUp?.(event);
   };
 
+  const baseInputClass =
+    "rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] shadow-sm outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20";
+
   return (
     <input
       ref={inputRef}
@@ -127,7 +130,7 @@ const MoneyInput = ({
       value={raw}
       placeholder={placeholder}
       disabled={disabled}
-      className={`rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 ${className}`}
+      className={`${baseInputClass} ${className}`}
       onChange={handleChange}
       onFocus={handleFocus}
       onBlur={handleBlur}

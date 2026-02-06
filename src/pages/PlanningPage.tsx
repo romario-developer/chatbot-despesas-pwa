@@ -13,7 +13,7 @@ import {
   getDefaultMonthRange,
 } from "../utils/months";
 import { type Planning, type PlanningBill, type PlanningExtra } from "../types";
-import { usePlanning } from "../hooks/usePlanning";
+import { usePlanning } from "../hooks/queries";
 import { DATA_CHANGED_EVENT, type DataChangedDetail } from "../utils/dataBus";
 
 const currentMonth = () => getCurrentMonthInTimeZone("America/Bahia");
@@ -54,7 +54,6 @@ const PlanningPage = () => {
     extrasByMonth: {},
     fixedBills: [],
   });
-  const [initialLoading, setInitialLoading] = useState(true);
   const [salaryCents, setSalaryCents] = useState(0);
   const [extraForm, setExtraForm] = useState<{
     id?: string;
@@ -94,12 +93,6 @@ const PlanningPage = () => {
   }, [remotePlanning]);
 
   useEffect(() => {
-    if (!planningLoading) {
-      setInitialLoading(false);
-    }
-  }, [planningLoading]);
-
-  useEffect(() => {
     if (!planningError) return;
     const message =
       planningError instanceof Error ? planningError.message : "Erro ao carregar planejamento";
@@ -109,7 +102,7 @@ const PlanningPage = () => {
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
     const handler = () => {
-      void refetchPlanning({ silent: true });
+      void refetchPlanning();
     };
     window.addEventListener("planning-updated", handler);
     return () => {
@@ -123,7 +116,7 @@ const PlanningPage = () => {
       const detail = (event as CustomEvent<DataChangedDetail>).detail;
       const matchesMonth = !detail.month || detail.month === monthKey;
       if (matchesMonth && (detail.scope === "all" || detail.scope === "planning")) {
-        void refetchPlanning({ silent: true });
+        void refetchPlanning();
       }
     };
     window.addEventListener(DATA_CHANGED_EVENT, handleDataChanged);
@@ -382,8 +375,23 @@ const PlanningPage = () => {
     }
   };
 
-  if (initialLoading) {
-    return <div className="card p-4 text-sm text-slate-600">Carregando planejamento...</div>;
+  if (planningLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="h-8 w-48 rounded-full bg-slate-700/40 animate-pulse" />
+        <div className="card space-y-4 p-4 animate-pulse">
+          <div className="h-4 w-28 rounded-full bg-slate-700/40" />
+          <div className="h-10 w-full rounded-full bg-slate-700/40" />
+        </div>
+        {Array.from({ length: 2 }).map((_, index) => (
+          <div key={`planning-skeleton-${index}`} className="card space-y-3 p-4 animate-pulse">
+            <div className="h-4 w-32 rounded-full bg-slate-700/40" />
+            <div className="h-6 w-full rounded-full bg-slate-700/40" />
+            <div className="h-6 w-full rounded-full bg-slate-700/40" />
+          </div>
+        ))}
+      </div>
+    );
   }
 
   return (
