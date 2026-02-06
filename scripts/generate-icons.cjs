@@ -45,6 +45,6 @@ const run = async () => {
 };
 
 run().catch((err) => {
-  console.error("Erro ao gerar ícones:", err);
+  console.error("Failed to generate icons:", err);
   process.exit(1);
 });
