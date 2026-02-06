@@ -155,7 +155,9 @@ const EntriesPage = () => {
     card.brand ? `${card.name} • ${card.brand}` : card.name;
 
   const badgeBaseClass =
-    "inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600";
+    "inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-[0_0_0_1px_rgba(255,255,255,0.08)]";
+  const cardBadgeClass =
+    "inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-[0_0_0_1px_rgba(255,255,255,0.08)]";
 
   const renderPaymentBadge = (entry: Entry) => {
     const label = formatPaymentMethodLabel(entry.paymentMethod);
@@ -169,7 +171,7 @@ const EntriesPage = () => {
     const label = card ? formatCardLabel(card) : "Cartao";
     const dotColor = card?.color ?? "#94a3b8";
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+      <span className={cardBadgeClass}>
         <span className="h-2 w-2 rounded-full" style={{ backgroundColor: dotColor }} />
         <span>{label}</span>
       </span>
@@ -232,24 +234,24 @@ const EntriesPage = () => {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-2">
-        <h2 className="text-xl font-semibold text-slate-900">Lancamentos</h2>
-        <p className="text-sm text-slate-600">
+        <h2 className="text-xl font-semibold text-[var(--text)]">Lancamentos</h2>
+        <p className="text-sm text-[var(--muted)]">
           Use o Assistente para registrar novas despesas e acompanhe os registros abaixo.
         </p>
       </div>
-      <div className="grid gap-3">
-        <div className="relative flex flex-col gap-2 text-sm font-medium text-slate-700">
-          <span className="text-xs font-semibold uppercase text-slate-500">Mes</span>
+          <div className="grid gap-3">
+        <div className="relative flex flex-col gap-2 text-sm font-medium text-[var(--muted)]">
+          <span className="text-xs font-semibold uppercase text-[var(--muted)]">Mes</span>
           <div>
             <button
               type="button"
               aria-expanded={isMonthPanelOpen}
               aria-controls="entries-month-panel"
               onClick={toggleMonthPanel}
-              className="group mt-1 inline-flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-base font-semibold text-slate-900 shadow-sm transition hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+              className="group mt-1 inline-flex w-full items-center justify-between rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-left text-base font-semibold text-[var(--text)] shadow-sm transition hover:border-[var(--primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]"
             >
               <span>{monthLabel}</span>
-              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition group-hover:border-purple-300 group-hover:text-purple-600">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] shadow-sm transition group-hover:border-[var(--primary)] group-hover:text-[var(--primary)]">
                 <svg
                   viewBox="0 0 20 20"
                   fill="currentColor"
@@ -278,26 +280,26 @@ const EntriesPage = () => {
 
       <div className="card p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-[var(--muted)]">
             {safeEntries.length} lancamento(s) - Total {formatCurrency(totalAmount)}
           </p>
         </div>
 
         {entriesLoading && (
-          <p className="mt-3 text-sm text-slate-600">Carregando lancamentos...</p>
+        <p className="mt-3 text-sm text-[var(--muted)]">Carregando lancamentos...</p>
         )}
 
         {entriesError && (
-          <div className="mt-3 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-700">
-            <p>{entriesError.message}</p>
-            <button
-              type="button"
-              onClick={handleRetryEntries}
-              className="mt-2 inline-flex items-center rounded bg-white px-3 py-0.5 text-xs font-semibold uppercase tracking-wide text-red-700 transition hover:bg-red-100"
-            >
-              Tentar novamente
-            </button>
-          </div>
+            <div className="mt-3 rounded-lg border border-[rgba(239,68,68,0.4)] bg-[rgba(239,68,68,0.12)] px-3 py-2 text-sm text-rose-200">
+              <p>{entriesError.message}</p>
+              <button
+                type="button"
+                onClick={handleRetryEntries}
+                className="mt-2 inline-flex items-center rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-0.5 text-xs font-semibold uppercase tracking-wide text-[var(--danger)] transition hover:bg-[var(--surface-2)]"
+              >
+                Tentar novamente
+              </button>
+            </div>
         )}
 
         {!entriesLoading && !entriesError && (
@@ -307,61 +309,61 @@ const EntriesPage = () => {
                 safeEntries.map((entry) => {
                   const descriptionLabel = `${entry.description}${formatInstallmentLabel(entry)}`;
                   return (
-                <div
-                  key={entry.id}
-                  className="border-b border-slate-100 bg-white px-4 py-3 last:border-b-0"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-slate-900">{descriptionLabel}</p>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {formatCurrency(entry.amount)}
-                    </p>
-                  </div>
-                  <div className="mt-2 flex flex-col gap-1 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-                    <span>
-                      {formatDate(entry.date)} • {entry.category}
-                      {entry.categoryInferred && (
-                        <span className="ml-2 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-500">
-                          auto
-                        </span>
-                      )}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      {renderPaymentBadge(entry)}
-                      {entry.source && (
-                        <span className="text-[10px] font-semibold text-slate-400">
-                          {entry.source}
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-slate-600">
-                    <button
-                      type="button"
-                      onClick={() => handleEditEntry(entry.id)}
-                      className="text-slate-500 transition hover:text-primary"
-                    >
-                      ✏️ Editar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteClick(entry)}
-                      className="text-rose-600 transition hover:text-rose-500"
-                    >
-                      🗑️ Excluir
-                    </button>
-                  </div>
+          <div
+            key={entry.id}
+            className="border-b border-[var(--border)] bg-[var(--surface)] px-4 py-3 last:border-b-0"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-[var(--text)]">{descriptionLabel}</p>
+              <p className="text-sm font-semibold text-[var(--text)]">
+                {formatCurrency(entry.amount)}
+              </p>
+            </div>
+            <div className="mt-2 flex flex-col gap-1 text-xs text-[var(--muted)] sm:flex-row sm:items-center sm:justify-between">
+              <span>
+                {formatDate(entry.date)} • {entry.category}
+                {entry.categoryInferred && (
+                  <span className="ml-2 inline-flex rounded-full border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--muted)]">
+                    auto
+                  </span>
+                )}
+              </span>
+              <span className="flex items-center gap-1">
+                {renderPaymentBadge(entry)}
+                {entry.source && (
+                  <span className="text-[10px] font-semibold text-[var(--muted)]">
+                    {entry.source}
+                  </span>
+                )}
+              </span>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-[var(--muted)]">
+                  <button
+                    type="button"
+                    onClick={() => handleEditEntry(entry.id)}
+                    className="text-[var(--muted)] transition hover:text-[var(--primary)]"
+                  >
+                    ✏️ Editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteClick(entry)}
+                    className="text-rose-400 transition hover:text-rose-300"
+                  >
+                    🗑️ Excluir
+                  </button>
                 </div>
-              );
-            })
-          ) : (
-                <p className="text-sm text-slate-500">Nenhum lancamento encontrado.</p>
+              </div>
+            );
+          })
+        ) : (
+                <p className="text-sm text-[var(--muted)]">Nenhum lancamento encontrado.</p>
               )}
             </div>
 
-            <div className="mt-4 hidden overflow-hidden rounded-lg border border-slate-200 bg-white md:block">
-              <table className="min-w-full divide-y divide-slate-200 text-sm">
-                <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+            <div className="mt-4 hidden overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)] md:block">
+              <table className="min-w-full divide-y divide-[var(--border)] text-sm">
+                <thead className="bg-[var(--surface-2)] text-left text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
                   <tr>
                     <th className="px-4 py-3">Descricao</th>
                     <th className="px-4 py-3">Data</th>
@@ -371,33 +373,36 @@ const EntriesPage = () => {
                     <th className="px-4 py-3 text-right">Acoes</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-[var(--border)]">
                   {safeEntries.length ? (
                     safeEntries.map((entry) => {
                       const descriptionLabel = `${entry.description}${formatInstallmentLabel(entry)}`;
                       return (
-                    <tr key={entry.id} className="group hover:bg-slate-50">
-                          <td className="px-4 py-3 font-medium text-slate-900">
+                    <tr
+                      key={entry.id}
+                      className="group transition-colors hover:bg-[var(--surface-2)]"
+                    >
+                          <td className="px-4 py-3 font-medium text-[var(--text)]">
                             <div className="flex flex-col gap-1">
                               <span>{descriptionLabel}</span>
                               {renderEntryBadges(entry)}
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-slate-700">
+                          <td className="px-4 py-3 text-[var(--muted)]">
                             {formatDate(entry.date)}
                           </td>
-                          <td className="px-4 py-3 text-slate-700">
+                          <td className="px-4 py-3 text-[var(--muted)]">
                             <span className="inline-flex items-center gap-2">
                               <span>{entry.category}</span>
                               {entry.categoryInferred && (
-                                <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-500">
+                                <span className="inline-flex rounded-full border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--muted)]">
                                   auto
                                 </span>
                               )}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-slate-700">{entry.source}</td>
-                          <td className="px-4 py-3 text-right font-semibold text-slate-900">
+                          <td className="px-4 py-3 text-[var(--muted)]">{entry.source}</td>
+                          <td className="px-4 py-3 text-right font-semibold text-[var(--text)] text-lg">
                             {formatCurrency(entry.amount)}
                           </td>
                           <td className="px-4 py-3 text-right">
@@ -405,7 +410,7 @@ const EntriesPage = () => {
                               <button
                                 type="button"
                                 onClick={() => handleEditEntry(entry.id)}
-                                className="flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-primary"
+                                className="flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-semibold text-[var(--muted)] transition hover:border hover:border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--primary)]"
                               >
                                 ✏️
                                 <span className="sr-only">Editar</span>
@@ -413,7 +418,7 @@ const EntriesPage = () => {
                               <button
                                 type="button"
                                 onClick={() => handleDeleteClick(entry)}
-                                className="flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-semibold text-rose-600 transition hover:bg-rose-50"
+                                className="flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-semibold text-rose-400 transition hover:bg-rose-50 hover:text-rose-300"
                               >
                                 🗑️
                                 <span className="sr-only">Excluir</span>
@@ -425,7 +430,7 @@ const EntriesPage = () => {
                     })
                   ) : (
                     <tr>
-                      <td className="px-4 py-4 text-sm text-slate-500" colSpan={6}>
+                      <td className="px-4 py-4 text-sm text-[var(--muted)]" colSpan={6}>
                         Nenhum lancamento encontrado.
                       </td>
                     </tr>

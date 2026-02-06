@@ -16,7 +16,7 @@
   --border: #e2e8f0;
   --text: #0f172a;
   --muted: #475569;
-  --card-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+  --card-shadow: 0 20px 35px rgba(15, 23, 42, 0.15);
   --header-bg: rgba(255, 255, 255, 0.9);
   --settings-bg: rgba(255, 255, 255, 0.95);
   --primary: #34a853;
@@ -35,23 +35,23 @@
 
 .dark {
   color-scheme: dark;
-  --bg: #0b1220;
-  --surface: #111827;
-  --surface-2: #0f172a;
-  --border: #1f2937;
-  --text: #e5e7eb;
-  --muted: #9ca3af;
-  --card-shadow: 0 20px 45px rgba(0, 0, 0, 0.7);
-  --header-bg: rgba(7, 12, 23, 0.85);
-  --settings-bg: rgba(15, 23, 42, 0.95);
-  --primary: #34a853;
-  --primary-dark: #2e8b57;
+  --bg: #0b0e14;
+  --surface: #161b22;
+  --surface-2: #1f242c;
+  --border: rgba(255, 255, 255, 0.08);
+  --text: #f0f6fc;
+  --muted: #8b949e;
+  --card-shadow: 0 20px 35px rgba(0, 0, 0, 0.55);
+  --header-bg: rgba(7, 11, 18, 0.85);
+  --settings-bg: rgba(15, 20, 30, 0.95);
+  --primary: #3fb950;
+  --primary-dark: #2f9144;
   --success: #22c55e;
   --danger: #ef4444;
   --warning: #f59e0b;
   --info: #3b82f6;
   --card-bg: var(--surface);
-  --card-border: var(--border);
+  --card-border: rgba(255, 255, 255, 0.1);
 }
 
 html,
