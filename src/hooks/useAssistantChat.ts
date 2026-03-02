@@ -37,7 +37,18 @@ export const useAssistantChat = ({ onSavedStage }: { onSavedStage?: () => void }
 
     // O Roteador Inteligente
     const isQuestion = AI_KEYWORDS.test(trimmed);
-    const useAiRoute = isQuestion && !isPendingExpenseStep;
+    
+    // A ROTA DE FUGA: Se você fizer uma pergunta no meio de um lançamento,
+    // a gente cancela o lançamento antigo, apaga a memória dele e chama a Nova IA.
+    if (isQuestion && isPendingExpenseStep) {
+      setIsPendingExpenseStep(false);
+      setConversationId(null);
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem(STORAGE_KEY);
+      }
+    }
+
+    const useAiRoute = isQuestion;
 
     try {
       if (useAiRoute) {
@@ -61,7 +72,7 @@ export const useAssistantChat = ({ onSavedStage }: { onSavedStage?: () => void }
         const uiHint = response.uiHint ?? null;
         const isSavedStage = stage === "saved" || uiHint?.kind === "saved";
         
-        // Se a IA antiga perguntou "Qual cartão?", travamos na rota de despesa até concluir
+        // Se a IA antiga perguntou algo, travamos na rota de despesa
         setIsPendingExpenseStep(!!stage && stage !== "saved" && uiHint?.kind !== "saved");
 
         if (isSavedStage) {
