@@ -66,7 +66,7 @@ export default function AssistantWidget() {
           {card.data.invoices.map((inv: any, i: number) => (
             <div key={i} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
               
-              {/* Cabeçalho da Fatura */}
+              {/* Cabeçalho da Faturas */}
               <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-3 dark:border-slate-700/50 dark:bg-slate-950/50">
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary dark:bg-primary/20">
