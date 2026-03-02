@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AssistantIcon from "./AssistantIcon";
 import { ASSISTANT_OPEN_EVENT } from "../constants/assistantEvents";
 import { useAssistantChat } from "../hooks/useAssistantChat";

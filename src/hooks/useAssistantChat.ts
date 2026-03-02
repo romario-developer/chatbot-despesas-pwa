@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { postAssistantMessage, type AssistantAction } from "../api/assistant";
+import { useCallback, useEffect, useState } from "react";
+import { postAssistantMessage, } from "../api/assistant";
 import { aiService } from "../services/aiService";
 import { getCurrentMonthInTimeZone } from "../utils/months";
 import { emitDataChanged } from "../utils/dataBus";
