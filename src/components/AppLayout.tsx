@@ -428,7 +428,10 @@ const AppLayout = () => {
       {menuToast && (
         <Toast type={menuToast.type} message={menuToast.message} onClose={() => setMenuToast(null)} />
       )}
-      {!isMobileView && <AssistantWidget />}
+      
+      {/* MUDANÇA AQUI: Carrega o Assistente sempre, sem a trava do !isMobileView */}
+      <AssistantWidget />
+      
       {isMobileNavigation && <BottomTabBar />}
       <ServiceWorkerUpdate />
     </div>

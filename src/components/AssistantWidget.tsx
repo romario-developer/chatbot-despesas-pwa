@@ -252,8 +252,15 @@ export default function AssistantWidget() {
         </div>
       </div>
 
+      {/* MUDANÇA AQUI: Cor e ícone atualizados para Rosa com Foguete */}
       {!isExpanded && (
-        <button onClick={() => setWidgetState("expanded")} className="fixed bottom-8 right-8 z-[90] flex h-16 w-16 items-center justify-center rounded-[24px] bg-primary text-3xl shadow-2xl transition-all hover:scale-110 active:scale-90 hover:rotate-6" style={{ animation: 'bounce 2s infinite' }}>🤖</button>
+        <button 
+          onClick={() => setWidgetState("expanded")} 
+          className="fixed bottom-8 right-8 z-[90] flex h-16 w-16 items-center justify-center rounded-[24px] bg-[#ec407a] text-3xl shadow-2xl shadow-[#ec407a]/40 transition-all hover:scale-110 active:scale-90 hover:rotate-6"
+          style={{ animation: 'bounce 2s infinite' }}
+        >
+          🚀
+        </button>
       )}
     </>
   );
