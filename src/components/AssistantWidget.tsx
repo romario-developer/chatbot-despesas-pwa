@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useAssistantChat } from "../hooks/useAssistantChat";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, } from 'recharts';
 
 export default function AssistantWidget() {
   const [widgetState, setWidgetState] = useState<"collapsed" | "expanded">("collapsed");
@@ -88,7 +88,7 @@ export default function AssistantWidget() {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie data={card.data} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={5} dataKey="value" stroke="none">
-                  {card.data.map((entry: any, i: number) => (
+                  {card.data.map((_: any, i: number) => (
                     <Cell key={`cell-${i}`} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                   ))}
                 </Pie>
