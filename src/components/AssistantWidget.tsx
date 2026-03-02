@@ -1,274 +1,259 @@
 import { useEffect, useRef, useState } from "react";
-import AssistantIcon from "./AssistantIcon";
-import { ASSISTANT_OPEN_EVENT } from "../constants/assistantEvents";
 import { useAssistantChat } from "../hooks/useAssistantChat";
-
-const WIDGET_STATE_KEY = "assistantWidgetState";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
 export default function AssistantWidget() {
-  const [widgetState, setWidgetState] = useState<"collapsed" | "expanded">(() => {
-    if (typeof window === "undefined") return "collapsed";
-    return window.localStorage.getItem(WIDGET_STATE_KEY) === "expanded" ? "expanded" : "collapsed";
-  });
-  
+  const [widgetState, setWidgetState] = useState<"collapsed" | "expanded">("collapsed");
   const isExpanded = widgetState === "expanded";
   
-  // Chama o Cérebro Unificado e a função de Limpar
   const { messages, inputValue, setInputValue, handleSendMessage, clearChat, isSending, isTyping } = useAssistantChat();
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
+  // Referências para os áudios não recarregarem a cada render
+  const audioSend = useRef(new Audio("https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3")); 
+  const audioReceive = useRef(new Audio("https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3")); 
+  const audioSuccess = useRef(new Audio("https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3")); 
+
+  // Ajuste de volume
   useEffect(() => {
-    if (isExpanded && inputRef.current) setTimeout(() => inputRef.current?.focus(), 50);
-    localStorage.setItem(WIDGET_STATE_KEY, widgetState);
-  }, [isExpanded, widgetState]);
-
-  // Função centralizada para fechar e limpar o chat
-  const handleCloseWidget = () => {
-    setWidgetState("collapsed");
-    clearChat(); // Limpa o histórico automaticamente ao fechar
-  };
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => { 
-      if (e.key === "Escape") handleCloseWidget(); 
-    };
-    const handleOpen = () => setWidgetState("expanded");
-    
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener(ASSISTANT_OPEN_EVENT, handleOpen);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener(ASSISTANT_OPEN_EVENT, handleOpen);
-    };
+    audioSend.current.volume = 0.4;
+    audioReceive.current.volume = 0.5;
+    audioSuccess.current.volume = 0.3;
   }, []);
 
   useEffect(() => {
-    if (messagesEndRef.current) messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages, isTyping]);
+    if (isExpanded && inputRef.current) setTimeout(() => inputRef.current?.focus(), 50);
+  }, [isExpanded]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleSendMessage(inputValue);
+  const handleCloseWidget = () => {
+    setWidgetState("collapsed");
+    clearChat();
   };
 
-  const renderCard = (card: any, index: number) => {
-    const baseClass = "mt-2 w-[90%] rounded-2xl border border-slate-200 bg-white/90 p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100";
-    
-    // Faturas em Aberto (Nova UX Premium)
-    if (card.type === "summary" && card.data?.invoices) {
-      return (
-        <div key={index} className="mt-2 w-[90%] space-y-4">
-          <p className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-bold ml-1">{card.title}</p>
-          
-          {card.data.invoices.map((inv: any, i: number) => (
-            <div key={i} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              
-              {/* Cabeçalho da Faturas */}
-              <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-3 dark:border-slate-700/50 dark:bg-slate-950/50">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary dark:bg-primary/20">
-                    💳
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{inv.cardName}</p>
-                    <p className="text-[11px] font-medium text-slate-500">Vence: {inv.dueDate.split("-").reverse().join("/")}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] font-bold text-orange-500 uppercase tracking-widest">Aberta</p>
-                  <p className="text-base font-black text-slate-900 dark:text-slate-100">{inv.formattedRemaining}</p>
-                </div>
-              </div>
+  useEffect(() => {
+    if (messagesEndRef.current) messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isTyping, isSending]);
 
-              {/* Lista de Compras */}
-              {inv.purchases && inv.purchases.length > 0 ? (
-                <div className="divide-y divide-slate-50 px-4 py-1 dark:divide-slate-800/50">
-                  {/* Limitamos a 5 itens para não fazer o chat ficar gigante, o resto esconde */}
-                  {inv.purchases.slice(0, 5).map((p: any, j: number) => (
-                    <div key={j} className="flex justify-between py-2.5">
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                            {p.description}
-                          </span>
-                          {/* A MÁGICA DA PARCELA (Ex: 1/3) */}
-                          {p.installmentTotal && p.installmentTotal > 1 && (
-                            <span className="rounded bg-primary/10 px-1.5 py-[1px] text-[10px] font-bold text-primary dark:bg-primary/20">
-                              {p.installmentCurrent}/{p.installmentTotal}
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-[10px] font-medium text-slate-400">
-                          {p.date.split("-").reverse().slice(0, 2).join("/")}
-                        </span>
-                      </div>
-                      <span className="text-sm font-bold text-slate-600 dark:text-slate-400">
-                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(p.amount)}
-                      </span>
-                    </div>
-                  ))}
-                  {inv.purchases.length > 5 && (
-                    <p className="py-2.5 text-center text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                      + {inv.purchases.length - 5} lançamentos
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <p className="px-4 py-4 text-xs font-medium text-slate-500 text-center">Nenhuma compra neste ciclo.</p>
-              )}
-            </div>
-          ))}
-        </div>
-      );
+  // Gatilho sonoro Inteligente (Verifica o painel de configurações)
+  useEffect(() => {
+    if (messages.length === 0) return;
+
+    // Só toca se o som estiver ativado no LocalStorage
+    const isSoundOn = localStorage.getItem('ai-sound') !== 'false';
+    if (!isSoundOn) return;
+
+    const lastMessage = messages[messages.length - 1];
+    const isUser = lastMessage.role === "user";
+
+    if (isUser) {
+      audioSend.current.play().catch(() => {});
+    } else {
+      audioReceive.current.play().catch(() => {});
     }
+  }, [messages.length]);
 
-    if (card.type === "metric") {
-      const value = card.data ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(card.data.value / 100) : card.value;
-      const subtitle = card.data ? card.data.detail : card.subtitle;
+  // Gatilho sonoro para o Sucesso de Lançamento
+  useEffect(() => {
+    const isSoundOn = localStorage.getItem('ai-sound') !== 'false';
+    if (!isSoundOn) return;
+
+    if (isSending === false && messages.length > 0) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg.text?.includes("✅")) {
+        audioSuccess.current.play().catch(() => {});
+      }
+    }
+  }, [isSending]);
+
+  const renderCard = (card: any, index: number) => {
+    const baseClass = "mt-3 w-[95%] animate-msg rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 backdrop-blur-sm";
+    
+    // Gráfico de Pizza com Cores Harmônicas Automáticas
+    if (card.type === "chart" && card.data) {
+      // Usa as variáveis globais do CSS configuradas pelo AppLayout
+      const CHART_COLORS = [
+        `hsl(var(--primary-h, 220), 70%, 50%)`,
+        `hsl(var(--analogous-h, 190), 70%, 50%)`,
+        `hsl(var(--complementary-h, 40), 70%, 50%)`,
+        `hsl(var(--primary-h, 220), 50%, 40%)`,
+      ];
+
       return (
         <div key={index} className={baseClass}>
-          <p className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-bold">{card.title}</p>
-          <p className={`mt-1 text-2xl font-bold ${card.data?.value < 0 ? 'text-red-500' : ''}`}>{value}</p>
-          {subtitle && <p className="mt-2 text-xs text-slate-500">{subtitle}</p>}
+          <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-black mb-4">{card.title}</p>
+          <div className="h-[200px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={card.data} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={5} dataKey="value" stroke="none">
+                  {card.data.map((entry: any, i: number) => (
+                    <Cell key={`cell-${i}`} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '12px', color: '#fff' }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       );
     }
 
-    if (card.type === "list") {
-      if (card.data) {
+    if (card.type === "summary" && card.data?.invoices) {
         return (
-          <div key={index} className={baseClass}>
-            <p className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-bold mb-2">{card.title}</p>
-            <div className="space-y-2">
-              {card.data.items.map((item: any, i: number) => (
-                <div key={i} className="flex justify-between items-center text-sm">
-                  <div className="flex flex-col">
-                    <span className="font-semibold">{item.title}</span>
-                    {item.subtitle && <span className="text-[11px] text-slate-500">{item.subtitle}</span>}
+          <div key={index} className="mt-4 w-full space-y-4 animate-msg">
+            {card.data.invoices.map((inv: any, i: number) => (
+              <div key={i} className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-md dark:border-slate-800 dark:bg-slate-900 ai-glow">
+                <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-5 py-4 dark:border-slate-800 dark:bg-slate-950/50">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-xl text-primary">💳</div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{inv.cardName}</p>
+                      <p className="text-[11px] font-bold text-slate-400 uppercase">Vence {inv.dueDate.split("-").reverse().join("/")}</p>
+                    </div>
                   </div>
-                  <span className="font-bold">{item.formattedValue}</span>
+                  <div className="text-right">
+                    <p className="text-lg font-black text-slate-900 dark:text-slate-100">{inv.formattedRemaining}</p>
+                  </div>
                 </div>
-              ))}
-            </div>
+                <div className="divide-y divide-slate-100 px-5 py-2 dark:divide-slate-800/50">
+                  {inv.purchases?.slice(0, 5).map((p: any, j: number) => (
+                    <div key={j} className="flex justify-between py-3">
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{p.description}</span>
+                          {p.installmentTotal > 1 && (
+                            <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-black text-primary">{p.installmentCurrent}/{p.installmentTotal}</span>
+                          )}
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-400">{p.date.split("-").reverse().slice(0, 2).join("/")}</span>
+                      </div>
+                      <span className="text-sm font-black text-slate-600 dark:text-slate-400">R$ {p.amount.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         );
       }
-      return (
-        <div key={index} className={baseClass}>
-          <p className="text-xs font-semibold">{card.title}</p>
-          <ul className="mt-2 space-y-1 text-sm text-slate-400">
-            {(card.items || []).map((item: string, i: number) => <li key={i}>• {item}</li>)}
-          </ul>
-        </div>
-      );
+
+    if (card.type === "metric") {
+        const isNegative = card.data?.value < 0;
+        return (
+          <div key={index} className={baseClass}>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-black mb-1">{card.title}</p>
+            <p className={`text-2xl font-black ${isNegative ? 'text-red-500' : 'text-slate-900 dark:text-white'}`}>
+                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(card.data ? card.data.value / 100 : card.value / 100)}
+            </p>
+            {card.data?.detail && <p className="mt-2 text-[11px] font-medium text-slate-500 leading-relaxed">{card.data.detail}</p>}
+          </div>
+        );
     }
     return null;
   };
 
   return (
     <>
-      <div aria-hidden={!isExpanded} className={`fixed inset-0 z-[100] ${isExpanded ? "" : "pointer-events-none"}`}>
-        {/* Fundo escuro: Clica aqui = Fecha e limpa */}
-        <div 
-          className={`absolute inset-0 z-[90] bg-slate-900/40 transition-opacity duration-200`} 
-          style={{ opacity: isExpanded ? 1 : 0 }} 
-          onClick={handleCloseWidget} 
-        />
+      <style>{`
+        /* Lê as variáveis injetadas pelo AppLayout */
+        .bg-primary { background-color: hsl(var(--primary-h, 220), 70%, 50%) !important; }
+        .text-primary { color: hsl(var(--primary-h, 220), 70%, 50%) !important; }
+        .border-primary { border-color: hsl(var(--primary-h, 220), 70%, 50%) !important; }
+        .bg-primary\/10 { background-color: hsla(var(--primary-h, 220), 70%, 50%, 0.1) !important; }
+        .bg-primary\/5 { background-color: hsla(var(--primary-h, 220), 70%, 50%, 0.05) !important; }
+        .border-primary\/20 { border-color: hsla(var(--primary-h, 220), 70%, 50%, 0.2) !important; }
+
+        @keyframes slideInUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .animate-msg { animation: slideInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .dot-pulse { animation: pulse 1.5s infinite ease-in-out; }
+        @keyframes pulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.1); } }
+      `}</style>
+
+      <div className={`fixed inset-0 z-[100] transition-all duration-300 ${isExpanded ? "visible" : "invisible"}`}>
+        <div className={`absolute inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300 ${isExpanded ? "opacity-100" : "opacity-0"}`} onClick={handleCloseWidget} />
         
-        {/* Modal do Chat: Garantido que está na frente (z-100) */}
-        <div
-          role="dialog"
-          onClick={(e) => e.stopPropagation()}
-          className={`fixed left-0 right-0 bottom-0 z-[100] flex h-full flex-col overflow-hidden rounded-t-[24px] bg-white transition-all duration-200 ${isExpanded ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"} md:inset-auto md:right-4 md:bottom-4 md:left-auto md:w-[400px] md:max-h-[75vh] md:h-auto md:rounded-3xl md:border md:border-slate-200 md:shadow-2xl dark:bg-slate-950 dark:border-slate-800`}
-          style={{ minHeight: "350px" }}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-slate-800">
-            <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary text-white text-lg">🙂</span>
-              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Super Assistente</p>
+        <div className={`fixed inset-x-0 bottom-0 z-[101] flex h-[90vh] flex-col overflow-hidden rounded-t-[40px] bg-white shadow-2xl transition-all duration-500 ease-out dark:bg-slate-950 md:inset-auto md:right-6 md:bottom-6 md:h-[700px] md:w-[420px] md:rounded-[32px] md:border md:border-white/10 ${isExpanded ? "translate-y-0" : "translate-y-full"}`}>
+          
+          <div className="flex items-center justify-between border-b border-slate-100 bg-white/80 px-6 py-5 backdrop-blur-md dark:border-white/5 dark:bg-slate-950/80">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-2xl shadow-lg shadow-primary/30 transition-all duration-500">🤖</span>
+                <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-white bg-green-500 dark:border-slate-950" />
+              </div>
+              <div>
+                <p className="text-base font-black text-slate-900 dark:text-white">Super Assistente</p>
+                <div className="flex items-center gap-2">
+                   <p className="text-[11px] font-bold text-green-500 uppercase tracking-widest">Online Agora</p>
+                </div>
+              </div>
             </div>
-            
-            <div className="flex items-center gap-1">
-              {/* Botão de Limpar Manual */}
-              <button 
-                onClick={clearChat} 
-                title="Limpar conversa"
-                className="rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition"
-              >
-                Limpar
-              </button>
-              
-              {/* Botão de Fechar */}
-              <button 
-                onClick={handleCloseWidget} 
-                className="rounded-xl px-3 py-1 text-lg font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-              >
-                ×
-              </button>
+            <div className="flex items-center gap-2">
+                <button onClick={clearChat} className="rounded-xl bg-slate-100 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-400 transition-all active:scale-95">Limpar</button>
+                <button onClick={handleCloseWidget} className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-2xl text-slate-500 hover:bg-slate-200 dark:bg-white/5 transition-all active:scale-95">×</button>
             </div>
           </div>
 
-          <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4 text-sm bg-slate-50 dark:bg-slate-950">
+          <div className="flex-1 overflow-y-auto bg-slate-50/50 px-6 py-6 dark:bg-slate-950/50" ref={scrollRef}>
             {messages.length === 0 && !isTyping && (
-              <p className="text-xs text-center text-slate-500 mt-4">Digite "mercado 50" para lançar,<br/>ou pergunte "Como estão meus gastos?"</p>
+              <p className="text-xs text-center text-slate-500 mt-4 leading-loose">
+                Olá! Eu sou sua IA financeira.<br/>
+                Tente: <strong>"Uber 25 no Pix"</strong> ou <strong>"Resumo do mês"</strong>
+              </p>
             )}
 
             {messages.map((msg, idx) => {
-              const isUser = msg.role === "user" || msg.from === "user";
+              const isUser = msg.role === "user";
               return (
-                <div key={idx} className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}>
-                  <div className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm ${isUser ? "bg-primary text-white rounded-tr-none" : "bg-slate-800 border border-slate-700 text-slate-100 rounded-tl-none"}`}>
-                    <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+                <div key={idx} className={`mb-6 flex flex-col ${isUser ? "items-end" : "items-start"} animate-msg`}>
+                  <div className={`max-w-[85%] rounded-[24px] px-5 py-4 text-sm font-medium shadow-sm leading-relaxed transition-all duration-500 ${isUser ? "bg-primary text-white rounded-tr-none" : "bg-white border border-slate-200 text-slate-800 rounded-tl-none dark:bg-slate-900 dark:border-white/5 dark:text-slate-100"}`}>
+                    {msg.text}
                   </div>
+                  {!isUser && msg.cards?.map((c: any, i: number) => renderCard(c, i))}
                   
-                  {!isUser && msg.cards && msg.cards.map((c: any, i: number) => renderCard(c, i))}
-                  
+                  {/* Botões de Ação Sugerida */}
                   {!isUser && msg.suggestedActions && (
-                    <div className="flex flex-wrap gap-2 mt-2 w-[90%]">
-                      {msg.suggestedActions.map((action: any, i: number) => (
-                        <button key={i} onClick={() => handleSendMessage(action.prompt || action.label)} className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary transition hover:bg-primary/20">
-                          {action.label}
-                        </button>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {msg.suggestedActions.map((a: any, i: number) => (
+                        <button key={i} onClick={() => handleSendMessage(a.label)} className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-2 text-[11px] font-bold text-primary transition-all hover:bg-primary hover:text-white">{a.label}</button>
                       ))}
                     </div>
                   )}
                 </div>
               );
             })}
-
-            {isTyping && (
-              <div className="max-w-[50%] rounded-2xl rounded-tl-none border border-slate-700 bg-slate-800 px-4 py-3 text-slate-400">Analisando...</div>
-            )}
-            <div ref={messagesEndRef} className="h-1" />
+            
+            {/* Feedback Visual: Digitação vs Sucesso */}
+            {isTyping ? (
+              <div className="flex items-center gap-3 px-4 py-2 animate-pulse">
+                <div className="flex gap-1.5">
+                  <div className="h-2 w-2 rounded-full bg-primary/40 dot-pulse" style={{ animationDelay: '0s' }} />
+                  <div className="h-2 w-2 rounded-full bg-primary/40 dot-pulse" style={{ animationDelay: '0.2s' }} />
+                  <div className="h-2 w-2 rounded-full bg-primary/40 dot-pulse" style={{ animationDelay: '0.4s' }} />
+                </div>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Processando...</span>
+              </div>
+            ) : isSending ? (
+              <div className="flex items-center gap-2 px-4 py-2 animate-msg">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-[10px] font-bold text-white shadow-sm shadow-green-500/30">✓</span>
+                <span className="text-[10px] font-black text-green-500 uppercase tracking-widest">Lançamento Salvo!</span>
+              </div>
+            ) : null}
+            <div ref={messagesEndRef} />
           </div>
 
-          <div className="border-t border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
-            <form onSubmit={handleSubmit} className="flex items-end gap-2">
-              <textarea
-                ref={inputRef}
-                rows={1}
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendMessage(inputValue); } }}
-                placeholder="Ex: mercado 50 ou Resumo..."
-                className="flex-1 min-h-[44px] max-h-[96px] resize-none rounded-2xl border bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-              />
-              <button type="submit" disabled={!inputValue.trim() || isSending} className="flex h-[44px] items-center justify-center rounded-2xl bg-primary px-5 text-xs font-bold uppercase tracking-wider text-white transition-colors hover:bg-primary/90 disabled:opacity-50">Enviar</button>
+          <div className="bg-white p-6 dark:bg-slate-950">
+            <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(inputValue); }} className="flex items-center gap-3">
+              <input ref={inputRef} value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder="Como posso te ajudar?" className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-white/10 dark:bg-white/5 dark:text-white" />
+              <button type="submit" disabled={!inputValue.trim() || isSending} className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white shadow-lg transition-all active:scale-95 disabled:opacity-50">🚀</button>
             </form>
           </div>
         </div>
       </div>
 
       {!isExpanded && (
-        <div className="fixed bottom-6 right-6 z-50">
-          <button onClick={() => setWidgetState("expanded")} className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-[#25D366] text-white shadow-lg transition hover:-translate-y-1">
-            <AssistantIcon className="h-8 w-8 text-white" />
-          </button>
-        </div>
+        <button onClick={() => setWidgetState("expanded")} className="fixed bottom-8 right-8 z-[90] flex h-16 w-16 items-center justify-center rounded-[24px] bg-primary text-3xl shadow-2xl transition-all hover:scale-110 active:scale-90 hover:rotate-6" style={{ animation: 'bounce 2s infinite' }}>🤖</button>
       )}
     </>
   );

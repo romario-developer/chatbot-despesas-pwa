@@ -40,7 +40,6 @@ const isDashboardDebugEnabled = () => {
 
 const logDashboardDebug = (...args: unknown[]) => {
   if (!isDashboardDebugEnabled()) return;
-  // eslint-disable-next-line no-console
   console.debug("[dashboard-debug]", ...args);
 };
 
@@ -49,7 +48,6 @@ const isSyncDebugEnabled = () =>
   typeof window !== "undefined" && window.localStorage.getItem(SYNC_DEBUG_KEY) === "1";
 const logSyncDebug = (...args: unknown[]) => {
   if (!isSyncDebugEnabled()) return;
-  // eslint-disable-next-line no-console
   console.debug("[sync]", ...args);
 };
 
@@ -88,15 +86,18 @@ const DashboardPage = () => {
     error: entriesError,
     refetch: refetchEntries,
   } = useEntries(month, { pollIntervalMs: entriesPollingEnabled ? 20_000 : 0 });
+  
   const safeEntries = Array.isArray(entriesData) ? entriesData : [];
   const latestEntriesList = useMemo(() => {
     return [...safeEntries]
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 6);
   }, [safeEntries]);
+  
   const entriesCount = safeEntries.length;
   const showSummarySkeleton = summaryLoading && !summaryData;
   const showEntriesSkeleton = entriesLoading && !latestEntriesList.length;
+  
   const summarySkeletonCards = Array.from({ length: 3 }).map((_, index) => (
     <div
       key={`summary-skeleton-${index}`}
@@ -106,6 +107,7 @@ const DashboardPage = () => {
       <div className="mt-4 h-10 w-32 rounded-full bg-slate-700/40 dark:bg-slate-600/40" />
     </div>
   ));
+  
   const entriesSkeletonItems = Array.from({ length: 3 }).map((_, index) => (
     <div
       key={`entries-skeleton-${index}`}
@@ -115,6 +117,7 @@ const DashboardPage = () => {
       <div className="h-3 w-24 rounded-full bg-slate-700/40 dark:bg-slate-600/40" />
     </div>
   ));
+  
   const buildVersion = import.meta.env.VITE_APP_VERSION || buildTag;
   const showBuildTag = !import.meta.env.VITE_APP_VERSION;
   const { readyVersion } = useApiReadyState();
@@ -137,7 +140,7 @@ const DashboardPage = () => {
       const shouldRefetchEntries =
         matchesMonth && (detail.scope === "all" || detail.scope === "entries");
       if (shouldRefetchSummary) {
-      void refetchSummary();
+        void refetchSummary();
       }
       if (shouldRefetchEntries) {
         void refetchEntries();
@@ -167,8 +170,8 @@ const DashboardPage = () => {
 
   const refreshDashboard = useCallback(() => {
     if (!entriesPollingEnabled) return;
-        void refetchSummary();
-        void refetchEntries();
+    void refetchSummary();
+    void refetchEntries();
   }, [entriesPollingEnabled, refetchEntries, refetchSummary]);
 
   useEffect(() => {
@@ -208,17 +211,6 @@ const DashboardPage = () => {
     };
   }, [refreshDashboard]);
 
-  useEffect(() => {
-    const isLocalHost =
-      typeof window !== "undefined" &&
-      (window.location.hostname === "localhost" ||
-        window.location.hostname === "127.0.0.1");
-    if (import.meta.env.DEV || isLocalHost || showBuildTag) {
-      // eslint-disable-next-line no-console
-      console.info("[build] version:", buildVersion);
-    }
-  }, [buildVersion, showBuildTag]);
-
   const monthLabel = useMemo(() => formatMonthLabel(month), [month]);
   const monthOptions = useMemo(
     () => buildMonthList({ start: monthRange.start, end: monthRange.end }),
@@ -245,48 +237,15 @@ const DashboardPage = () => {
   const balanceCents = summaryData?.balanceCents ?? 0;
   const incomeTotalCents = summaryData?.incomeTotalCents ?? 0;
   const cashExpensesCents = summaryData?.expenseCashTotalCents ?? 0;
-  const creditExpensesCents = summaryData?.expenseCreditTotalCents ?? 0;
+  
   const renderSummaryValue = (valueCents: number) =>
     summaryData ? formatCentsToBRL(valueCents) : "--";
   const summaryValueClassName =
     "max-w-full overflow-hidden text-ellipsis whitespace-nowrap leading-tight text-2xl font-semibold sm:text-3xl md:text-4xl";
+  
   const handleMonthToggle = () => {
     setIsMonthPanelOpen((prev) => !prev);
   };
-
-  useEffect(() => {
-    if (!summaryData) return;
-    logDashboardDebug("totals", {
-      month: summaryData.month,
-      balanceCents,
-      incomeTotalCents,
-      expenseTotalCents: summaryData.expenseTotalCents,
-      expenseCashTotalCents: cashExpensesCents,
-      expenseCreditTotalCents: creditExpensesCents,
-      entriesCount,
-    });
-  }, [
-    summaryData,
-    balanceCents,
-    incomeTotalCents,
-    cashExpensesCents,
-    creditExpensesCents,
-    entriesCount,
-  ]);
-
-  useEffect(() => {
-    if (!summaryData) return;
-    logDashboardDebug("summary payload", {
-      month: summaryData.month,
-      balanceCents: summaryData.balanceCents,
-      incomeTotalCents: summaryData.incomeTotalCents,
-      expenseTotalCents: summaryData.expenseTotalCents,
-      expenseCashTotalCents: summaryData.expenseCashTotalCents,
-      expenseCreditTotalCents: summaryData.expenseCreditTotalCents,
-      entriesCount,
-      categories: summaryData.byCategory?.length ?? 0,
-    });
-  }, [summaryData, entriesCount]);
 
   const handleRetryEntries = useCallback(() => {
     setEntriesPollingEnabled(true);
@@ -295,7 +254,8 @@ const DashboardPage = () => {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-4 sm:p-6 shadow-[0_20px_45px_rgba(15,23,42,0.25)]">
+      {/* Container Principal Animado */}
+      <div className="animate-fade-in-up rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-4 sm:p-6 shadow-[0_20px_45px_rgba(15,23,42,0.25)] transition-colors duration-400">
         <div className="space-y-6">
           <div className="relative">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -304,7 +264,7 @@ const DashboardPage = () => {
                 <button
                   type="button"
                   onClick={handleMonthToggle}
-                  className="group mt-1 inline-flex items-center gap-3 text-left"
+                  className="group mt-1 inline-flex items-center gap-3 text-left transition-transform active:scale-95"
                   aria-expanded={isMonthPanelOpen}
                   aria-controls="dashboard-month-panel"
                 >
@@ -312,19 +272,8 @@ const DashboardPage = () => {
                     {monthLabel}
                   </span>
                   <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] shadow-[0_12px_20px_rgba(15,23,42,0.15)] transition group-hover:border-[var(--primary)] group-hover:text-[var(--primary)]">
-                    <svg
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                      className={`h-4 w-4 transition ${
-                        isMonthPanelOpen ? "rotate-180" : "rotate-0"
-                      }`}
-                      aria-hidden="true"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.25a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08z"
-                        clipRule="evenodd"
-                      />
+                    <svg viewBox="0 0 20 20" fill="currentColor" className={`h-4 w-4 transition-transform duration-300 ${isMonthPanelOpen ? "rotate-180" : "rotate-0"}`}>
+                      <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.25a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08z" clipRule="evenodd" />
                     </svg>
                   </span>
                 </button>
@@ -356,8 +305,10 @@ const DashboardPage = () => {
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {/* CARTÃO 1: Atraso de 0.1s */}
               <div
-                className={`${cardBase} ${cardHover} flex min-h-[104px] flex-col justify-between gap-3 px-4 py-4 sm:px-5 sm:py-5 sm:min-h-[140px]`}
+                className={`${cardBase} ${cardHover} flex min-h-[104px] flex-col justify-between gap-3 px-4 py-4 sm:px-5 sm:py-5 sm:min-h-[140px] animate-fade-in-up`}
+                style={{ animationDelay: "0.1s" }}
               >
                 <div className="min-w-0">
                   <p className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-[var(--text-muted)]">
@@ -368,8 +319,10 @@ const DashboardPage = () => {
                   </p>
                 </div>
               </div>
+              {/* CARTÃO 2: Atraso de 0.2s */}
               <div
-                className={`${cardBase} ${cardHover} flex min-h-[104px] flex-col justify-between gap-3 px-4 py-4 sm:px-5 sm:py-5 sm:min-h-[140px]`}
+                className={`${cardBase} ${cardHover} flex min-h-[104px] flex-col justify-between gap-3 px-4 py-4 sm:px-5 sm:py-5 sm:min-h-[140px] animate-fade-in-up`}
+                style={{ animationDelay: "0.2s" }}
               >
                 <div className="min-w-0">
                   <p className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-[var(--text-muted)]">
@@ -380,8 +333,10 @@ const DashboardPage = () => {
                   </p>
                 </div>
               </div>
+              {/* CARTÃO 3: Atraso de 0.3s */}
               <div
-                className={`${cardBase} ${cardHover} col-span-2 flex min-h-[104px] flex-col justify-between gap-3 px-4 py-4 sm:col-span-1 sm:px-5 sm:py-5 sm:min-h-[140px]`}
+                className={`${cardBase} ${cardHover} col-span-2 flex min-h-[104px] flex-col justify-between gap-3 px-4 py-4 sm:col-span-1 sm:px-5 sm:py-5 sm:min-h-[140px] animate-fade-in-up`}
+                style={{ animationDelay: "0.3s" }}
               >
                 <div className="min-w-0">
                   <p className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-[var(--text-muted)]">
@@ -394,10 +349,15 @@ const DashboardPage = () => {
               </div>
             </div>
           )}
-          <DashboardCardsList month={month} />
+          
+          {/* CARDS LIST: Atraso de 0.4s */}
+          <div className="animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
+            <DashboardCardsList month={month} />
+          </div>
 
           <div className="grid gap-4 lg:grid-cols-3">
-            <div className={`${cardBase} ${cardHover} lg:col-span-2`}>
+            {/* GRÁFICO PIZZA: Atraso de 0.5s */}
+            <div className={`${cardBase} ${cardHover} lg:col-span-2 animate-fade-in-up`} style={{ animationDelay: "0.5s" }}>
               <div className="mb-3 flex items-center justify-between">
                 <h4 className="text-base font-semibold text-[var(--text-primary)]">Por categoria</h4>
               </div>
@@ -416,22 +376,20 @@ const DashboardPage = () => {
                         paddingAngle={2}
                       >
                         {categoryData.map((item, index) => (
-                          <Cell
-                            key={`${item.category}-${index}`}
-                            fill={item.color}
-                          />
+                          <Cell key={`${item.category}-${index}`} fill={item.color} />
                         ))}
                       </Pie>
-                    <Tooltip formatter={(v: unknown) => formatCentsToBRL(Number(v) || 0)} />
+                    <Tooltip formatter={(v: unknown) => formatCentsToBRL(Number(v) || 0)} contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: 'var(--card-bg)', color: 'var(--text-primary)', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}/>
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
               ) : (
-                    <div className="text-sm text-[var(--text-muted)]">Sem dados neste mês.</div>
+                <div className="text-sm text-[var(--text-muted)]">Sem dados neste mês.</div>
               )}
             </div>
 
-            <div className={`${cardBase} ${cardHover}`}>
+            {/* LISTA DE CATEGORIAS: Atraso de 0.6s */}
+            <div className={`${cardBase} ${cardHover} animate-fade-in-up`} style={{ animationDelay: "0.6s" }}>
               <h4 className="text-base font-semibold text-[var(--text-primary)]">Categorias</h4>
               <div className="mt-3 space-y-2">
                 {categoryData.length ? (
@@ -441,10 +399,7 @@ const DashboardPage = () => {
                       className="flex items-center justify-between text-sm text-[var(--text-muted)]"
                     >
                       <div className="flex items-center gap-2">
-                        <span
-                          className="h-2.5 w-2.5 rounded-full"
-                          style={{ backgroundColor: item.color }}
-                        />
+                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
                         <span>{item.category}</span>
                       </div>
                       <span className="font-semibold text-[var(--text-primary)]">
@@ -459,57 +414,61 @@ const DashboardPage = () => {
             </div>
           </div>
 
-          <DashboardSection
-            title={`Ultimos lancamentos${entriesCount ? ` (${entriesCount})` : ""}`}
-            actionLabel="Ver todos"
-            onAction={() => navigate("/entries")}
-          >
-            {showEntriesSkeleton ? (
-              <div className="space-y-3">{entriesSkeletonItems}</div>
-            ) : entriesError ? (
-              <div className="rounded-lg border border-[var(--danger-border)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger-text)]">
-                <p>{entriesError.message}</p>
-                <button
-                  type="button"
-                  onClick={handleRetryEntries}
-                  className="mt-2 inline-flex items-center rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] transition hover:opacity-90"
-                >
-                  Tentar novamente
-                </button>
-              </div>
-            ) : latestEntriesList.length ? (
-              <ul className="divide-y divide-[var(--border)]">
-                {latestEntriesList.map((entry) => (
-                  <li key={entry.id} className="flex items-start justify-between py-3">
-                    <div>
-                      <p className="text-sm font-medium text-[var(--text-primary)]">
-                        {entry.description}
+          {/* SESSÃO DE ÚLTIMOS LANÇAMENTOS: Atraso inicial de 0.7s */}
+          <div className="animate-fade-in-up" style={{ animationDelay: "0.7s" }}>
+            <DashboardSection
+              title={`Ultimos lancamentos${entriesCount ? ` (${entriesCount})` : ""}`}
+              actionLabel="Ver todos"
+              onAction={() => navigate("/entries")}
+            >
+              {showEntriesSkeleton ? (
+                <div className="space-y-3">{entriesSkeletonItems}</div>
+              ) : entriesError ? (
+                <div className="rounded-lg border border-[var(--danger-border)] bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger-text)]">
+                  <p>{entriesError.message}</p>
+                  <button onClick={handleRetryEntries} className="mt-2 inline-flex items-center rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] transition hover:opacity-90">
+                    Tentar novamente
+                  </button>
+                </div>
+              ) : latestEntriesList.length ? (
+                <ul className="divide-y divide-[var(--border)]">
+                  {latestEntriesList.map((entry, index) => (
+                    // MÁGICA FINAL: Cada item da lista ganha +0.1s de atraso (0.8s, 0.9s, 1.0s...)
+                    <li 
+                      key={entry.id} 
+                      className="flex items-start justify-between py-3 animate-fade-in-up opacity-0"
+                      style={{ animationDelay: `${0.8 + index * 0.1}s` }}
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-[var(--text-primary)]">
+                          {entry.description}
+                        </p>
+                        <p className="text-xs text-[var(--text-muted)]">
+                          {formatDate(entry.date)} - {entry.category}
+                          {entry.categoryInferred && (
+                            <span className="ml-2 inline-flex rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--text-muted)]">
+                              auto
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">
+                        {formatBRL(entry.amount)}
                       </p>
-                      <p className="text-xs text-[var(--text-muted)]">
-                        {formatDate(entry.date)} - {entry.category}
-                        {entry.categoryInferred && (
-                          <span className="ml-2 inline-flex rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--text-muted)]">
-                            auto
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                    <p className="text-sm font-semibold text-[var(--text-primary)]">
-                      {formatBRL(entry.amount)}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="space-y-1">
-                <p className={subtleText}>Nenhum lançamento encontrado para este mês.</p>
-                <p className="text-xs text-[var(--text-muted)]">Adicione lançamentos para visualizar este resumo.</p>
-              </div>
-            )}
-          </DashboardSection>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="space-y-1">
+                  <p className={subtleText}>Nenhum lançamento encontrado para este mês.</p>
+                  <p className="text-xs text-[var(--text-muted)]">Adicione lançamentos para visualizar este resumo.</p>
+                </div>
+              )}
+            </DashboardSection>
+          </div>
 
           {showBuildTag && (
-          <div className="text-[11px] text-[var(--text-muted)]">build: {buildVersion}</div>
+            <div className="text-[11px] text-[var(--text-muted)]">build: {buildVersion}</div>
           )}
         </div>
       </div>
@@ -522,4 +481,3 @@ const DashboardPage = () => {
 };
 
 export default DashboardPage;
-

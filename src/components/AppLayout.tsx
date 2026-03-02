@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { createPortal } from "react-dom";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Settings, Moon, Sun } from "lucide-react";
+// Adicionado Palette, Volume2, VolumeX para os novos botões
+import { Settings, Moon, Sun, Palette, Volume2, VolumeX } from "lucide-react"; 
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
 import AssistantWidget from "./AssistantWidget";
@@ -32,6 +33,21 @@ type ToastState = {
   message: string;
 };
 
+// Funções para gerar cores harmônicas
+const randomRange = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1) + min);
+
+const updateGlobalTheme = (h: number) => {
+  const primary = h;
+  const complementary = (h + 180) % 360;
+  const analogous = (h + 30) % 360;
+  
+  document.documentElement.style.setProperty('--primary-h', `${primary}`);
+  document.documentElement.style.setProperty('--complementary-h', `${complementary}`);
+  document.documentElement.style.setProperty('--analogous-h', `${analogous}`);
+  
+  localStorage.setItem('theme-hue', `${h}`);
+};
+
 const AppLayout = () => {
   const { logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -47,14 +63,34 @@ const AppLayout = () => {
   const [menuToast, setMenuToast] = useState<ToastState | null>(null);
   const menuFileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const openSettings = () => setSettingsOpen(true);
+  // NOVO: Estado para o som da IA
+  const [soundEnabled, setSoundEnabled] = useState(() => localStorage.getItem('ai-sound') !== 'false');
 
+  const openSettings = () => setSettingsOpen(true);
   const closeSettings = () => setSettingsOpen(false);
 
   const handleLogoutFromSheet = () => {
     closeSettings();
     logout();
   };
+
+  // NOVO: Funções de ação das novas configurações
+  const handleToggleSound = () => {
+    const newValue = !soundEnabled;
+    setSoundEnabled(newValue);
+    localStorage.setItem('ai-sound', String(newValue));
+  };
+
+  const handleGeneratePalette = () => {
+    const newHue = randomRange(0, 360);
+    updateGlobalTheme(newHue);
+  };
+
+  // NOVO: Carrega o tema salvo ao iniciar o AppLayout
+  useEffect(() => {
+    const savedHue = localStorage.getItem('theme-hue');
+    if (savedHue) updateGlobalTheme(Number(savedHue));
+  }, []);
 
   const handleMenuExport = useCallback(async () => {
     if (isExporting) return;
@@ -92,6 +128,7 @@ const AppLayout = () => {
   );
 
   const appVersion = import.meta.env.VITE_APP_VERSION || buildTag;
+  
   const handleClearAppCache = useCallback(async () => {
     if (typeof window === "undefined") return;
     const confirmed = window.confirm(
@@ -172,6 +209,7 @@ const AppLayout = () => {
             <div className="flex flex-1 items-center justify-center">
               <p className="text-sm font-semibold text-[var(--text-primary)]">Assistente</p>
             </div>
+            {/* Ícone de configurações para Mobile */}
             <button
               type="button"
               onClick={openSettings}
@@ -179,13 +217,7 @@ const AppLayout = () => {
               className="md:hidden rounded-full border border-[var(--border-muted)] p-2 text-[var(--text-primary)] transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
               aria-label="Abrir configurações"
             >
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
-                <path
-                  fillRule="evenodd"
-                  clipRule="evenodd"
-                  d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zm9-3.5a2.5 2.5 0 0 1-2.438 2.496l-.196.013-.133-.02-1.615-.414-.402 1.46.643.643c.193.193.193.506 0 .7l-1.414 1.414a.5.5 0 0 1-.707 0l-.643-.643-1.46.402.414 1.615c.021.084.023.17.013.255A2.5 2.5 0 0 1 12 21.5a2.5 2.5 0 0 1-2.496-2.438l-.013-.196.02-.133.414-1.615-1.46-.402-.643.643a.5.5 0 0 1-.707 0L5.5 16.334a.5.5 0 0 1 0-.707l.643-.643-1.46-.402-.414 1.615a2.5 2.5 0 0 1-4.985-.266l-.013-.196A2.5 2.5 0 0 1 2.5 12c0-1.246.9-2.28 2.094-2.458l.196-.033.133.02 1.615.414.402-1.46-.643-.643a.5.5 0 0 1 0-.707L5.5 5.358a.5.5 0 0 1 .707 0l.643.643 1.46-.402-.414-1.615a2.5 2.5 0 0 1 4.985.266l.013.196-.02.133-.414 1.615 1.46.402.643-.643a.5.5 0 0 1 .707 0l1.414 1.414a.5.5 0 0 1 0 .707l-.643.643 1.46.402.414-1.615c.021-.084.023-.17.013-.255A2.5 2.5 0 0 1 21.5 12z"
-                />
-              </svg>
+              <Settings className="h-5 w-5" />
             </button>
           </div>
         </header>
@@ -232,9 +264,11 @@ const AppLayout = () => {
           </div>
         </header>
       )}
+
       <main className={`${hideTabBar ? "pb-6" : "app-main"} mx-auto max-w-6xl px-4 py-6 md:pb-6`}>
         <Outlet />
       </main>
+
       {settingsOpen &&
         typeof document !== "undefined" &&
         createPortal(
@@ -265,6 +299,7 @@ const AppLayout = () => {
                     Configurações
                   </p>
                   <div className="space-y-3">
+                    {/* 1. MODO CLARO/ESCURO */}
                     <button
                       type="button"
                       onClick={() => {
@@ -287,6 +322,42 @@ const AppLayout = () => {
                         )}
                       </span>
                     </button>
+
+                    {/* 2. NOVA SEÇÃO: PERSONALIZAÇÃO DE CORES (Aparência do Backup) */}
+                    <div className="rounded-2xl border border-[var(--border-muted)] bg-[var(--card-bg)] p-3 text-sm text-[var(--text-muted)] shadow-[0_10px_25px_rgba(15,23,42,0.08)]">
+                      <p className="font-semibold text-[var(--text-primary)]">Personalização</p>
+                      <div className="mt-2 space-y-2">
+                        <button
+                          type="button"
+                          onClick={handleGeneratePalette}
+                          className="flex w-full items-center justify-between rounded-xl border border-[var(--border-muted)] bg-[var(--card-bg)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                        >
+                          Mudar tema (Cor Aleatória)
+                          <Palette className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 3. NOVA SEÇÃO: ASSISTENTE IA (Aparência do Backup) */}
+                    <div className="rounded-2xl border border-[var(--border-muted)] bg-[var(--card-bg)] p-3 text-sm text-[var(--text-muted)] shadow-[0_10px_25px_rgba(15,23,42,0.08)]">
+                      <p className="font-semibold text-[var(--text-primary)]">Assistente IA</p>
+                      <div className="mt-2 space-y-2">
+                        <button
+                          type="button"
+                          onClick={handleToggleSound}
+                          className="flex w-full items-center justify-between rounded-xl border border-[var(--border-muted)] bg-[var(--card-bg)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition hover:border-[var(--primary)]"
+                        >
+                          Efeitos sonoros do Chat
+                          {soundEnabled ? (
+                            <Volume2 className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <VolumeX className="h-4 w-4 text-red-500" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 4. BACKUP (Original) */}
                     <div className="rounded-2xl border border-[var(--border-muted)] bg-[var(--card-bg)] p-3 text-sm text-[var(--text-muted)] shadow-[0_10px_25px_rgba(15,23,42,0.08)]">
                       <p className="font-semibold text-[var(--text-primary)]">Backup</p>
                       <div className="mt-2 space-y-2">
@@ -322,6 +393,7 @@ const AppLayout = () => {
                         </p>
                       </div>
                     </div>
+
                     <button
                       type="button"
                       onClick={handleClearAppCache}
@@ -330,12 +402,14 @@ const AppLayout = () => {
                       Limpar cache do app
                       <span className="text-xs text-[var(--text-muted)]">(suporte)</span>
                     </button>
+                    
                     <p
                       className="mt-2 text-xs text-[var(--text-muted)]"
                       title="Versão disponível para debug"
                     >
                       Versão: {appVersion}
                     </p>
+                    
                     <button
                       type="button"
                       onClick={handleLogoutFromSheet}
@@ -357,7 +431,6 @@ const AppLayout = () => {
       {!isMobileView && <AssistantWidget />}
       {isMobileNavigation && <BottomTabBar />}
       <ServiceWorkerUpdate />
-
     </div>
   );
 };
