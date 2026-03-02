@@ -5,7 +5,7 @@ import AppLayout from "../components/AppLayout";
 import ProtectedRoute from "../components/ProtectedRoute";
 import { AuthProvider } from "../contexts/AuthContext";
 import LoginPage from "../pages/LoginPage";
-import { AssistantChat } from '../pages/AssistantChat';
+
 
 const DashboardPage = lazy(() => import("../pages/DashboardPage"));
 const EntriesPage = lazy(() => import("../pages/EntriesPage"));
@@ -53,7 +53,7 @@ const AppRouter = () => (
             <Route path="/cards" element={<CardsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
-          <Route path="/chat" element={<AssistantChat />} />
+          
         </Routes>
       </Suspense>
     </AuthProvider>
