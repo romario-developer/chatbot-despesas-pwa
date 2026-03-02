@@ -6,7 +6,7 @@ type MonthParts = {
 const MONTH_LABELS = [
   "Janeiro",
   "Fevereiro",
-  "Marco",
+  "Março",
   "Abril",
   "Maio",
   "Junho",
