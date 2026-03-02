@@ -12,33 +12,31 @@ export default function AssistantWidget() {
   });
   
   const isExpanded = widgetState === "expanded";
-  const [isMobileView, setIsMobileView] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
   
-  // Chama o Cérebro Unificado
-  const { messages, inputValue, setInputValue, handleSendMessage, isSending, isTyping } = useAssistantChat({
-    onSavedStage: () => console.log("Despesa salva com sucesso!")
-  });
+  // Chama o Cérebro Unificado e a função de Limpar
+  const { messages, inputValue, setInputValue, handleSendMessage, clearChat, isSending, isTyping } = useAssistantChat();
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mq = window.matchMedia("(max-width: 767px)");
-    const handleChange = () => setIsMobileView(mq.matches);
-    mq.addEventListener("change", handleChange);
-    return () => mq.removeEventListener("change", handleChange);
-  }, []);
-
-  useEffect(() => {
     if (isExpanded && inputRef.current) setTimeout(() => inputRef.current?.focus(), 50);
     localStorage.setItem(WIDGET_STATE_KEY, widgetState);
   }, [isExpanded, widgetState]);
 
+  // Função centralizada para fechar e limpar o chat
+  const handleCloseWidget = () => {
+    setWidgetState("collapsed");
+    clearChat(); // Limpa o histórico automaticamente ao fechar
+  };
+
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === "Escape") setWidgetState("collapsed"); };
+    const handleKeyDown = (e: KeyboardEvent) => { 
+      if (e.key === "Escape") handleCloseWidget(); 
+    };
     const handleOpen = () => setWidgetState("expanded");
+    
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener(ASSISTANT_OPEN_EVENT, handleOpen);
     return () => {
@@ -59,7 +57,6 @@ export default function AssistantWidget() {
   const renderCard = (card: any, index: number) => {
     const baseClass = "mt-2 w-[90%] rounded-2xl border border-slate-200 bg-white/90 p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100";
     
-    // Faturas em Aberto (Nova IA)
     if (card.type === "summary" && card.data?.invoices) {
       return (
         <div key={index} className={baseClass}>
@@ -76,7 +73,6 @@ export default function AssistantWidget() {
       );
     }
 
-    // Métricas
     if (card.type === "metric") {
       const value = card.data ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(card.data.value / 100) : card.value;
       const subtitle = card.data ? card.data.detail : card.subtitle;
@@ -89,7 +85,6 @@ export default function AssistantWidget() {
       );
     }
 
-    // Listas
     if (card.type === "list") {
       if (card.data) {
         return (
@@ -109,8 +104,6 @@ export default function AssistantWidget() {
           </div>
         );
       }
-      
-      // Lista Antiga Clássica
       return (
         <div key={index} className={baseClass}>
           <p className="text-xs font-semibold">{card.title}</p>
@@ -123,24 +116,48 @@ export default function AssistantWidget() {
     return null;
   };
 
-  if (isMobileView) return null;
-
   return (
     <>
-      <div aria-hidden={!isExpanded} className={`fixed inset-0 z-[90] ${isExpanded ? "" : "pointer-events-none"}`}>
-        <div className={`absolute inset-0 z-[88] bg-slate-900/40 transition-opacity duration-200`} style={{ opacity: isExpanded ? 1 : 0 }} onClick={() => setWidgetState("collapsed")} />
+      <div aria-hidden={!isExpanded} className={`fixed inset-0 z-[100] ${isExpanded ? "" : "pointer-events-none"}`}>
+        {/* Fundo escuro: Clica aqui = Fecha e limpa */}
+        <div 
+          className={`absolute inset-0 z-[90] bg-slate-900/40 transition-opacity duration-200`} 
+          style={{ opacity: isExpanded ? 1 : 0 }} 
+          onClick={handleCloseWidget} 
+        />
         
+        {/* Modal do Chat: Garantido que está na frente (z-100) */}
         <div
           role="dialog"
-          className={`fixed left-0 right-0 bottom-0 z-[94] flex h-full flex-col overflow-hidden rounded-t-[24px] bg-white transition-all duration-200 ${isExpanded ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"} md:inset-auto md:right-4 md:bottom-4 md:left-auto md:w-[400px] md:max-h-[75vh] md:h-auto md:rounded-3xl md:border md:border-slate-200 md:shadow-2xl md:z-[52] dark:bg-slate-950 dark:border-slate-800`}
+          onClick={(e) => e.stopPropagation()}
+          className={`fixed left-0 right-0 bottom-0 z-[100] flex h-full flex-col overflow-hidden rounded-t-[24px] bg-white transition-all duration-200 ${isExpanded ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"} md:inset-auto md:right-4 md:bottom-4 md:left-auto md:w-[400px] md:max-h-[75vh] md:h-auto md:rounded-3xl md:border md:border-slate-200 md:shadow-2xl dark:bg-slate-950 dark:border-slate-800`}
           style={{ minHeight: "350px" }}
         >
+          {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-slate-800">
             <div className="flex items-center gap-3">
               <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary text-white text-lg">🙂</span>
-              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Assistente</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Super Assistente</p>
             </div>
-            <button onClick={() => setWidgetState("collapsed")} className="rounded-full px-3 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-800">×</button>
+            
+            <div className="flex items-center gap-1">
+              {/* Botão de Limpar Manual */}
+              <button 
+                onClick={clearChat} 
+                title="Limpar conversa"
+                className="rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition"
+              >
+                Limpar
+              </button>
+              
+              {/* Botão de Fechar */}
+              <button 
+                onClick={handleCloseWidget} 
+                className="rounded-xl px-3 py-1 text-lg font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              >
+                ×
+              </button>
+            </div>
           </div>
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4 text-sm bg-slate-50 dark:bg-slate-950">
