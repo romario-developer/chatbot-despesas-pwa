@@ -17,6 +17,25 @@ export default function AssistantWidget() {
   const audioReceive = useRef(new Audio("https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3")); 
   const audioSuccess = useRef(new Audio("https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3")); 
 
+  // --- INÍCIO DO BLOCO NOVO ---
+  // Escuta o botão central verde da barra inferior
+  useEffect(() => {
+    const handleGlobalOpen = () => {
+      setWidgetState("expanded");
+    };{!isExpanded && (
+        <button 
+          onClick={() => setWidgetState("expanded")} 
+          className="fixed bottom-8 right-8 z-[90] flex h-16 w-16 items-center justify-center rounded-[24px] bg-[#ec407a] text-3xl shadow-2xl shadow-[#ec407a]/40 transition-all hover:scale-110 active:scale-90 hover:rotate-6"
+          style={{ animation: 'bounce 2s infinite' }}
+        >
+          🚀
+        </button>
+      )}
+    window.addEventListener('OPEN_GLOBAL_ASSISTANT', handleGlobalOpen);
+    return () => window.removeEventListener('OPEN_GLOBAL_ASSISTANT', handleGlobalOpen);
+  }, []);
+  // --- FIM DO BLOCO NOVO ---
+
   // Ajuste de volume
   useEffect(() => {
     audioSend.current.volume = 0.4;
@@ -174,7 +193,7 @@ export default function AssistantWidget() {
       <div className={`fixed inset-0 z-[100] transition-all duration-300 ${isExpanded ? "visible" : "invisible"}`}>
         <div className={`absolute inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300 ${isExpanded ? "opacity-100" : "opacity-0"}`} onClick={handleCloseWidget} />
         
-        <div className={`fixed inset-x-0 bottom-0 z-[101] flex h-[90vh] flex-col overflow-hidden rounded-t-[40px] bg-white shadow-2xl transition-all duration-500 ease-out dark:bg-slate-950 md:inset-auto md:right-6 md:bottom-6 md:h-[700px] md:w-[420px] md:rounded-[32px] md:border md:border-white/10 ${isExpanded ? "translate-y-0" : "translate-y-full"}`}>
+        <div className={`fixed inset-x-0 bottom-0 z-[101] flex h-[92dvh] flex-col overflow-hidden rounded-t-[40px] bg-white shadow-2xl transition-all duration-500 ease-out dark:bg-slate-950 md:inset-auto md:right-6 md:bottom-6 md:h-[700px] md:w-[420px] md:rounded-[32px] md:border md:border-white/10 ${isExpanded ? "translate-y-0" : "translate-y-full"}`}>
           
           <div className="flex items-center justify-between border-b border-slate-100 bg-white/80 px-6 py-5 backdrop-blur-md dark:border-white/5 dark:bg-slate-950/80">
             <div className="flex items-center gap-4">
@@ -245,7 +264,7 @@ export default function AssistantWidget() {
 
           <div className="bg-white p-6 dark:bg-slate-950">
             <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(inputValue); }} className="flex items-center gap-3">
-              <input ref={inputRef} value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder="Como posso te ajudar?" className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-white/10 dark:bg-white/5 dark:text-white" />
+              <input ref={inputRef} value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder="Como posso te ajudar?" className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-base md:text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-white/10 dark:bg-white/5 dark:text-white" />
               <button type="submit" disabled={!inputValue.trim() || isSending} className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white shadow-lg transition-all active:scale-95 disabled:opacity-50">🚀</button>
             </form>
           </div>
@@ -256,7 +275,8 @@ export default function AssistantWidget() {
       {!isExpanded && (
         <button 
           onClick={() => setWidgetState("expanded")} 
-          className="fixed bottom-8 right-8 z-[90] flex h-16 w-16 items-center justify-center rounded-[24px] bg-[#ec407a] text-3xl shadow-2xl shadow-[#ec407a]/40 transition-all hover:scale-110 active:scale-90 hover:rotate-6"
+          // O 'hidden md:flex' oculta o botão rosa no celular e mostra só no Desktop!
+          className="hidden md:flex fixed bottom-8 right-8 z-[90] h-16 w-16 items-center justify-center rounded-[24px] bg-[#ec407a] text-3xl shadow-2xl shadow-[#ec407a]/40 transition-all hover:scale-110 active:scale-90 hover:rotate-6"
           style={{ animation: 'bounce 2s infinite' }}
         >
           🚀

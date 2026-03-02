@@ -1,9 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import type { CSSProperties, ReactNode } from "react";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { ASSISTANT_OPEN_EVENT } from "../constants/assistantEvents";
-import AssistantIcon from "./AssistantIcon";
-import usePrefersReducedMotion from "../hooks/usePrefersReducedMotion";
+import { NavLink, useLocation } from "react-router-dom";
 
 type TabItem = {
   label: string;
@@ -16,36 +13,28 @@ const tabs: TabItem[] = [
     label: "Início",
     to: "/",
     icon: (
-      <path
-        d="M3 9.5L10 3l7 6.5V18a1 1 0 0 1-1 1h-4v-4H8v4H4a1 1 0 0 1-1-1V9.5z"
-        strokeWidth="1.5"
-      />
+      <path d="M3 9.5L10 3l7 6.5V18a1 1 0 0 1-1 1h-4v-4H8v4H4a1 1 0 0 1-1-1V9.5z" strokeWidth="1.5" stroke="currentColor" fill="none" />
     ),
   },
   {
     label: "Lançamentos",
     to: "/entries",
     icon: (
-      <path d="M4 6h12v3h3M6 17H5a1 1 0 0 1-1-1V5v-1h12v12a1 1 0 0 1-1 1h-1" strokeWidth="1.5" />
+      <path d="M4 6h12v3h3M6 17H5a1 1 0 0 1-1-1V5v-1h12v12a1 1 0 0 1-1 1h-1" strokeWidth="1.5" stroke="currentColor" fill="none" />
     ),
   },
   {
     label: "Cartões",
     to: "/cards",
     icon: (
-      <path
-        d="M4 7h12v6H4zM4 10h12M7 16h3"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M4 7h12v6H4zM4 10h12M7 16h3" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" stroke="currentColor" fill="none" />
     ),
   },
   {
     label: "Planejamento",
     to: "/planning",
     icon: (
-      <path d="M5 7h10v10H5zM12 7v10M8 7v4" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M5 7h10v10H5zM12 7v10M8 7v4" strokeWidth="1.5" strokeLinecap="round" stroke="currentColor" fill="none" />
     ),
   },
 ];
@@ -57,27 +46,20 @@ const tabBarStyle: CSSProperties & { "--tabbar-height": string } = {
 };
 
 const BottomTabBar = () => {
-  const openAssistant = useCallback(() => {
-    if (typeof window === "undefined") return;
-    window.dispatchEvent(new CustomEvent(ASSISTANT_OPEN_EVENT));
-  }, []);
-  const navigate = useNavigate();
   const location = useLocation();
-  const prefersReducedMotion = usePrefersReducedMotion();
-  const [isMobile, setIsMobile] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return window.matchMedia("(max-width: 767px)").matches;
-  });
   const assistantActive = useMemo(() => location.pathname.startsWith("/assistant"), [location]);
+
+  // A MÁGICA: Este evento avisa o AssistantWidget para se abrir!
+  const handleOpenAssistantModal = () => {
+    window.dispatchEvent(new Event('OPEN_GLOBAL_ASSISTANT'));
+  };
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof document === "undefined") return undefined;
     const html = document.documentElement;
     const mq = window.matchMedia("(max-width: 767px)");
     const setHeight = () => {
-      const mobile = mq.matches;
-      setIsMobile(mobile);
-      const value = mobile ? "64px" : "0px";
+      const value = mq.matches ? "64px" : "0px";
       html.style.setProperty("--tabbar-height", value);
     };
     setHeight();
@@ -105,20 +87,14 @@ const BottomTabBar = () => {
       end={tab.to === "/"}
       className={({ isActive }: { isActive: boolean }) =>
         [
-          "flex-1 flex flex-col items-center justify-center rounded-2xl px-2 py-2 text-xs font-semibold transition",
+          "flex-1 flex flex-col items-center justify-center rounded-2xl px-2 py-2 text-[10px] font-semibold transition-all duration-300",
           isActive
-            ? "text-primary"
-            : "text-slate-500 dark:text-slate-300 hover:text-primary",
+            ? "text-[var(--primary)]"
+            : "text-slate-500 dark:text-slate-400 hover:text-[var(--primary)]",
         ].join(" ")
       }
     >
-      <svg
-        viewBox="0 0 20 20"
-        fill="none"
-        className="h-6 w-6"
-        aria-hidden="true"
-        stroke="currentColor"
-      >
+      <svg viewBox="0 0 24 24" className="h-6 w-6 mb-1" aria-hidden="true">
         {tab.icon}
       </svg>
       <span>{tab.label}</span>
@@ -128,35 +104,33 @@ const BottomTabBar = () => {
   return (
     <nav
       aria-label="Navegação principal"
-      className="fixed bottom-0 left-0 right-0 z-[70] overflow-visible border-t border-slate-200 bg-white shadow-[0_-2px_12px_rgba(15,23,42,0.04)] dark:border-slate-800 dark:bg-slate-900 md:hidden"
+      className="fixed bottom-0 left-0 right-0 z-[70] overflow-visible border-t border-slate-200 bg-white/90 backdrop-blur-md shadow-[0_-10px_30px_rgba(0,0,0,0.05)] dark:border-white/5 dark:bg-slate-950/90 md:hidden"
       style={tabBarStyle}
     >
-      <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-2">
-        <div className="flex flex-1 items-center gap-1">{tabs.slice(0, 2).map(renderTab)}</div>
-        <div className="relative flex h-full items-center justify-center">
+      <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-2 h-full">
+        <div className="flex flex-1 items-center justify-around h-full">{tabs.slice(0, 2).map(renderTab)}</div>
+        
+        <div className="relative flex h-full items-center justify-center w-16">
           <button
             type="button"
-            onClick={() => {
-              if (isMobile) {
-                navigate("/assistant");
-              } else {
-                openAssistant();
-              }
-            }}
+            onClick={handleOpenAssistantModal}
             aria-label="Abrir assistente"
             className={[
-              "relative -top-6 flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-[#25D366] text-white shadow-lg shadow-slate-900/20 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70",
+              "absolute -top-6 flex h-14 w-14 items-center justify-center rounded-[20px] border-4 border-white bg-[#25D366] text-white shadow-[0_10px_20px_rgba(37,211,102,0.3)] transition-all duration-300 focus-visible:outline-none dark:border-slate-950",
               assistantActive ? "ring-2 ring-[#25D366]/40" : "",
-              assistantActive && !prefersReducedMotion ? "motion-safe:animate-[pulse_1.3s_ease-in-out]" : "",
-              !assistantActive ? "hover:-translate-y-0.5 active:translate-y-0.5" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
+              !assistantActive ? "hover:-translate-y-1 active:scale-90" : "",
+            ].filter(Boolean).join(" ")}
           >
-            <AssistantIcon className="h-8 w-8 text-white" />
+             {/* Ícone customizado de Chat/Magia para a IA */}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+              <path d="M9.75 9.75 12 12l2.25-2.25"/>
+              <path d="m9.75 14.25 2.25-2.25 2.25 2.25"/>
+            </svg>
           </button>
         </div>
-        <div className="flex flex-1 items-center justify-end gap-1">
+
+        <div className="flex flex-1 items-center justify-around h-full">
           {tabs.slice(2).map(renderTab)}
         </div>
       </div>
