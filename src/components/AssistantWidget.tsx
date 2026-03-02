@@ -57,18 +57,70 @@ export default function AssistantWidget() {
   const renderCard = (card: any, index: number) => {
     const baseClass = "mt-2 w-[90%] rounded-2xl border border-slate-200 bg-white/90 p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100";
     
+    // Faturas em Aberto (Nova UX Premium)
     if (card.type === "summary" && card.data?.invoices) {
       return (
-        <div key={index} className={baseClass}>
-          <p className="text-[10px] uppercase tracking-[0.3em] text-red-500 font-bold mb-3">{card.title}</p>
-          <div className="space-y-3">
-            {card.data.invoices.map((inv: any, i: number) => (
-              <div key={i} className="flex justify-between items-center text-sm">
-                <span className="font-semibold">{inv.cardName}</span>
-                <span className="font-black text-red-500">{inv.formattedRemaining}</span>
+        <div key={index} className="mt-2 w-[90%] space-y-4">
+          <p className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-bold ml-1">{card.title}</p>
+          
+          {card.data.invoices.map((inv: any, i: number) => (
+            <div key={i} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              
+              {/* Cabeçalho da Fatura */}
+              <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-3 dark:border-slate-700/50 dark:bg-slate-950/50">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary dark:bg-primary/20">
+                    💳
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{inv.cardName}</p>
+                    <p className="text-[11px] font-medium text-slate-500">Vence: {inv.dueDate.split("-").reverse().join("/")}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-bold text-orange-500 uppercase tracking-widest">Aberta</p>
+                  <p className="text-base font-black text-slate-900 dark:text-slate-100">{inv.formattedRemaining}</p>
+                </div>
               </div>
-            ))}
-          </div>
+
+              {/* Lista de Compras */}
+              {inv.purchases && inv.purchases.length > 0 ? (
+                <div className="divide-y divide-slate-50 px-4 py-1 dark:divide-slate-800/50">
+                  {/* Limitamos a 5 itens para não fazer o chat ficar gigante, o resto esconde */}
+                  {inv.purchases.slice(0, 5).map((p: any, j: number) => (
+                    <div key={j} className="flex justify-between py-2.5">
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                            {p.description}
+                          </span>
+                          {/* A MÁGICA DA PARCELA (Ex: 1/3) */}
+                          {p.installmentTotal && p.installmentTotal > 1 && (
+                            <span className="rounded bg-primary/10 px-1.5 py-[1px] text-[10px] font-bold text-primary dark:bg-primary/20">
+                              {p.installmentCurrent}/{p.installmentTotal}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] font-medium text-slate-400">
+                          {p.date.split("-").reverse().slice(0, 2).join("/")}
+                        </span>
+                      </div>
+                      <span className="text-sm font-bold text-slate-600 dark:text-slate-400">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(p.amount)}
+                      </span>
+                    </div>
+                  ))}
+                  {inv.purchases.length > 5 && (
+                    <p className="py-2.5 text-center text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                      + {inv.purchases.length - 5} lançamentos
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="px-4 py-4 text-xs font-medium text-slate-500 text-center">Nenhuma compra neste ciclo.</p>
+              )}
+            </div>
+          ))}
         </div>
       );
     }
