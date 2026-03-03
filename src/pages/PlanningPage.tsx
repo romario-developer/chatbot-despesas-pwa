@@ -86,44 +86,44 @@ const PlanningPage = () => {
   const monthExtras = useMemo(() => Array.isArray(planning.extrasByMonth?.[monthKey]) ? planning.extrasByMonth[monthKey] : [], [planning.extrasByMonth, monthKey]);
   const extrasTotal = monthExtras.reduce((sum, item) => sum + toCents(item.amount), 0);
   
-  // CHAVE MESTRA DA TELA: Lê tudo convertendo forçadamente para minúsculo
   const rawCategoryBudgets = (planning as any).categoryBudgets || {};
   const categoryBudgets: Record<string, number> = {};
   Object.keys(rawCategoryBudgets).forEach(key => {
     categoryBudgets[key.toLowerCase().trim()] = rawCategoryBudgets[key];
   });
 
-  // --- ACTIONS ---
+  // --- ACTIONS CORRIGIDAS COM REFETCH ---
   const handleSaveSalary = async () => {
     if (salaryCents < 0) { setErrors(prev => ({ ...prev, salary: "Valor inválido" })); return; }
-    const next: Planning = { ...planning, salaryByMonth: { ...planning.salaryByMonth, [monthKey]: salaryCents } };
+    const next: Planning = { ...planning, salaryByMonth: { ...(planning.salaryByMonth || {}), [monthKey]: salaryCents } };
     setPlanning(next);
     try {
       await savePlanning(next);
       setToast({ message: "Salário salvo", type: "success" });
       setErrors(prev => ({ ...prev, salary: undefined }));
+      refetchPlanning(); // <-- ISSO IMPEDE DE ZERAR AO MUDAR DE ABA
     } catch { setToast({ message: "Erro ao salvar", type: "error" }); }
   };
 
   const handleSaveSavings = async () => {
     if (savingsCents < 0) return;
-    const next = { ...planning, savingsByMonth: { ...(planning as any).savingsByMonth, [monthKey]: savingsCents } };
+    const next = { ...planning, savingsByMonth: { ...((planning as any).savingsByMonth || {}), [monthKey]: savingsCents } };
     setPlanning(next as any);
     try {
       await savePlanning(next as any);
       setToast({ message: "Reserva salva no cofre!", type: "success" });
+      refetchPlanning(); // <-- ISSO IMPEDE DE ZERAR AO MUDAR DE ABA
     } catch { setToast({ message: "Erro ao salvar", type: "error" }); }
   };
 
   const handleUpdateBudget = async (catName: string, val: number) => {
-    // CHAVE MESTRA DA TELA: Salva manualmente forçando minúsculo
     const safeKey = catName.toLowerCase().trim();
     const next = { ...planning, categoryBudgets: { ...rawCategoryBudgets, [safeKey]: val } };
     setPlanning(next as any);
     try {
       await savePlanning(next as any);
       setToast({ message: `Meta salva com sucesso`, type: "success" });
-      refetchPlanning();
+      refetchPlanning(); // <-- ISSO IMPEDE DE ZERAR AO MUDAR DE ABA
     } catch { setToast({ message: "Erro ao salvar meta", type: "error" }); }
   };
 
@@ -144,6 +144,7 @@ const PlanningPage = () => {
     try {
       await savePlanning(nextPlanning);
       setToast({ message: extraForm.id ? "Extra atualizado" : "Extra adicionado", type: "success" });
+      refetchPlanning();
     } catch { setToast({ message: "Erro ao salvar", type: "error" }); }
     resetExtraForm();
   };
@@ -155,6 +156,7 @@ const PlanningPage = () => {
     try {
       await savePlanning(nextPlanning);
       setToast({ message: "Extra removido", type: "success" });
+      refetchPlanning();
     } catch { setToast({ message: "Erro ao remover", type: "error" }); }
   };
 
@@ -204,7 +206,6 @@ const PlanningPage = () => {
         
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {categories.map((cat) => {
-            // Busca o limite forçando a chave minúscula
             const safeCategoryKey = cat.name.toLowerCase().trim();
             const goalCents = categoryBudgets[safeCategoryKey] || 0; 
             
