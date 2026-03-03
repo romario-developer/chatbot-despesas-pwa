@@ -18,10 +18,17 @@ export const useAssistantChat = () => {
     else window.localStorage.removeItem(STORAGE_KEY);
   }, [conversationId]);
 
-  const handleSendMessage = useCallback(async (value: string) => {
+  // Modificação: Adicionado o parâmetro isSystemMessage
+  const handleSendMessage = useCallback(async (value: string, isSystemMessage: boolean = false) => {
     const trimmed = value.trim();
     if (!trimmed || isSending) return;
     
+    // Se for mensagem de sistema (A Saudação Inicial), insere direto como 'assistant' e aborta o envio pro backend
+    if (isSystemMessage) {
+      setMessages((prev) => [...prev, { id: `ai-${Date.now()}`, role: "assistant", text: trimmed }]);
+      return;
+    }
+
     setMessages((prev) => [...prev, { id: `user-${Date.now()}`, role: "user", text: trimmed }]);
     setInputValue("");
     setIsTyping(true);

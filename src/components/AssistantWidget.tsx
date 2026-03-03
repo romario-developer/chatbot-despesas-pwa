@@ -1,42 +1,49 @@
 import { useEffect, useRef, useState } from "react";
 import { useAssistantChat } from "../hooks/useAssistantChat";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { useAuth } from "../contexts/AuthContext";
 
 export default function AssistantWidget() {
   const [widgetState, setWidgetState] = useState<"collapsed" | "expanded">("collapsed");
   const isExpanded = widgetState === "expanded";
   
   const { messages, inputValue, setInputValue, handleSendMessage, clearChat, isSending, isTyping } = useAssistantChat();
+  const { user } = useAuth(); // Pega os dados do usuário atual
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // Referências para os áudios não recarregarem a cada render
+  // Referências para os áudios
   const audioSend = useRef(new Audio("https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3")); 
   const audioReceive = useRef(new Audio("https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3")); 
   const audioSuccess = useRef(new Audio("https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3")); 
 
-  // --- INÍCIO DO BLOCO NOVO ---
-  // Escuta o botão central verde da barra inferior
+  // --- SAUDAÇÃO INICIAL AUTOMÁTICA ---
+  // Se o usuário estiver carregado, o chat estiver vazio e a IA não estiver digitando
   useEffect(() => {
-    const handleGlobalOpen = () => {
-      setWidgetState("expanded");
-    };{!isExpanded && (
-        <button 
-          onClick={() => setWidgetState("expanded")} 
-          className="fixed bottom-8 right-8 z-[90] flex h-16 w-16 items-center justify-center rounded-[24px] bg-[#ec407a] text-3xl shadow-2xl shadow-[#ec407a]/40 transition-all hover:scale-110 active:scale-90 hover:rotate-6"
-          style={{ animation: 'bounce 2s infinite' }}
-        >
-          🚀
-        </button>
-      )}
+    if (user && messages.length === 0 && !isTyping) {
+      const hora = new Date().getHours();
+      let saudacao = "Bom dia";
+      if (hora >= 12 && hora < 18) saudacao = "Boa tarde";
+      else if (hora >= 18) saudacao = "Boa noite";
+
+      const welcomeText = user.name
+        ? `${saudacao}, ${user.name}! Tudo bem? Como posso te ajudar a cuidar do seu dinheiro hoje?`
+        : `Olá! Seja muito bem-vindo ao Financio. Eu sou seu assistente financeiro. Como você gostaria que eu te chamasse?`;
+
+      // O "true" no final avisa o hook: "Coloque na tela como Assistente, mas NÃO mande pro servidor"
+      handleSendMessage(welcomeText, true);
+    }
+  }, [user, messages.length, isTyping, handleSendMessage]); 
+  // --------------------------------------------------
+
+  useEffect(() => {
+    const handleGlobalOpen = () => setWidgetState("expanded");
     window.addEventListener('OPEN_GLOBAL_ASSISTANT', handleGlobalOpen);
     return () => window.removeEventListener('OPEN_GLOBAL_ASSISTANT', handleGlobalOpen);
   }, []);
-  // --- FIM DO BLOCO NOVO ---
 
-  // Ajuste de volume
   useEffect(() => {
     audioSend.current.volume = 0.4;
     audioReceive.current.volume = 0.5;
@@ -49,29 +56,21 @@ export default function AssistantWidget() {
 
   const handleCloseWidget = () => {
     setWidgetState("collapsed");
-    clearChat();
   };
 
   useEffect(() => {
     if (messagesEndRef.current) messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping, isSending]);
 
-  // Gatilho sonoro Inteligente (Verifica o painel de configurações)
+  // Gatilho sonoro Inteligente
   useEffect(() => {
     if (messages.length === 0) return;
-
-    // Só toca se o som estiver ativado no LocalStorage
     const isSoundOn = localStorage.getItem('ai-sound') !== 'false';
     if (!isSoundOn) return;
 
     const lastMessage = messages[messages.length - 1];
-    const isUser = lastMessage.role === "user";
-
-    if (isUser) {
-      audioSend.current.play().catch(() => {});
-    } else {
-      audioReceive.current.play().catch(() => {});
-    }
+    if (lastMessage.role === "user") audioSend.current.play().catch(() => {});
+    else audioReceive.current.play().catch(() => {});
   }, [messages.length]);
 
   // Gatilho sonoro para o Sucesso de Lançamento
@@ -81,18 +80,14 @@ export default function AssistantWidget() {
 
     if (isSending === false && messages.length > 0) {
       const lastMsg = messages[messages.length - 1];
-      if (lastMsg.text?.includes("✅")) {
-        audioSuccess.current.play().catch(() => {});
-      }
+      if (lastMsg.text?.includes("✅")) audioSuccess.current.play().catch(() => {});
     }
   }, [isSending]);
 
   const renderCard = (card: any, index: number) => {
     const baseClass = "mt-3 w-[95%] animate-msg rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 backdrop-blur-sm";
     
-    // Gráfico de Pizza com Cores Harmônicas Automáticas
     if (card.type === "chart" && card.data) {
-      // Usa as variáveis globais do CSS configuradas pelo AppLayout
       const CHART_COLORS = [
         `hsl(var(--primary-h, 220), 70%, 50%)`,
         `hsl(var(--analogous-h, 190), 70%, 50%)`,
@@ -120,55 +115,53 @@ export default function AssistantWidget() {
     }
 
     if (card.type === "summary" && card.data?.invoices) {
-        return (
-          <div key={index} className="mt-4 w-full space-y-4 animate-msg">
-            {card.data.invoices.map((inv: any, i: number) => (
-              <div key={i} className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-md dark:border-slate-800 dark:bg-slate-900 ai-glow">
-                <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-5 py-4 dark:border-slate-800 dark:bg-slate-950/50">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-xl text-primary">💳</div>
-                    <div>
-                      <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{inv.cardName}</p>
-                      <p className="text-[11px] font-bold text-slate-400 uppercase">Vence {inv.dueDate.split("-").reverse().join("/")}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-black text-slate-900 dark:text-slate-100">{inv.formattedRemaining}</p>
+      return (
+        <div key={index} className="mt-4 w-full space-y-4 animate-msg">
+          {card.data.invoices.map((inv: any, i: number) => (
+            <div key={i} className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-md dark:border-slate-800 dark:bg-slate-900 ai-glow">
+              <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-5 py-4 dark:border-slate-800 dark:bg-slate-950/50">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-xl text-primary">💳</div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{inv.cardName}</p>
+                    <p className="text-[11px] font-bold text-slate-400 uppercase">Vence {inv.dueDate.split("-").reverse().join("/")}</p>
                   </div>
                 </div>
-                <div className="divide-y divide-slate-100 px-5 py-2 dark:divide-slate-800/50">
-                  {inv.purchases?.slice(0, 5).map((p: any, j: number) => (
-                    <div key={j} className="flex justify-between py-3">
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{p.description}</span>
-                          {p.installmentTotal > 1 && (
-                            <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-black text-primary">{p.installmentCurrent}/{p.installmentTotal}</span>
-                          )}
-                        </div>
-                        <span className="text-[10px] font-bold text-slate-400">{p.date.split("-").reverse().slice(0, 2).join("/")}</span>
-                      </div>
-                      <span className="text-sm font-black text-slate-600 dark:text-slate-400">R$ {p.amount.toFixed(2)}</span>
-                    </div>
-                  ))}
+                <div className="text-right">
+                  <p className="text-lg font-black text-slate-900 dark:text-slate-100">{inv.formattedRemaining}</p>
                 </div>
               </div>
-            ))}
-          </div>
-        );
-      }
+              <div className="divide-y divide-slate-100 px-5 py-2 dark:divide-slate-800/50">
+                {inv.purchases?.slice(0, 5).map((p: any, j: number) => (
+                  <div key={j} className="flex justify-between py-3">
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{p.description}</span>
+                        {p.installmentTotal > 1 && <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-black text-primary">{p.installmentCurrent}/{p.installmentTotal}</span>}
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-400">{p.date.split("-").reverse().slice(0, 2).join("/")}</span>
+                    </div>
+                    <span className="text-sm font-black text-slate-600 dark:text-slate-400">R$ {p.amount.toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
 
     if (card.type === "metric") {
-        const isNegative = card.data?.value < 0;
-        return (
-          <div key={index} className={baseClass}>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-black mb-1">{card.title}</p>
-            <p className={`text-2xl font-black ${isNegative ? 'text-red-500' : 'text-slate-900 dark:text-white'}`}>
-                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(card.data ? card.data.value / 100 : card.value / 100)}
-            </p>
-            {card.data?.detail && <p className="mt-2 text-[11px] font-medium text-slate-500 leading-relaxed">{card.data.detail}</p>}
-          </div>
-        );
+      const isNegative = card.data?.value < 0;
+      return (
+        <div key={index} className={baseClass}>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-black mb-1">{card.title}</p>
+          <p className={`text-2xl font-black ${isNegative ? 'text-red-500' : 'text-slate-900 dark:text-white'}`}>
+            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(card.data ? card.data.value / 100 : card.value / 100)}
+          </p>
+          {card.data?.detail && <p className="mt-2 text-[11px] font-medium text-slate-500 leading-relaxed">{card.data.detail}</p>}
+        </div>
+      );
     }
     return null;
   };
@@ -176,13 +169,12 @@ export default function AssistantWidget() {
   return (
     <>
       <style>{`
-        /* Lê as variáveis injetadas pelo AppLayout */
         .bg-primary { background-color: hsl(var(--primary-h, 220), 70%, 50%) !important; }
         .text-primary { color: hsl(var(--primary-h, 220), 70%, 50%) !important; }
         .border-primary { border-color: hsl(var(--primary-h, 220), 70%, 50%) !important; }
-        .bg-primary\/10 { background-color: hsla(var(--primary-h, 220), 70%, 50%, 0.1) !important; }
-        .bg-primary\/5 { background-color: hsla(var(--primary-h, 220), 70%, 50%, 0.05) !important; }
-        .border-primary\/20 { border-color: hsla(var(--primary-h, 220), 70%, 50%, 0.2) !important; }
+        .bg-primary\\/10 { background-color: hsla(var(--primary-h, 220), 70%, 50%, 0.1) !important; }
+        .bg-primary\\/5 { background-color: hsla(var(--primary-h, 220), 70%, 50%, 0.05) !important; }
+        .border-primary\\/20 { border-color: hsla(var(--primary-h, 220), 70%, 50%, 0.2) !important; }
 
         @keyframes slideInUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         .animate-msg { animation: slideInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
@@ -195,6 +187,7 @@ export default function AssistantWidget() {
         
         <div className={`fixed inset-x-0 bottom-0 z-[101] flex h-[92dvh] flex-col overflow-hidden rounded-t-[40px] bg-white shadow-2xl transition-all duration-500 ease-out dark:bg-slate-950 md:inset-auto md:right-6 md:bottom-6 md:h-[700px] md:w-[420px] md:rounded-[32px] md:border md:border-white/10 ${isExpanded ? "translate-y-0" : "translate-y-full"}`}>
           
+          {/* CABEÇALHO DO CHAT */}
           <div className="flex items-center justify-between border-b border-slate-100 bg-white/80 px-6 py-5 backdrop-blur-md dark:border-white/5 dark:bg-slate-950/80">
             <div className="flex items-center gap-4">
               <div className="relative">
@@ -214,24 +207,17 @@ export default function AssistantWidget() {
             </div>
           </div>
 
+          {/* LISTA DE MENSAGENS */}
           <div className="flex-1 overflow-y-auto bg-slate-50/50 px-6 py-6 dark:bg-slate-950/50" ref={scrollRef}>
-            {messages.length === 0 && !isTyping && (
-              <p className="text-xs text-center text-slate-500 mt-4 leading-loose">
-                Olá! Eu sou sua IA financeira.<br/>
-                Tente: <strong>"Uber 25 no Pix"</strong> ou <strong>"Resumo do mês"</strong>
-              </p>
-            )}
-
             {messages.map((msg, idx) => {
               const isUser = msg.role === "user";
+
               return (
                 <div key={idx} className={`mb-6 flex flex-col ${isUser ? "items-end" : "items-start"} animate-msg`}>
                   <div className={`max-w-[85%] rounded-[24px] px-5 py-4 text-sm font-medium shadow-sm leading-relaxed transition-all duration-500 ${isUser ? "bg-primary text-white rounded-tr-none" : "bg-white border border-slate-200 text-slate-800 rounded-tl-none dark:bg-slate-900 dark:border-white/5 dark:text-slate-100"}`}>
                     {msg.text}
                   </div>
                   {!isUser && msg.cards?.map((c: any, i: number) => renderCard(c, i))}
-                  
-                  {/* Botões de Ação Sugerida */}
                   {!isUser && msg.suggestedActions && (
                     <div className="mt-4 flex flex-wrap gap-2">
                       {msg.suggestedActions.map((a: any, i: number) => (
@@ -243,7 +229,6 @@ export default function AssistantWidget() {
               );
             })}
             
-            {/* Feedback Visual: Digitação vs Sucesso */}
             {isTyping ? (
               <div className="flex items-center gap-3 px-4 py-2 animate-pulse">
                 <div className="flex gap-1.5">
@@ -256,12 +241,13 @@ export default function AssistantWidget() {
             ) : isSending ? (
               <div className="flex items-center gap-2 px-4 py-2 animate-msg">
                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-[10px] font-bold text-white shadow-sm shadow-green-500/30">✓</span>
-                <span className="text-[10px] font-black text-green-500 uppercase tracking-widest">Lançamento Salvo!</span>
+                <span className="text-[10px] font-black text-green-500 uppercase tracking-widest">Aguardando IA...</span>
               </div>
             ) : null}
             <div ref={messagesEndRef} />
           </div>
 
+          {/* INPUT DO CHAT */}
           <div className="bg-white p-6 dark:bg-slate-950">
             <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(inputValue); }} className="flex items-center gap-3">
               <input ref={inputRef} value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder="Como posso te ajudar?" className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-base md:text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-white/10 dark:bg-white/5 dark:text-white" />
@@ -271,14 +257,8 @@ export default function AssistantWidget() {
         </div>
       </div>
 
-      {/* MUDANÇA AQUI: Cor e ícone atualizados para Rosa com Foguete */}
       {!isExpanded && (
-        <button 
-          onClick={() => setWidgetState("expanded")} 
-          // O 'hidden md:flex' oculta o botão rosa no celular e mostra só no Desktop!
-          className="hidden md:flex fixed bottom-8 right-8 z-[90] h-16 w-16 items-center justify-center rounded-[24px] bg-[#ec407a] text-3xl shadow-2xl shadow-[#ec407a]/40 transition-all hover:scale-110 active:scale-90 hover:rotate-6"
-          style={{ animation: 'bounce 2s infinite' }}
-        >
+        <button onClick={() => setWidgetState("expanded")} className="hidden md:flex fixed bottom-8 right-8 z-[90] h-16 w-16 items-center justify-center rounded-[24px] bg-[#ec407a] text-3xl shadow-2xl shadow-[#ec407a]/40 transition-all hover:scale-110 active:scale-90 hover:rotate-6" style={{ animation: 'bounce 2s infinite' }}>
           🚀
         </button>
       )}
