@@ -6,32 +6,27 @@ import MonthPicker, {
 import MoneyInput from "../components/MoneyInput";
 import Toast from "../components/Toast";
 import { savePlanning } from "../api/planning";
+import { listCategories } from "../api/categories";
 import { formatCentsToBRL } from "../utils/money";
 import {
   formatMonthLabel,
   getCurrentMonthInTimeZone,
   getDefaultMonthRange,
 } from "../utils/months";
-import { type Planning, type PlanningBill, type PlanningExtra } from "../types";
-import { usePlanning } from "../hooks/queries";
+import { type Planning, type PlanningExtra, type Category } from "../types";
+import { useDashboard, usePlanning } from "../hooks/queries";
 import { DATA_CHANGED_EVENT, type DataChangedDetail } from "../utils/dataBus";
 
 const currentMonth = () => getCurrentMonthInTimeZone("America/Bahia");
 
 const createId = () => {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
   return `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 };
 
 const getMonthKey = (value: string | Date) => {
-  if (value instanceof Date) {
-    return value.toISOString().slice(0, 7);
-  }
-  if (typeof value === "string" && value.length >= 7) {
-    return value.slice(0, 7);
-  }
+  if (value instanceof Date) return value.toISOString().slice(0, 7);
+  if (typeof value === "string" && value.length >= 7) return value.slice(0, 7);
   return new Date().toISOString().slice(0, 7);
 };
 
@@ -44,644 +39,210 @@ type ToastState = { message: string; type: "success" | "error" } | null;
 
 const PlanningPage = () => {
   const currentMonthValue = useMemo(() => currentMonth(), []);
-  const monthRange = useMemo(
-    () => getDefaultMonthRange({ endMonth: currentMonthValue, monthsBack: 24 }),
-    [currentMonthValue],
-  );
+  const monthRange = useMemo(() => getDefaultMonthRange({ endMonth: currentMonthValue, monthsBack: 24 }), [currentMonthValue]);
   const [month, setMonth] = useState(currentMonthValue);
-  const [planning, setPlanning] = useState<Planning>({
-    salaryByMonth: {},
-    extrasByMonth: {},
-    fixedBills: [],
-  });
+  const monthKey = useMemo(() => getMonthKey(month), [month]);
+
+  const [planning, setPlanning] = useState<Planning>({ salaryByMonth: {}, extrasByMonth: {}, fixedBills: [] });
   const [salaryCents, setSalaryCents] = useState(0);
-  const [extraForm, setExtraForm] = useState<{
-    id?: string;
-    date: string;
-    description: string;
-    amountCents: number;
-  }>({
-    date: `${currentMonthValue}-01`,
-    description: "",
-    amountCents: 0,
+  const [categories, setCategories] = useState<Category[]>([]);
+  
+  const [extraForm, setExtraForm] = useState<{ id?: string; date: string; description: string; amountCents: number }>({
+    date: `${currentMonthValue}-01`, description: "", amountCents: 0,
   });
-  const [billForm, setBillForm] = useState<{
-    id?: string;
-    name: string;
-    amountCents: number;
-    dueDay: string;
-  }>({
-    name: "",
-    amountCents: 0,
-    dueDay: "1",
-  });
-  const [errors, setErrors] = useState<{ salary?: string; extra?: string; bill?: string }>({});
+  
+  const [errors, setErrors] = useState<{ salary?: string; extra?: string }>({});
   const [toast, setToast] = useState<ToastState>(null);
 
-  const monthKey = useMemo(() => getMonthKey(month), [month]);
-  const {
-    planning: remotePlanning,
-    isLoading: planningLoading,
-    error: planningError,
-    refetch: refetchPlanning,
-  } = usePlanning(monthKey);
+  const { planning: remotePlanning, isLoading: planningLoading, refetch: refetchPlanning } = usePlanning(monthKey);
+  const { data: dashboardSummary } = useDashboard(monthKey);
 
   useEffect(() => {
-    if (remotePlanning) {
-      setPlanning(remotePlanning);
-    }
+    if (remotePlanning) setPlanning(remotePlanning);
+    listCategories({ active: true }).then(setCategories);
   }, [remotePlanning]);
-
-  useEffect(() => {
-    if (!planningError) return;
-    const message =
-      planningError instanceof Error ? planningError.message : "Erro ao carregar planejamento";
-    setToast({ message, type: "error" });
-  }, [planningError]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-    const handler = () => {
-      void refetchPlanning();
-    };
-    window.addEventListener("planning-updated", handler);
-    return () => {
-      window.removeEventListener("planning-updated", handler);
-    };
-  }, [refetchPlanning]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
     const handleDataChanged = (event: Event) => {
       const detail = (event as CustomEvent<DataChangedDetail>).detail;
-      const matchesMonth = !detail.month || detail.month === monthKey;
-      if (matchesMonth && (detail.scope === "all" || detail.scope === "planning")) {
-        void refetchPlanning();
-      }
+      if (!detail.month || detail.month === monthKey) void refetchPlanning();
     };
     window.addEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+    window.addEventListener("planning-updated", () => refetchPlanning());
     return () => {
       window.removeEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+      window.removeEventListener("planning-updated", () => refetchPlanning());
     };
   }, [monthKey, refetchPlanning]);
 
   useEffect(() => {
-    const value = planning.salaryByMonth?.[monthKey] ?? 0;
-    setSalaryCents(toCents(value));
-    setExtraForm((prev) => ({
-      ...prev,
-      date: `${monthKey}-01`,
-    }));
+    setSalaryCents(toCents(planning.salaryByMonth?.[monthKey] ?? 0));
+    setExtraForm(prev => ({ ...prev, date: `${monthKey}-01` }));
   }, [monthKey, planning.salaryByMonth]);
 
   const salaryValue = toCents(planning.salaryByMonth?.[monthKey] ?? 0);
-
-  const monthExtras = useMemo(() => {
-    const list = planning.extrasByMonth?.[monthKey];
-    return Array.isArray(list) ? list : [];
-  }, [planning.extrasByMonth, monthKey]);
-
-  const fixedBills = Array.isArray(planning.fixedBills) ? planning.fixedBills : [];
-
+  const monthExtras = useMemo(() => Array.isArray(planning.extrasByMonth?.[monthKey]) ? planning.extrasByMonth[monthKey] : [], [planning.extrasByMonth, monthKey]);
   const extrasTotal = monthExtras.reduce((sum, item) => sum + toCents(item.amount), 0);
-  const fixedTotal = fixedBills.reduce((sum, bill) => sum + toCents(bill.amount), 0);
+  const categoryBudgets = (planning as any).categoryBudgets || {};
 
+  // --- ACTIONS ---
   const handleSaveSalary = async () => {
-    const salaryValue = Number.isFinite(salaryCents) ? salaryCents : 0;
-    if (salaryValue < 0) {
-      setErrors((prev) => ({ ...prev, salary: "Valor inválido" }));
-      return;
-    }
-    const next: Planning = {
-      ...planning,
-      salaryByMonth: {
-        ...planning.salaryByMonth,
-        [monthKey]: salaryValue,
-      },
-    };
-
+    if (salaryCents < 0) { setErrors(prev => ({ ...prev, salary: "Valor inválido" })); return; }
+    const next: Planning = { ...planning, salaryByMonth: { ...planning.salaryByMonth, [monthKey]: salaryCents } };
     setPlanning(next);
-
     try {
       await savePlanning(next);
       setToast({ message: "Salário salvo", type: "success" });
-      setErrors((prev) => ({ ...prev, salary: undefined }));
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro ao salvar salário";
-      setToast({ message, type: "error" });
-    }
+      setErrors(prev => ({ ...prev, salary: undefined }));
+    } catch { setToast({ message: "Erro ao salvar", type: "error" }); }
   };
 
-  const resetExtraForm = () => {
-    setExtraForm({
-      id: undefined,
-      date: `${monthKey}-01`,
-      description: "",
-      amountCents: 0,
-    });
-    setErrors((prev) => ({ ...prev, extra: undefined }));
+  const handleUpdateBudget = async (catName: string, val: number) => {
+    const next = { ...planning, categoryBudgets: { ...categoryBudgets, [catName]: val } };
+    setPlanning(next as any);
+    try {
+      await savePlanning(next as any);
+      setToast({ message: `Meta de ${catName} salva`, type: "success" });
+      refetchPlanning();
+    } catch { setToast({ message: "Erro ao salvar meta", type: "error" }); }
   };
+
+  const resetExtraForm = () => { setExtraForm({ id: undefined, date: `${monthKey}-01`, description: "", amountCents: 0 }); setErrors(prev => ({ ...prev, extra: undefined })); };
 
   const handleSubmitExtra = async () => {
-    const amountValueCents = toCents(extraForm.amountCents);
-    const description = extraForm.description.trim();
-    const date = extraForm.date || `${monthKey}-01`;
-    if (!description || !date || amountValueCents <= 0) {
-      setErrors((prev) => ({
-        ...prev,
-        extra: "Preencha descrição, data e valor válido",
-      }));
-      return;
+    if (!extraForm.description.trim() || extraForm.amountCents <= 0) {
+      setErrors(prev => ({ ...prev, extra: "Preencha descrição e valor válido" })); return;
     }
-
-    const currentList = Array.isArray(planning.extrasByMonth[monthKey])
-      ? planning.extrasByMonth[monthKey]
-      : [];
-
+    const currentList = Array.isArray(planning.extrasByMonth[monthKey]) ? planning.extrasByMonth[monthKey] : [];
     const nextList: PlanningExtra[] = extraForm.id
-      ? currentList.map((item) =>
-              item.id === extraForm.id
-            ? {
-                ...item,
-                id: item.id,
-                description,
-                label: item.label ?? description,
-                date,
-                amount: amountValueCents,
-              }
-            : item,
-          )
-      : [
-          ...currentList,
-          {
-            id: extraForm.id ?? createId(),
-            description,
-            label: description,
-            date,
-            amount: amountValueCents,
-          },
-        ];
-
-    const nextPlanning: Planning = {
-      ...planning,
-      extrasByMonth: {
-        ...planning.extrasByMonth,
-        [monthKey]: nextList,
-      },
-    };
-
-    setErrors((prev) => ({ ...prev, extra: undefined }));
+      ? currentList.map(item => item.id === extraForm.id ? { ...item, description: extraForm.description, label: extraForm.description, date: extraForm.date, amount: extraForm.amountCents } : item)
+      : [...currentList, { id: createId(), description: extraForm.description, label: extraForm.description, date: extraForm.date, amount: extraForm.amountCents }];
+    
+    const nextPlanning: Planning = { ...planning, extrasByMonth: { ...planning.extrasByMonth, [monthKey]: nextList } };
+    setErrors(prev => ({ ...prev, extra: undefined }));
     setPlanning(nextPlanning);
     try {
       await savePlanning(nextPlanning);
-      setToast({
-        message: extraForm.id ? "Entrada extra atualizada" : "Entrada extra adicionada",
-        type: "success",
-      });
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Erro ao salvar entrada extra";
-      setToast({ message, type: "error" });
-    }
+      setToast({ message: extraForm.id ? "Extra atualizado" : "Extra adicionado", type: "success" });
+    } catch { setToast({ message: "Erro ao salvar", type: "error" }); }
     resetExtraForm();
   };
 
-  const handleEditExtra = (extra: PlanningExtra) => {
-    setExtraForm({
-      id: extra.id,
-      date: extra.date ?? `${monthKey}-01`,
-      description: extra.description ?? extra.label ?? "",
-      amountCents: toCents(extra.amount),
-    });
-  };
-
   const handleDeleteExtra = async (extra: PlanningExtra) => {
-    const currentList = Array.isArray(planning.extrasByMonth[monthKey])
-      ? planning.extrasByMonth[monthKey]
-      : [];
-    const nextList = currentList.filter((item) => item.id !== extra.id);
-    const nextPlanning: Planning = {
-      ...planning,
-      extrasByMonth: {
-        ...planning.extrasByMonth,
-        [monthKey]: nextList,
-      },
-    };
+    const nextList = monthExtras.filter(item => item.id !== extra.id);
+    const nextPlanning: Planning = { ...planning, extrasByMonth: { ...planning.extrasByMonth, [monthKey]: nextList } };
     setPlanning(nextPlanning);
     try {
       await savePlanning(nextPlanning);
-      setToast({ message: "Entrada extra removida", type: "success" });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro ao remover extra";
-      setToast({ message, type: "error" });
-    }
-    if (extraForm.id === extra.id) {
-      resetExtraForm();
-    }
+      setToast({ message: "Extra removido", type: "success" });
+    } catch { setToast({ message: "Erro ao remover", type: "error" }); }
   };
 
-  const resetBillForm = () => {
-    setBillForm({
-      id: undefined,
-      name: "",
-      amountCents: 0,
-      dueDay: "1",
-    });
-    setErrors((prev) => ({ ...prev, bill: undefined }));
-  };
-
-  const handleSubmitBill = async () => {
-    const amountValueCents = toCents(billForm.amountCents);
-    const dueDay = Number(billForm.dueDay);
-    const name = billForm.name.trim();
-    if (
-      !name ||
-      amountValueCents <= 0 ||
-      Number.isNaN(dueDay) ||
-      dueDay < 1 ||
-      dueDay > 31
-    ) {
-      setErrors((prev) => ({ ...prev, bill: "Preencha nome, valor e dia válido (1-31)" }));
-      return;
-    }
-
-    const nextBills: PlanningBill[] = billForm.id
-      ? fixedBills.map((bill) =>
-          bill.id === billForm.id
-            ? {
-                ...bill,
-                id: bill.id,
-                name,
-                label: bill.label ?? name,
-                amount: amountValueCents,
-                dueDay,
-              }
-            : bill,
-        )
-      : [
-          ...fixedBills,
-          {
-            id: billForm.id ?? createId(),
-            name,
-            label: name,
-            amount: amountValueCents,
-            dueDay,
-          },
-        ];
-
-    const nextPlanning: Planning = { ...planning, fixedBills: nextBills };
-
-    setErrors((prev) => ({ ...prev, bill: undefined }));
-    setPlanning(nextPlanning);
-    try {
-      await savePlanning(nextPlanning);
-      setToast({
-        message: billForm.id ? "Conta fixa atualizada" : "Conta fixa adicionada",
-        type: "success",
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro ao salvar conta fixa";
-      setToast({ message, type: "error" });
-    }
-    resetBillForm();
-  };
-
-  const handleEditBill = (bill: PlanningBill) => {
-    setBillForm({
-      id: bill.id,
-      name: bill.name ?? bill.label ?? "",
-      amountCents: toCents(bill.amount),
-      dueDay: bill.dueDay ? String(bill.dueDay) : "1",
-    });
-  };
-
-  const handleDeleteBill = async (bill: PlanningBill) => {
-    const nextBills = fixedBills.filter((item) => item.id !== bill.id);
-    const nextPlanning: Planning = {
-      ...planning,
-      fixedBills: nextBills,
-    };
-    setPlanning(nextPlanning);
-    try {
-      await savePlanning(nextPlanning);
-      setToast({ message: "Conta fixa removida", type: "success" });
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Erro ao remover conta fixa";
-      setToast({ message, type: "error" });
-    }
-    if (billForm.id === bill.id) {
-      resetBillForm();
-    }
-  };
-
-  if (planningLoading) {
-    return (
-      <div className="space-y-4">
-        <div className="h-8 w-48 rounded-full bg-slate-700/40 animate-pulse" />
-        <div className="card space-y-4 p-4 animate-pulse">
-          <div className="h-4 w-28 rounded-full bg-slate-700/40" />
-          <div className="h-10 w-full rounded-full bg-slate-700/40" />
-        </div>
-        {Array.from({ length: 2 }).map((_, index) => (
-          <div key={`planning-skeleton-${index}`} className="card space-y-3 p-4 animate-pulse">
-            <div className="h-4 w-32 rounded-full bg-slate-700/40" />
-            <div className="h-6 w-full rounded-full bg-slate-700/40" />
-            <div className="h-6 w-full rounded-full bg-slate-700/40" />
-          </div>
-        ))}
-      </div>
-    );
-  }
+  if (planningLoading) return <div className="p-4 space-y-4 animate-pulse"><div className="h-8 w-48 rounded-full bg-slate-200" /><div className="h-32 rounded-xl bg-slate-200" /></div>;
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4 overflow-x-hidden">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 overflow-x-hidden">
+      
+      {/* CABEÇALHO */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-slate-900">Planejamento</h2>
-          <p className="text-sm text-slate-600">
-            Cadastre salario, entradas extras e contas fixas para o mes.
-          </p>
+          <h2 className="text-2xl font-bold text-slate-900">Planejamento</h2>
+          <p className="text-sm text-slate-600">Gerencie salários, ganhos extras e metas de gastos.</p>
         </div>
-        <div className="w-full sm:w-60">
-          <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-            Mes
-            <MonthPicker
-              valueMonth={month}
-              onChangeMonth={(value) => setMonth(getMonthKey(value))}
-              minMonth={monthRange.start}
-              maxMonth={monthRange.end}
-              buttonClassName={monthPickerFieldButtonClassName}
-              trigger={<MonthPickerFieldTrigger label={formatMonthLabel(month)} />}
-            />
-          </label>
-        </div>
+        <MonthPicker valueMonth={month} onChangeMonth={value => setMonth(getMonthKey(value))} minMonth={monthRange.start} maxMonth={monthRange.end} buttonClassName={monthPickerFieldButtonClassName} trigger={<MonthPickerFieldTrigger label={formatMonthLabel(month)} />} />
       </div>
 
-      <div className="card space-y-3 p-4">
-        <h3 className="text-lg font-semibold text-slate-900">Salario do mes</h3>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-          <div className="flex-1">
-            <MoneyInput
-              valueCents={salaryCents}
-              onChangeCents={setSalaryCents}
-              placeholder="R$ 0,00"
-              className="w-full"
-            />
-            {errors.salary && <p className="mt-1 text-xs text-red-600">{errors.salary}</p>}
-            <p className="mt-1 text-xs text-slate-500">
-              Atual: {formatCentsToBRL(salaryValue || 0)}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleSaveSalary}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90"
-          >
-            Salvar salario
-          </button>
+      {/* SALÁRIO */}
+      <div className="card flex flex-col sm:flex-row gap-4 p-5 items-end">
+        <div className="flex-1 w-full">
+          <label className="text-sm font-bold text-slate-500 uppercase mb-2 block">Salário Mensal</label>
+          <MoneyInput valueCents={salaryCents} onChangeCents={setSalaryCents} className="w-full text-lg" />
+          <p className="mt-1 text-xs text-slate-500">Atual: {formatCentsToBRL(salaryValue)}</p>
+          {errors.salary && <p className="mt-1 text-xs font-medium text-rose-600">{errors.salary}</p>}
         </div>
+        <button onClick={handleSaveSalary} className="btn-primary w-full sm:w-auto h-12">Salvar</button>
       </div>
 
-      <div className="card space-y-3 p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold text-slate-900">
-                {extraForm.id ? "Editar entrada extra" : "Entradas extras"}
-              </h3>
-              {extraForm.id && (
-                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
-                  Editando
-                </span>
-              )}
-            </div>
-            <p className="text-sm text-slate-600">
-              Total no mes: {formatCentsToBRL(extrasTotal)}
-            </p>
-            {extraForm.id && (
-              <p className="text-xs text-slate-500">
-                Valor atual: {formatCentsToBRL(extraForm.amountCents)}
-              </p>
-            )}
-          </div>
-        </div>
+      {/* NOVO: METAS POR CATEGORIA */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">🎯 Metas de Gastos</h3>
+        <p className="text-sm text-slate-600">Acompanhe seus limites. A IA avisará se você chegar perto de estourar o orçamento.</p>
+        
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {categories.map((cat) => {
+            const goalCents = categoryBudgets[cat.name] || 0;
+            const spentCents = dashboardSummary?.byCategory?.find((c) => c.category === cat.name)?.total || 0;
+            const percent = goalCents > 0 ? Math.min((spentCents / goalCents) * 100, 100) : 0;
+            
+            // Cores dinâmicas baseadas no progresso
+            const isDanger = percent >= 100;
+            const isWarning = percent >= 80 && !isDanger;
+            const barColor = isDanger ? 'bg-rose-500' : isWarning ? 'bg-amber-500' : 'bg-[#25D366]';
+            const textColor = isDanger ? 'text-rose-600' : isWarning ? 'text-amber-600' : 'text-slate-500';
 
-        <div className="flex flex-col gap-3 md:grid md:grid-cols-3">
-          <label className="w-full flex flex-col gap-2 text-sm font-medium text-slate-700">
-            Data
-            <input
-              type="date"
-              value={extraForm.date}
-              onChange={(e) => setExtraForm((prev) => ({ ...prev, date: e.target.value }))}
-              className="block w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
-          </label>
-          <label className="w-full flex flex-col gap-2 text-sm font-medium text-slate-700">
-            Descricao
-            <input
-              type="text"
-              value={extraForm.description}
-              onChange={(e) =>
-                setExtraForm((prev) => ({ ...prev, description: e.target.value }))
-              }
-              className="block w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-              placeholder="Ex.: bonus"
-            />
-          </label>
-          <label className="w-full flex flex-col gap-2 text-sm font-medium text-slate-700">
-            Valor
-            <MoneyInput
-              valueCents={extraForm.amountCents}
-              onChangeCents={(amountCents) =>
-                setExtraForm((prev) => ({ ...prev, amountCents }))
-              }
-              placeholder="R$ 0,00"
-              className="w-full"
-            />
-          </label>
-        </div>
-        {errors.extra && <p className="text-xs text-red-600">{errors.extra}</p>}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-          {extraForm.id && (
-            <button
-              type="button"
-              onClick={resetExtraForm}
-              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-primary hover:text-primary"
-            >
-              Cancelar edicao
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={handleSubmitExtra}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90"
-          >
-            {extraForm.id ? "Salvar alteracoes" : "Adicionar extra"}
-          </button>
-        </div>
+            return (
+              <div key={cat.id} className="card p-4 transition-all hover:shadow-md">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="font-bold text-slate-800">{cat.name}</span>
+                  <span className={`text-xs font-bold ${textColor}`}>{percent.toFixed(0)}%</span>
+                </div>
+                
+                <div className="mb-3 h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div className={`h-full transition-all duration-700 ${barColor}`} style={{ width: `${percent}%` }} />
+                </div>
 
-        <div className="divide-y divide-slate-100">
-          {monthExtras.length ? (
-            monthExtras.map((extra) => (
-              <div key={extra.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {extra.description ?? extra.label ?? "Entrada extra"}
-                  </p>
-                  <p className="text-xs text-slate-600">
-                    {(extra.date ?? `${monthKey}-01`).slice(0, 10)} ·{" "}
-                    {formatCentsToBRL(toCents(extra.amount))}
-                  </p>
+                <div className="flex justify-between text-[10px] text-slate-400 font-bold mb-4 uppercase tracking-wider">
+                  <span>Usado: {formatCentsToBRL(spentCents)}</span>
+                  <span>Teto: {goalCents > 0 ? formatCentsToBRL(goalCents) : '---'}</span>
                 </div>
-                <div className="flex items-center gap-2 text-xs font-semibold">
-                  <button
-                    type="button"
-                    onClick={() => handleEditExtra(extra)}
-                    className="text-primary hover:underline"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteExtra(extra)}
-                    className="text-red-600 hover:underline"
-                  >
-                    Excluir
-                  </button>
-                </div>
+                
+                <MoneyInput valueCents={goalCents} onChangeCents={(val) => handleUpdateBudget(cat.name, val)} placeholder="Definir meta" className="h-9 w-full text-xs" />
               </div>
-            ))
-          ) : (
-            <p className="py-2 text-sm text-slate-500">
-              Nenhuma entrada extra para este mes.
-            </p>
-          )}
+            );
+          })}
         </div>
       </div>
 
-      <div className="card space-y-3 p-4">
-        <div className="flex items-center justify-between">
+      {/* ENTRADAS EXTRAS */}
+      <div className="card space-y-4 p-5 mt-4">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold text-slate-900">
-                {billForm.id ? "Editar conta fixa" : "Contas fixas"}
-              </h3>
-              {billForm.id && (
-                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
-                  Editando
-                </span>
-              )}
-            </div>
-            <p className="text-sm text-slate-600">
-              Total previsto: {formatCentsToBRL(fixedTotal)}
-            </p>
-            {billForm.id && (
-              <p className="text-xs text-slate-500">
-                Valor atual: {formatCentsToBRL(billForm.amountCents)}
-              </p>
-            )}
+            <h3 className="text-lg font-bold text-slate-900">{extraForm.id ? "Editar ganho extra" : "Ganhos Extras"}</h3>
+            <p className="text-sm text-slate-500">Renda extra no mês: {formatCentsToBRL(extrasTotal)}</p>
           </div>
         </div>
 
         <div className="grid gap-3 md:grid-cols-3">
-          <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-            Nome
-            <input
-              type="text"
-              value={billForm.name}
-              onChange={(e) => setBillForm((prev) => ({ ...prev, name: e.target.value }))}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-              placeholder="Ex.: Aluguel"
-            />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-            Valor
-            <MoneyInput
-              valueCents={billForm.amountCents}
-              onChangeCents={(amountCents) => setBillForm((prev) => ({ ...prev, amountCents }))}
-              placeholder="R$ 0,00"
-              className="w-full"
-            />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-            Dia do vencimento
-            <input
-              type="number"
-              min={1}
-              max={31}
-              value={billForm.dueDay}
-              onChange={(e) => setBillForm((prev) => ({ ...prev, dueDay: e.target.value }))}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
-          </label>
+          <label className="text-sm font-medium text-slate-700">Data<input type="date" value={extraForm.date} onChange={e => setExtraForm(p => ({ ...p, date: e.target.value }))} className="mt-1 block w-full rounded-lg border border-slate-200 p-2 outline-none focus:border-primary" /></label>
+          <label className="text-sm font-medium text-slate-700">Origem<input type="text" value={extraForm.description} onChange={e => setExtraForm(p => ({ ...p, description: e.target.value }))} className="mt-1 block w-full rounded-lg border border-slate-200 p-2 outline-none focus:border-primary" placeholder="Ex: Venda, Freela" /></label>
+          <label className="text-sm font-medium text-slate-700">Valor<MoneyInput valueCents={extraForm.amountCents} onChangeCents={v => setExtraForm(p => ({ ...p, amountCents: v }))} className="mt-1 w-full" /></label>
         </div>
-        {errors.bill && <p className="text-xs text-red-600">{errors.bill}</p>}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-          {billForm.id && (
-            <button
-              type="button"
-              onClick={resetBillForm}
-              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-primary hover:text-primary"
-            >
-              Cancelar edicao
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={handleSubmitBill}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90"
-          >
-            {billForm.id ? "Salvar alteracoes" : "Adicionar conta fixa"}
-          </button>
+        
+        <div className="flex justify-end gap-2 pt-2">
+          {extraForm.id && <button onClick={resetExtraForm} className="btn-secondary">Cancelar</button>}
+          <button onClick={handleSubmitExtra} className="btn-primary">{extraForm.id ? "Salvar" : "Adicionar Extra"}</button>
         </div>
+        {errors.extra && <p className="text-xs font-medium text-rose-600">{errors.extra}</p>}
 
-        <div className="divide-y divide-slate-100">
-          {fixedBills.length ? (
-            fixedBills.map((bill) => (
-              <div key={bill.id} className="py-3">
-                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {bill.name ?? bill.label ?? "Conta"}
-                    </p>
-                    <p className="text-xs text-slate-600">
-                    {formatCentsToBRL(toCents(bill.amount))}{" "}
-                      {bill.dueDay ? `- Vence dia ${bill.dueDay}` : ""}
-                    </p>
-                  </div>
-                  <div className="flex gap-2 text-xs font-semibold">
-                    <button
-                      type="button"
-                      onClick={() => handleEditBill(bill)}
-                      className="text-primary hover:underline"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteBill(bill)}
-                      className="text-red-600 hover:underline"
-                    >
-                      Excluir
-                    </button>
-                  </div>
-                </div>
+        {/* Lista de Extras */}
+        <div className="divide-y divide-slate-100 pt-2">
+          {monthExtras.map(extra => (
+            <div key={extra.id} className="flex items-center justify-between py-3">
+              <div>
+                <p className="font-semibold text-slate-800">{extra.description ?? extra.label}</p>
+                <p className="text-xs text-slate-500">{extra.date?.slice(0, 10)} · {formatCentsToBRL(toCents(extra.amount))}</p>
               </div>
-            ))
-          ) : (
-            <p className="py-2 text-sm text-slate-500">Nenhuma conta fixa cadastrada.</p>
-          )}
+              <div className="flex gap-3 text-xs font-bold">
+                <button onClick={() => { setExtraForm({ id: extra.id, date: extra.date || '', description: extra.description || '', amountCents: toCents(extra.amount) }) }} className="text-primary">Editar</button>
+                <button onClick={() => handleDeleteExtra(extra)} className="text-rose-500">Excluir</button>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
 };
