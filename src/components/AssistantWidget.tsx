@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useAssistantChat } from "../hooks/useAssistantChat";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { useAuth } from "../contexts/AuthContext";
 
 export default function AssistantWidget() {
   const [widgetState, setWidgetState] = useState<"collapsed" | "expanded">("collapsed");
   const isExpanded = widgetState === "expanded";
   
   const { messages, inputValue, setInputValue, handleSendMessage, clearChat, isSending, isTyping } = useAssistantChat();
-  const { user } = useAuth(); // Pega os dados do usuário atual
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
