@@ -11,6 +11,7 @@ export interface ChatResponse {
   assistantMessage: string;
   cards: any[];
   suggestedActions: any[];
+  refreshData?: boolean;
 }
 
 export const aiService = {

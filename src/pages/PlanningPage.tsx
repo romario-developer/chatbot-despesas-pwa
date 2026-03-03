@@ -45,6 +45,7 @@ const PlanningPage = () => {
 
   const [planning, setPlanning] = useState<Planning>({ salaryByMonth: {}, extrasByMonth: {}, fixedBills: [] });
   const [salaryCents, setSalaryCents] = useState(0);
+  const [savingsCents, setSavingsCents] = useState(0); // NOVO: Estado para poupança
   const [categories, setCategories] = useState<Category[]>([]);
   
   const [extraForm, setExtraForm] = useState<{ id?: string; date: string; description: string; amountCents: number }>({
@@ -55,36 +56,50 @@ const PlanningPage = () => {
   const [toast, setToast] = useState<ToastState>(null);
 
   const { planning: remotePlanning, isLoading: planningLoading, refetch: refetchPlanning } = usePlanning(monthKey);
-  const { data: dashboardSummary } = useDashboard(monthKey);
+  const { data: dashboardSummary, refetch: refetchDashboard } = useDashboard(monthKey);
 
   useEffect(() => {
     if (remotePlanning) setPlanning(remotePlanning);
     listCategories({ active: true }).then(setCategories);
   }, [remotePlanning]);
 
+  // NOVO: Escutando os avisos da IA para recarregar a tela automaticamente
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
     const handleDataChanged = (event: Event) => {
       const detail = (event as CustomEvent<DataChangedDetail>).detail;
-      if (!detail.month || detail.month === monthKey) void refetchPlanning();
+      if (!detail?.month || detail.month === monthKey) {
+        void refetchPlanning();
+        void refetchDashboard();
+      }
     };
     window.addEventListener(DATA_CHANGED_EVENT, handleDataChanged);
-    window.addEventListener("planning-updated", () => refetchPlanning());
+    window.addEventListener("planning-updated", () => {
+      void refetchPlanning();
+      void refetchDashboard();
+    });
     return () => {
       window.removeEventListener(DATA_CHANGED_EVENT, handleDataChanged);
-      window.removeEventListener("planning-updated", () => refetchPlanning());
+      window.removeEventListener("planning-updated", () => { refetchPlanning(); refetchDashboard(); });
     };
-  }, [monthKey, refetchPlanning]);
+  }, [monthKey, refetchPlanning, refetchDashboard]);
 
   useEffect(() => {
     setSalaryCents(toCents(planning.salaryByMonth?.[monthKey] ?? 0));
+    setSavingsCents(toCents((planning as any).savingsByMonth?.[monthKey] ?? 0)); // Atualiza estado da poupança
     setExtraForm(prev => ({ ...prev, date: `${monthKey}-01` }));
-  }, [monthKey, planning.salaryByMonth]);
+  }, [monthKey, planning.salaryByMonth, (planning as any).savingsByMonth]);
 
   const salaryValue = toCents(planning.salaryByMonth?.[monthKey] ?? 0);
   const monthExtras = useMemo(() => Array.isArray(planning.extrasByMonth?.[monthKey]) ? planning.extrasByMonth[monthKey] : [], [planning.extrasByMonth, monthKey]);
   const extrasTotal = monthExtras.reduce((sum, item) => sum + toCents(item.amount), 0);
-  const categoryBudgets = (planning as any).categoryBudgets || {};
+  
+  // Normaliza as chaves do objeto de metas para evitar bugs de maiúsculas/minúsculas
+  const rawCategoryBudgets = (planning as any).categoryBudgets || {};
+  const categoryBudgets: Record<string, number> = {};
+  Object.keys(rawCategoryBudgets).forEach(key => {
+    categoryBudgets[key.toLowerCase()] = rawCategoryBudgets[key];
+  });
 
   // --- ACTIONS ---
   const handleSaveSalary = async () => {
@@ -98,8 +113,18 @@ const PlanningPage = () => {
     } catch { setToast({ message: "Erro ao salvar", type: "error" }); }
   };
 
+  const handleSaveSavings = async () => {
+    if (savingsCents < 0) return;
+    const next = { ...planning, savingsByMonth: { ...(planning as any).savingsByMonth, [monthKey]: savingsCents } };
+    setPlanning(next as any);
+    try {
+      await savePlanning(next as any);
+      setToast({ message: "Reserva salva no cofre!", type: "success" });
+    } catch { setToast({ message: "Erro ao salvar", type: "error" }); }
+  };
+
   const handleUpdateBudget = async (catName: string, val: number) => {
-    const next = { ...planning, categoryBudgets: { ...categoryBudgets, [catName]: val } };
+    const next = { ...planning, categoryBudgets: { ...rawCategoryBudgets, [catName]: val } };
     setPlanning(next as any);
     try {
       await savePlanning(next as any);
@@ -148,20 +173,34 @@ const PlanningPage = () => {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Planejamento</h2>
-          <p className="text-sm text-slate-600">Gerencie salários, ganhos extras e metas de gastos.</p>
+          <p className="text-sm text-slate-600">Gerencie salários, ganhos extras, economias e metas.</p>
         </div>
         <MonthPicker valueMonth={month} onChangeMonth={value => setMonth(getMonthKey(value))} minMonth={monthRange.start} maxMonth={monthRange.end} buttonClassName={monthPickerFieldButtonClassName} trigger={<MonthPickerFieldTrigger label={formatMonthLabel(month)} />} />
       </div>
 
-      {/* SALÁRIO */}
-      <div className="card flex flex-col sm:flex-row gap-4 p-5 items-end">
-        <div className="flex-1 w-full">
-          <label className="text-sm font-bold text-slate-500 uppercase mb-2 block">Salário Mensal</label>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {/* SALÁRIO */}
+        <div className="card flex flex-col gap-4 p-5">
+          <label className="text-sm font-bold text-slate-500 uppercase flex items-center gap-2 block">🏢 Salário Mensal</label>
           <MoneyInput valueCents={salaryCents} onChangeCents={setSalaryCents} className="w-full text-lg" />
-          <p className="mt-1 text-xs text-slate-500">Atual: {formatCentsToBRL(salaryValue)}</p>
+          <div className="flex justify-between items-center mt-auto">
+            <p className="text-xs text-slate-500">Atual: {formatCentsToBRL(salaryValue)}</p>
+            <button onClick={handleSaveSalary} className="btn-primary h-10 px-6">Salvar</button>
+          </div>
           {errors.salary && <p className="mt-1 text-xs font-medium text-rose-600">{errors.salary}</p>}
         </div>
-        <button onClick={handleSaveSalary} className="btn-primary w-full sm:w-auto h-12">Salvar</button>
+
+        {/* POUPANÇA */}
+        <div className="card flex flex-col gap-4 p-5 border-l-4 border-[#10b981] bg-green-50/30 dark:bg-green-900/10">
+          <label className="text-sm font-bold text-green-600 dark:text-green-500 uppercase flex items-center gap-2 block">
+            🐷 Minhas Reservas
+          </label>
+          <MoneyInput valueCents={savingsCents} onChangeCents={setSavingsCents} className="w-full text-lg bg-white dark:bg-slate-950" />
+          <div className="flex justify-between items-center mt-auto">
+            <p className="text-xs text-green-600/70 dark:text-green-500/70">Poupado: {formatCentsToBRL(savingsCents)}</p>
+            <button onClick={handleSaveSavings} className="rounded-lg bg-[#10b981] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#059669]">Guardar</button>
+          </div>
+        </div>
       </div>
 
       {/* NOVO: METAS POR CATEGORIA */}
@@ -171,11 +210,10 @@ const PlanningPage = () => {
         
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {categories.map((cat) => {
-            const goalCents = categoryBudgets[cat.name] || 0;
+            const goalCents = categoryBudgets[cat.name.toLowerCase()] || 0; // Busca segura com lowerCase
             const spentCents = dashboardSummary?.byCategory?.find((c) => c.category === cat.name)?.total || 0;
             const percent = goalCents > 0 ? Math.min((spentCents / goalCents) * 100, 100) : 0;
             
-            // Cores dinâmicas baseadas no progresso
             const isDanger = percent >= 100;
             const isWarning = percent >= 80 && !isDanger;
             const barColor = isDanger ? 'bg-rose-500' : isWarning ? 'bg-amber-500' : 'bg-[#25D366]';
@@ -225,7 +263,6 @@ const PlanningPage = () => {
         </div>
         {errors.extra && <p className="text-xs font-medium text-rose-600">{errors.extra}</p>}
 
-        {/* Lista de Extras */}
         <div className="divide-y divide-slate-100 pt-2">
           {monthExtras.map(extra => (
             <div key={extra.id} className="flex items-center justify-between py-3">

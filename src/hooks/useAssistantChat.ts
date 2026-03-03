@@ -18,21 +18,16 @@ export const useAssistantChat = () => {
     else window.localStorage.removeItem(STORAGE_KEY);
   }, [conversationId]);
 
-  // Modificação: Adicionado o parâmetro isSystemMessage
   const handleSendMessage = useCallback(async (value: string, isSystemMessage: boolean = false) => {
     const trimmed = value.trim();
     if (!trimmed || isSending) return;
     
-    // Se for mensagem de sistema LOCAL (apenas UI)
     if (isSystemMessage) {
       setMessages((prev) => [...prev, { id: `ai-${Date.now()}`, role: "assistant", text: trimmed }]);
       return;
     }
 
-    // Identifica se é o gatilho invisível de abertura de chat
     const isHiddenInit = trimmed === "[SYSTEM_INIT]";
-
-    // Só mostra a bolinha do usuário se NÃO for o gatilho invisível
     if (!isHiddenInit) {
       setMessages((prev) => [...prev, { id: `user-${Date.now()}`, role: "user", text: trimmed }]);
     }
@@ -44,6 +39,12 @@ export const useAssistantChat = () => {
     try {
       const response = await aiService.sendMessage(trimmed, conversationId || undefined);
       if (response.conversationId) setConversationId(response.conversationId);
+
+      // NOVO: Se a IA alterou dados, avisa o frontend para recarregar as telas!
+      if (response.refreshData && typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("planning-updated"));
+        window.dispatchEvent(new CustomEvent("data-changed", { detail: {} }));
+      }
 
       setMessages((prev) => [...prev, { 
         id: `ai-${Date.now()}`, 
