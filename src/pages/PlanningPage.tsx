@@ -1,18 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import MonthPicker, {
-  MonthPickerFieldTrigger,
-  monthPickerFieldButtonClassName,
-} from "../components/MonthPicker";
+import MonthPicker, { MonthPickerFieldTrigger, monthPickerFieldButtonClassName } from "../components/MonthPicker";
 import MoneyInput from "../components/MoneyInput";
 import Toast from "../components/Toast";
 import { savePlanning } from "../api/planning";
 import { listCategories } from "../api/categories";
 import { formatCentsToBRL } from "../utils/money";
-import {
-  formatMonthLabel,
-  getCurrentMonthInTimeZone,
-  getDefaultMonthRange,
-} from "../utils/months";
+import { formatMonthLabel, getCurrentMonthInTimeZone, getDefaultMonthRange } from "../utils/months";
 import { type Planning, type PlanningExtra, type Category } from "../types";
 import { useDashboard, usePlanning } from "../hooks/queries";
 import { DATA_CHANGED_EVENT, type DataChangedDetail } from "../utils/dataBus";
@@ -45,7 +38,7 @@ const PlanningPage = () => {
 
   const [planning, setPlanning] = useState<Planning>({ salaryByMonth: {}, extrasByMonth: {}, fixedBills: [] });
   const [salaryCents, setSalaryCents] = useState(0);
-  const [savingsCents, setSavingsCents] = useState(0); // NOVO: Estado para poupança
+  const [savingsCents, setSavingsCents] = useState(0);
   const [categories, setCategories] = useState<Category[]>([]);
   
   const [extraForm, setExtraForm] = useState<{ id?: string; date: string; description: string; amountCents: number }>({
@@ -63,7 +56,6 @@ const PlanningPage = () => {
     listCategories({ active: true }).then(setCategories);
   }, [remotePlanning]);
 
-  // NOVO: Escutando os avisos da IA para recarregar a tela automaticamente
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
     const handleDataChanged = (event: Event) => {
@@ -86,7 +78,7 @@ const PlanningPage = () => {
 
   useEffect(() => {
     setSalaryCents(toCents(planning.salaryByMonth?.[monthKey] ?? 0));
-    setSavingsCents(toCents((planning as any).savingsByMonth?.[monthKey] ?? 0)); // Atualiza estado da poupança
+    setSavingsCents(toCents((planning as any).savingsByMonth?.[monthKey] ?? 0));
     setExtraForm(prev => ({ ...prev, date: `${monthKey}-01` }));
   }, [monthKey, planning.salaryByMonth, (planning as any).savingsByMonth]);
 
@@ -94,11 +86,11 @@ const PlanningPage = () => {
   const monthExtras = useMemo(() => Array.isArray(planning.extrasByMonth?.[monthKey]) ? planning.extrasByMonth[monthKey] : [], [planning.extrasByMonth, monthKey]);
   const extrasTotal = monthExtras.reduce((sum, item) => sum + toCents(item.amount), 0);
   
-  // Normaliza as chaves do objeto de metas para evitar bugs de maiúsculas/minúsculas
+  // CHAVE MESTRA DA TELA: Lê tudo convertendo forçadamente para minúsculo
   const rawCategoryBudgets = (planning as any).categoryBudgets || {};
   const categoryBudgets: Record<string, number> = {};
   Object.keys(rawCategoryBudgets).forEach(key => {
-    categoryBudgets[key.toLowerCase()] = rawCategoryBudgets[key];
+    categoryBudgets[key.toLowerCase().trim()] = rawCategoryBudgets[key];
   });
 
   // --- ACTIONS ---
@@ -124,11 +116,13 @@ const PlanningPage = () => {
   };
 
   const handleUpdateBudget = async (catName: string, val: number) => {
-    const next = { ...planning, categoryBudgets: { ...rawCategoryBudgets, [catName]: val } };
+    // CHAVE MESTRA DA TELA: Salva manualmente forçando minúsculo
+    const safeKey = catName.toLowerCase().trim();
+    const next = { ...planning, categoryBudgets: { ...rawCategoryBudgets, [safeKey]: val } };
     setPlanning(next as any);
     try {
       await savePlanning(next as any);
-      setToast({ message: `Meta de ${catName} salva`, type: "success" });
+      setToast({ message: `Meta salva com sucesso`, type: "success" });
       refetchPlanning();
     } catch { setToast({ message: "Erro ao salvar meta", type: "error" }); }
   };
@@ -203,15 +197,18 @@ const PlanningPage = () => {
         </div>
       </div>
 
-      {/* NOVO: METAS POR CATEGORIA */}
+      {/* METAS POR CATEGORIA */}
       <div className="space-y-4">
         <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">🎯 Metas de Gastos</h3>
         <p className="text-sm text-slate-600">Acompanhe seus limites. A IA avisará se você chegar perto de estourar o orçamento.</p>
         
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {categories.map((cat) => {
-            const goalCents = categoryBudgets[cat.name.toLowerCase()] || 0; // Busca segura com lowerCase
-            const spentCents = dashboardSummary?.byCategory?.find((c) => c.category === cat.name)?.total || 0;
+            // Busca o limite forçando a chave minúscula
+            const safeCategoryKey = cat.name.toLowerCase().trim();
+            const goalCents = categoryBudgets[safeCategoryKey] || 0; 
+            
+            const spentCents = dashboardSummary?.byCategory?.find((c) => c.category.toLowerCase().trim() === safeCategoryKey)?.total || 0;
             const percent = goalCents > 0 ? Math.min((spentCents / goalCents) * 100, 100) : 0;
             
             const isDanger = percent >= 100;
