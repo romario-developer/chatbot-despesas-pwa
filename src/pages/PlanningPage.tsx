@@ -240,7 +240,7 @@ const PlanningPage = () => {
         </div>
       </div>
 
-      {/* ENTRADAS EXTRAS */}
+      {/* ENTRADAS EXTRAS*/}
       <div className="card space-y-4 p-5 mt-4">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div>
