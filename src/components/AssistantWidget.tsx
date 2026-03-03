@@ -20,9 +20,9 @@ export default function AssistantWidget() {
   const audioSuccess = useRef(new Audio("https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3")); 
 
   // --- SAUDAÇÃO INICIAL AUTOMÁTICA ---
-  // Se o usuário estiver carregado, o chat estiver vazio e a IA não estiver digitando
+
   useEffect(() => {
-    if (user && messages.length === 0 && !isTyping) {
+    if (isExpanded && user && messages.length === 0 && !isTyping) {
       const hora = new Date().getHours();
       let saudacao = "Bom dia";
       if (hora >= 12 && hora < 18) saudacao = "Boa tarde";
@@ -32,10 +32,10 @@ export default function AssistantWidget() {
         ? `${saudacao}, ${user.name}! Tudo bem? Como posso te ajudar a cuidar do seu dinheiro hoje?`
         : `Olá! Seja muito bem-vindo ao Financio. Eu sou seu assistente financeiro. Como você gostaria que eu te chamasse?`;
 
-      // O "true" no final avisa o hook: "Coloque na tela como Assistente, mas NÃO mande pro servidor"
+      // O parâmetro "true" garante que vai aparecer na tela sem gastar dados do servidor
       handleSendMessage(welcomeText, true);
     }
-  }, [user, messages.length, isTyping, handleSendMessage]); 
+  }, [isExpanded, user, messages.length, isTyping, handleSendMessage]); 
   // --------------------------------------------------
 
   useEffect(() => {
