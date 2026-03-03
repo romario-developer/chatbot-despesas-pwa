@@ -123,7 +123,7 @@ const PlanningPage = () => {
     try {
       await savePlanning(next as any);
       setToast({ message: `Meta salva com sucesso`, type: "success" });
-      refetchPlanning(); // <-- ISSO IMPEDE DE ZERAR AO MUDAR DE ABA
+      refetchPlanning(); // <-- ISSO IMPEDE DE ZERAR AO MUDAR DE ABA!!
     } catch { setToast({ message: "Erro ao salvar meta", type: "error" }); }
   };
 
@@ -157,7 +157,7 @@ const PlanningPage = () => {
       await savePlanning(nextPlanning);
       setToast({ message: "Extra removido", type: "success" });
       refetchPlanning();
-    } catch { setToast({ message: "Erro ao remover", type: "error" }); }
+    } catch { setToast({ message: "Erro ao remover!", type: "error" }); }
   };
 
   if (planningLoading) return <div className="p-4 space-y-4 animate-pulse"><div className="h-8 w-48 rounded-full bg-slate-200" /><div className="h-32 rounded-xl bg-slate-200" /></div>;
