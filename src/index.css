@@ -85,6 +85,8 @@ html,
 body {
   height: 100%;
   scrollbar-gutter: stable;
+  overscroll-behavior-y: auto !important; 
+  overflow-y: auto;
 }
 
 body {

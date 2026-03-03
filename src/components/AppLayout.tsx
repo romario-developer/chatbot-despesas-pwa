@@ -228,7 +228,7 @@ const AppLayout = () => {
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-1 transition">
                 <img src="/logo.png" alt="Gestão Financeira" className="h-8 w-auto object-contain" />
               </div>
-              <div className="flex flex-col leading-tight">
+              <div className="flex flex-col leading-tight cursor-pointer" onClick={() => window.location.reload()}>
                 <span className="text-base font-semibold text-[var(--text-primary)]">Financio</span>
                 <span className="text-[0.65rem] font-semibold tracking-[0.3em] text-[var(--text-muted)] uppercase">
                   Gestão Financeira
