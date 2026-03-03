@@ -221,15 +221,22 @@ const EntryForm = ({ initialValues, onSubmit, onCancel }: EntryFormProps) => {
     setCreateCategoryError(null);
     setCreatingCategory(true);
     try {
-      const created = await createCategory(name);
-      if (created) {
-        await loadCategories();
-        setSelectedCategoryId(created.id);
-        setCategorySearch("");
-        closeCategoryModal();
-      } else {
-        setCreateCategoryError("Nao foi possivel criar categoria.");
+      // 1. Manda criar no backend (se der erro real, a API avisa e ele cai no catch)
+      await createCategory(name);
+      
+      // 2. Se passou da linha de cima, o banco salvou! Vamos buscar a lista nova atualizada.
+      const updatedList = await listCategories({ active: true });
+      setCategories(updatedList);
+      
+      // 3. Acha a categoria que acabamos de criar pelo nome e já deixa ela selecionada
+      const recemCriada = updatedList.find(c => c.name.toLowerCase() === name.toLowerCase());
+      if (recemCriada) {
+        setSelectedCategoryId(recemCriada.id);
       }
+
+      // 4. Limpa tudo e fecha o modal com sucesso
+      setCategorySearch("");
+      closeCategoryModal();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao criar categoria.";
       setCreateCategoryError(message);
