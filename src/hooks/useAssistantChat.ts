@@ -23,13 +23,20 @@ export const useAssistantChat = () => {
     const trimmed = value.trim();
     if (!trimmed || isSending) return;
     
-    // Se for mensagem de sistema (A Saudação Inicial), insere direto como 'assistant' e aborta o envio pro backend
+    // Se for mensagem de sistema LOCAL (apenas UI)
     if (isSystemMessage) {
       setMessages((prev) => [...prev, { id: `ai-${Date.now()}`, role: "assistant", text: trimmed }]);
       return;
     }
 
-    setMessages((prev) => [...prev, { id: `user-${Date.now()}`, role: "user", text: trimmed }]);
+    // Identifica se é o gatilho invisível de abertura de chat
+    const isHiddenInit = trimmed === "[SYSTEM_INIT]";
+
+    // Só mostra a bolinha do usuário se NÃO for o gatilho invisível
+    if (!isHiddenInit) {
+      setMessages((prev) => [...prev, { id: `user-${Date.now()}`, role: "user", text: trimmed }]);
+    }
+
     setInputValue("");
     setIsTyping(true);
     setIsSending(true);

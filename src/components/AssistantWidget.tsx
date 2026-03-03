@@ -19,23 +19,14 @@ export default function AssistantWidget() {
   const audioReceive = useRef(new Audio("https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3")); 
   const audioSuccess = useRef(new Audio("https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3")); 
 
-  // --- SAUDAÇÃO INICIAL AUTOMÁTICA ---
-
+   // --- NOVA LÓGICA: SAUDAÇÃO INICIAL AUTOMÁTICA VIA BACKEND ---
   useEffect(() => {
-    if (isExpanded && user && messages.length === 0 && !isTyping) {
-      const hora = new Date().getHours();
-      let saudacao = "Bom dia";
-      if (hora >= 12 && hora < 18) saudacao = "Boa tarde";
-      else if (hora >= 18) saudacao = "Boa noite";
-
-      const welcomeText = user.name
-        ? `${saudacao}, ${user.name}! Tudo bem? Como posso te ajudar a cuidar do seu dinheiro hoje?`
-        : `Olá! Seja muito bem-vindo ao Financio. Eu sou seu assistente financeiro. Como você gostaria que eu te chamasse?`;
-
-      // O parâmetro "true" garante que vai aparecer na tela sem gastar dados do servidor
-      handleSendMessage(welcomeText, true);
+    // Quando o chat é aberto e não tem mensagens
+    if (isExpanded && messages.length === 0 && !isTyping) {
+      // Envia o gatilho pro backend (sem o "true", para a requisição realmente acontecer)
+      handleSendMessage("[SYSTEM_INIT]");
     }
-  }, [isExpanded, user, messages.length, isTyping, handleSendMessage]); 
+  }, [isExpanded, messages.length, isTyping, handleSendMessage]); 
   // --------------------------------------------------
 
   useEffect(() => {
